@@ -127,18 +127,33 @@ def merge_split_diagrams(
 # Stage 2: bbox expansion + label association
 # ---------------------------------------------------------------------------
 
+_SENTENCE_STARTERS = (
+    "They ", "The ", "A ", "An ", "It ", "If ", "When ", "Which ", "What ",
+    "These ", "This ", "Both ", "How ", "Why ", "Where ", "Each ", "Some ",
+    "There ", "Here ", "Their ", "Its ",
+)
+
+
 def _is_label_like(line_bbox: BBox, text: str, max_width: float = 160.0) -> bool:
     """Reject paragraph-style sentences. Genuine diagram labels (force values,
-    axis labels, ticks, p/q/r markers, table keys) are always short."""
+    axis labels, ticks, p/q/r markers, single-word callouts) are always short
+    and never look like full sentences."""
     width = line_bbox[2] - line_bbox[0]
     if width > max_width:
         return False
     t = (text or "").strip()
     if not t:
         return False
-    if t.endswith("?"):
+    if t.endswith("?") or t.endswith("."):
         return False
-    if len(t) > 80:
+    if len(t) > 60:
+        return False
+    words = t.split()
+    if len(words) > 5:
+        return False
+    # Capitalised sentence starts (e.g. "They collide and join together") are
+    # never legitimate diagram labels.
+    if len(words) >= 3 and any(t.startswith(s) for s in _SENTENCE_STARTERS):
         return False
     return True
 
