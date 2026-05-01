@@ -55,6 +55,13 @@ class Question:
     page_start: int
     page_end: int
     question_text: str = ""
+    # Layout reconstruction: when at least one diagram sits between question
+    # text, these scalar fields split ``question_text`` at that diagram's
+    # bottom edge. Concatenated with a single space they reproduce
+    # ``question_text`` verbatim. Both are None when no between-text diagram
+    # exists (text-only / question_diagram_after_text / option_table cases).
+    image_between_question_before_text: Optional[str] = None
+    image_between_question_after_text: Optional[str] = None
     question_images_between_text: List[ImageAsset] = field(default_factory=list)
     question_images_after_text: List[ImageAsset] = field(default_factory=list)
     options: List[Option] = field(default_factory=list)

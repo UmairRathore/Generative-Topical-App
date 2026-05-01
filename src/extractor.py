@@ -472,7 +472,8 @@ class PaperExtractor:
         caption_payloads: List[CaptionPayload] = []
 
         # --- question text (everything not inside a visual region or after a marker) ---
-        question_text = self._compose_question_text(lines_q, markers, last_pidx, visuals_q)
+        question_lines = self._compose_question_lines(lines_q, markers, last_pidx, visuals_q)
+        question_text = " ".join(t for _, _, t in question_lines).strip()
         nearby_text = question_text
 
         # 2x2 image-grid options (Q8/Q13 style) — crop option regions directly from
@@ -733,11 +734,17 @@ class PaperExtractor:
 
         needs_review = bool(warnings) or layout_type == "mixed"
 
+        before_text, after_text = self._split_text_by_between_image(
+            question_lines, question_images_between
+        )
+
         question = Question(
             question_number=region.number,
             page_start=region.page_start,
             page_end=region.page_end,
             question_text=question_text,
+            image_between_question_before_text=before_text,
+            image_between_question_after_text=after_text,
             question_images_between_text=question_images_between,
             question_images_after_text=question_images_after,
             options=options,
@@ -753,16 +760,19 @@ class PaperExtractor:
 
     # ---- helpers -------------------------------------------------------
 
-    def _compose_question_text(
+    def _compose_question_lines(
         self,
         lines_q: List[Tuple[int, dict]],
         markers: List[OptionMarker],
         last_pidx: int,
         visuals_q: List[Tuple[int, VisualRegion]],
-    ) -> str:
+    ) -> List[Tuple[int, BBox, str]]:
+        """Return ordered ``(page, line_bbox, text)`` tuples that make up the
+        question's prose. Used by both ``question_text`` and the
+        before/after-image split for layout reconstruction.
+        """
         first_marker_y = min((m.bbox[1] for m in markers), default=10**9)
-        marker_xs = [m.bbox[0] for m in markers]
-        # Drop lines that are inside any visual region (e.g. labels inside diagrams)
+
         def _in_any_visual(line_bbox: BBox, pidx: int) -> bool:
             for vp, v in visuals_q:
                 if vp != pidx:
@@ -771,7 +781,7 @@ class PaperExtractor:
                     return True
             return False
 
-        pieces: List[str] = []
+        out: List[Tuple[int, BBox, str]] = []
         for pidx, line in lines_q:
             if pidx == last_pidx and line["bbox"][1] >= first_marker_y - 1:
                 continue
@@ -780,10 +790,55 @@ class PaperExtractor:
             text = line["text"].strip()
             if not text:
                 continue
-            # Strip leading question-number digits if first line of question
-            text = re.sub(r"^\s*\d{1,2}\s+", "", text) if not pieces else text
-            pieces.append(text)
-        return " ".join(pieces).strip()
+            if not out:
+                # Strip leading question-number digits on the first kept line
+                text = re.sub(r"^\s*\d{1,2}\s+", "", text)
+            out.append((pidx, tuple(line["bbox"]), text))
+        return out
+
+    def _compose_question_text(
+        self,
+        lines_q: List[Tuple[int, dict]],
+        markers: List[OptionMarker],
+        last_pidx: int,
+        visuals_q: List[Tuple[int, VisualRegion]],
+    ) -> str:
+        return " ".join(
+            t for _, _, t in self._compose_question_lines(lines_q, markers, last_pidx, visuals_q)
+        ).strip()
+
+    def _split_text_by_between_image(
+        self,
+        question_lines: List[Tuple[int, BBox, str]],
+        between_assets: List[ImageAsset],
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """Split ``question_lines`` at the bottom edge of the topmost between-text
+        diagram. Lines on earlier pages, or on the same page with center-y above
+        the diagram's bottom, are ``before``; the rest are ``after``.
+
+        Returns ``(None, None)`` when there is no between-text diagram so the
+        fields stay null in the JSON.
+        """
+        if not between_assets:
+            return None, None
+        topmost = min(between_assets, key=lambda a: (a.page, a.bbox[1]))
+        cut_page = topmost.page
+        cut_y = topmost.bbox[3]
+        before: List[str] = []
+        after: List[str] = []
+        for pidx, lb, text in question_lines:
+            if pidx < cut_page:
+                before.append(text)
+                continue
+            if pidx > cut_page:
+                after.append(text)
+                continue
+            cy = (lb[1] + lb[3]) / 2
+            if cy < cut_y:
+                before.append(text)
+            else:
+                after.append(text)
+        return (" ".join(before).strip() or None, " ".join(after).strip() or None)
 
     def _match_visual_to_option(
         self,
