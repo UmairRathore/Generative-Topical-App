@@ -513,7 +513,8 @@ class PaperExtractor:
         last_slice = region.slices[-1][1]
         for pidx, slice_bbox in region.slices:
             page = pages_by_idx[pidx]
-            ms = find_option_markers(page.spans, slice_bbox)
+            visual_bboxes = [v.bbox for v in page.visuals]
+            ms = find_option_markers(page.spans, slice_bbox, visual_bboxes=visual_bboxes)
             if len(ms) > len(markers):
                 markers = ms
                 last_pidx = pidx

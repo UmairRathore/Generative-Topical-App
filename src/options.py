@@ -1,7 +1,9 @@
 """Detect MCQ option markers (A/B/C/D) and parse their text/layout."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+from itertools import product
 from typing import List, Optional, Tuple
 
 import fitz
@@ -31,6 +33,7 @@ class OptionMarker:
     label: str
     bbox: BBox  # bbox of the letter only
     line_bbox: BBox  # bbox of the whole line containing the marker
+    is_bold: bool = False
 
     @property
     def x(self) -> float:
@@ -86,16 +89,217 @@ def get_lines(page: fitz.Page) -> List[dict]:
     return out
 
 
-def find_option_markers(spans: List[Span], region: BBox) -> List[OptionMarker]:
-    """Locate bold standalone A/B/C/D letters inside region.
+_NUMERIC_RE = re.compile(r"^[+\-]?\d+(\.\d+)?(\s*[°µ°µ%]?)?$|\d")
 
-    When a label has multiple candidates (e.g. a "3 A" current annotation
-    inside a circuit diagram + the real option "A" further down), pick the one
-    that *aligns* with the already-chosen markers — labels with a single
-    candidate are processed first, then ambiguous labels resolve to whichever
-    candidate sits closest in x or y to that anchor set.
+
+def _bbox_contains(outer: BBox, inner: BBox, tol: float = 1.5) -> bool:
+    return (
+        inner[0] >= outer[0] - tol
+        and inner[1] >= outer[1] - tol
+        and inner[2] <= outer[2] + tol
+        and inner[3] <= outer[3] + tol
+    )
+
+
+def _looks_numeric(text: str) -> bool:
+    """Return True if ``text`` is a number-bearing token (e.g. "0.15", "3", "1.0",
+    "10⁻³"). Used to detect "<number> A" unit-symbol patterns."""
+    t = (text or "").strip()
+    if not t:
+        return False
+    return any(ch.isdigit() for ch in t)
+
+
+def _spans_immediately_left_of(
+    target: "OptionMarker", spans: List[Span], y_tol: float = 3.0, max_gap: float = 18.0
+) -> List[Span]:
+    """Return spans on the same line as ``target`` that end within ``max_gap``
+    points to the left of ``target.bbox[0]``."""
+    cy = target.y
+    out: List[Span] = []
+    for s in spans:
+        sy = (s.bbox[1] + s.bbox[3]) / 2
+        if abs(sy - cy) > y_tol:
+            continue
+        if s.text.strip() == target.label and abs(s.bbox[0] - target.bbox[0]) < 0.5:
+            continue  # the candidate itself
+        gap = target.bbox[0] - s.bbox[2]
+        if 0.0 <= gap <= max_gap:
+            out.append(s)
+    return out
+
+
+def _other_option_letters_on_same_line(
+    target: "OptionMarker", spans: List[Span], y_tol: float = 3.0
+) -> int:
+    """Count other A/B/C/D-text spans on the same line as ``target``.
+
+    A horizontal-row option layout (`A 1.4×10⁴  B 1.5×10¹⁵  C 1.8×10¹⁶  D 9.0×10¹⁶`)
+    puts each marker right after the previous option's numeric value. When that
+    happens we must NOT treat the markers as unit symbols just because numbers
+    sit immediately to their left.
     """
-    candidates: List[OptionMarker] = []
+    cy = target.y
+    n = 0
+    for s in spans:
+        t = s.text.strip()
+        if t not in OPTION_LABELS:
+            continue
+        sy = (s.bbox[1] + s.bbox[3]) / 2
+        if abs(sy - cy) > y_tol:
+            continue
+        # Skip the candidate itself
+        if t == target.label and abs(s.bbox[0] - target.bbox[0]) < 0.5:
+            continue
+        n += 1
+    return n
+
+
+def _looks_like_unit(target: "OptionMarker", spans: List[Span]) -> bool:
+    """``"0.15 A"`` / ``"3 A"`` / ``"1.2 V"`` style: a numeric token sits
+    immediately to the left of the candidate on the same line.
+
+    Suppressed when the same line carries other A/B/C/D candidates — that
+    indicates a horizontal-row option layout where each marker legitimately
+    follows a numeric option-text segment.
+    """
+    if _other_option_letters_on_same_line(target, spans) >= 1:
+        return False
+    for s in _spans_immediately_left_of(target, spans):
+        if _looks_numeric(s.text):
+            return True
+    return False
+
+
+def _horizontal_score(combo: Tuple[Optional["OptionMarker"], ...]) -> float:
+    present = [(i, m) for i, m in enumerate(combo) if m is not None]
+    if len(present) < 2:
+        return 1e6
+    ys = [m.y for _, m in present]
+    xs = [m.x for _, m in present]
+    y_spread = max(ys) - min(ys)
+    inv = 0
+    for i in range(len(present)):
+        for j in range(i + 1, len(present)):
+            if xs[i] >= xs[j]:
+                inv += 1
+    return y_spread + inv * 50.0
+
+
+def _vertical_score(combo: Tuple[Optional["OptionMarker"], ...]) -> float:
+    present = [(i, m) for i, m in enumerate(combo) if m is not None]
+    if len(present) < 2:
+        return 1e6
+    ys = [m.y for _, m in present]
+    xs = [m.x for _, m in present]
+    x_spread = max(xs) - min(xs)
+    inv = 0
+    for i in range(len(present)):
+        for j in range(i + 1, len(present)):
+            if ys[i] >= ys[j]:
+                inv += 1
+    return x_spread + inv * 50.0
+
+
+def _grid_score(combo: Tuple[Optional["OptionMarker"], ...]) -> float:
+    """2x2 grid: A=top-left, B=top-right, C=bottom-left, D=bottom-right."""
+    if any(m is None for m in combo):
+        return 1e6
+    a, b, c, d = combo  # type: ignore[misc]
+    ys = sorted([a.y, b.y, c.y, d.y])
+    median_y = (ys[1] + ys[2]) / 2
+    above = [m for m in (a, b, c, d) if m.y < median_y]
+    below = [m for m in (a, b, c, d) if m.y >= median_y]
+    if len(above) != 2 or len(below) != 2:
+        return 1e6
+    row_gap = min(m.y for m in below) - max(m.y for m in above)
+    if row_gap < 8:
+        return 1e6
+    above_y_spread = max(m.y for m in above) - min(m.y for m in above)
+    below_y_spread = max(m.y for m in below) - min(m.y for m in below)
+    above_sorted = sorted(above, key=lambda m: m.bbox[0])
+    below_sorted = sorted(below, key=lambda m: m.bbox[0])
+    if above_sorted[0] is not a or above_sorted[1] is not b:
+        return 1e6
+    if below_sorted[0] is not c or below_sorted[1] is not d:
+        return 1e6
+    return above_y_spread + below_y_spread
+
+
+def _tuple_score(
+    combo: Tuple[Optional["OptionMarker"], ...],
+    visual_bboxes: List[BBox],
+) -> float:
+    """Best-of horizontal/vertical/grid quality for one candidate tuple, plus
+    penalties for missing labels and visual-region membership."""
+    base = min(_horizontal_score(combo), _vertical_score(combo), _grid_score(combo))
+    if base >= 1e5:
+        # No reasonable interpretation; use a softer fallback so we still rank
+        # tuples relatively rather than treating them all as identical garbage.
+        present = [m for m in combo if m is not None]
+        if len(present) < 2:
+            return 1e6
+        ys = [m.y for m in present]
+        xs = [m.x for m in present]
+        base = (max(ys) - min(ys)) + (max(xs) - min(xs))
+    # Missing-marker penalty — prefer 4-marker tuples strongly.
+    missing = sum(1 for m in combo if m is None)
+    base += missing * 200.0
+    # Visual-region penalty — soft signal, not absolute rejection.
+    for m in combo:
+        if m is None:
+            continue
+        for vb in visual_bboxes:
+            if _bbox_contains(vb, m.bbox, tol=2.0):
+                base += 25.0
+                break
+    # Bold-preference tiebreaker. Real Cambridge option markers are rendered
+    # bold; non-bold "A"-spans are usually inline option text or units.
+    for m in combo:
+        if m is None:
+            continue
+        if not m.is_bold:
+            base += 5.0
+    return base
+
+
+def find_option_markers(
+    spans: List[Span],
+    region: BBox,
+    visual_bboxes: Optional[List[BBox]] = None,
+) -> List[OptionMarker]:
+    """Locate bold/large standalone A/B/C/D letters inside ``region`` using
+    combinatorial alignment scoring.
+
+    Why: a 1-letter "A" can come from many sources — a real option marker, a
+    unit symbol like "0.15 A", a formula variable like "Avρ", a circuit-current
+    annotation "3 A", or an axis label. The earlier two-pass pick (singletons
+    first, then nearest-aligned) ties when many false candidates share a row or
+    column with the real markers, and the wrong one wins.
+
+    The new selection picks the (A, B, C, D) tuple with the lowest alignment
+    score across three layouts:
+
+        horizontal — small y-spread, A < B < C < D in **x**.
+        vertical   — small x-spread, A < B < C < D in **y**.
+        grid 2x2   — A=top-left, B=top-right, C=bottom-left, D=bottom-right with
+                     a meaningful inter-row gap.
+
+    Penalties:
+        * unit-symbol candidates ("0.15 A") are filtered up front.
+        * candidates inside any ``visual_bboxes`` get a soft penalty rather
+          than absolute rejection (Q8/Q13-style image-grid markers can sit
+          adjacent to an option diagram).
+        * missing labels are penalised heavily so 4-marker tuples are strongly
+          preferred when all four labels have at least one candidate.
+
+    Per-label candidates are capped at 6 by left-margin proximity before the
+    cartesian product, keeping the search bounded at ~6**4 = 1296 tuples.
+    """
+    visual_bboxes = list(visual_bboxes or [])
+
+    # 1) Raw candidates: text is exactly A/B/C/D, bold or size>=9.5, inside region.
+    raw: List[OptionMarker] = []
     for s in spans:
         t = s.text.strip()
         if t not in OPTION_LABELS:
@@ -104,42 +308,72 @@ def find_option_markers(spans: List[Span], region: BBox) -> List[OptionMarker]:
             continue
         if not _inside(s.bbox, region):
             continue
-        candidates.append(OptionMarker(label=t, bbox=s.bbox, line_bbox=s.bbox))
+        raw.append(
+            OptionMarker(
+                label=t, bbox=s.bbox, line_bbox=s.bbox, is_bold=s.is_bold,
+            )
+        )
+
+    if not raw:
+        return []
+
+    # 2) Pre-filter: drop "<number> A" / "1.2 V" unit-symbol candidates.
+    pre = [c for c in raw if not _looks_like_unit(c, spans)]
+    if not pre:
+        # Everything looked unit-like — fall back to raw rather than returning
+        # nothing. Combinatorial scoring will still pick the best of a bad set.
+        pre = raw
+
+    # 3) Group by label and cap to 6 per label. Preference order before the cap:
+    #    bold first, then candidates outside any visual region, then by left-x
+    #    (real option markers tend to start at the left margin).
+    def _candidate_priority(m: OptionMarker) -> Tuple[int, int, float, float]:
+        in_visual = any(_bbox_contains(v, m.bbox, tol=2.0) for v in visual_bboxes)
+        return (
+            0 if m.is_bold else 1,
+            1 if in_visual else 0,
+            m.bbox[0],
+            m.bbox[1],
+        )
 
     by_label: dict[str, List[OptionMarker]] = {l: [] for l in OPTION_LABELS}
-    for c in candidates:
+    for c in pre:
         by_label[c.label].append(c)
+    for lbl, items in by_label.items():
+        items.sort(key=_candidate_priority)
+        if len(items) > 6:
+            by_label[lbl] = items[:6]
 
-    chosen: List[OptionMarker] = []
-    deferred: List[Tuple[str, List[OptionMarker]]] = []
-    # Pass 1 — singletons (these are unambiguous anchors).
-    for label in OPTION_LABELS:
-        items = by_label[label]
-        if not items:
+    # 4) Cartesian product: missing-label slots get a single None placeholder.
+    options_per_label: dict[str, List[Optional[OptionMarker]]] = {}
+    for l in OPTION_LABELS:
+        if by_label[l]:
+            options_per_label[l] = list(by_label[l])
+        else:
+            options_per_label[l] = [None]
+
+    if all(opts == [None] for opts in options_per_label.values()):
+        return []
+
+    best_combo: Optional[Tuple[Optional[OptionMarker], ...]] = None
+    best_score = float("inf")
+    for combo in product(*(options_per_label[l] for l in OPTION_LABELS)):
+        present = [m for m in combo if m is not None]
+        if len(present) < 2:
             continue
-        if len(items) == 1:
-            chosen.append(items[0])
-        else:
-            deferred.append((label, items))
+        # Skip combos with duplicate markers (same span chosen twice from a
+        # multi-label collision — shouldn't happen, but guard).
+        ids = {id(m) for m in present}
+        if len(ids) != len(present):
+            continue
+        score = _tuple_score(combo, visual_bboxes)
+        if score < best_score:
+            best_score = score
+            best_combo = combo
 
-    # Pass 2 — multi-candidate labels: pick the option whose row OR column lines
-    # up with an already-chosen marker. Falls back to lowest-y-first when no
-    # anchors exist yet.
-    for label, items in deferred:
-        if chosen:
-            ref_ys = [m.y for m in chosen]
-            ref_xs = [m.x for m in chosen]
-
-            def _score(m: OptionMarker) -> float:
-                dy = min(abs(m.y - ry) for ry in ref_ys)
-                dx = min(abs(m.x - rx) for rx in ref_xs)
-                return min(dy, dx)
-
-            items_sorted = sorted(items, key=_score)
-        else:
-            items_sorted = sorted(items, key=lambda m: (m.bbox[1], m.bbox[0]))
-        chosen.append(items_sorted[0])
-
+    if best_combo is None:
+        return []
+    chosen = [m for m in best_combo if m is not None]
     chosen.sort(key=lambda m: (m.bbox[1], m.bbox[0]))
     return chosen
 
