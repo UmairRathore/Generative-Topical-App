@@ -87,7 +87,14 @@ def get_lines(page: fitz.Page) -> List[dict]:
 
 
 def find_option_markers(spans: List[Span], region: BBox) -> List[OptionMarker]:
-    """Locate bold standalone A/B/C/D letters inside region."""
+    """Locate bold standalone A/B/C/D letters inside region.
+
+    When a label has multiple candidates (e.g. a "3 A" current annotation
+    inside a circuit diagram + the real option "A" further down), pick the one
+    that *aligns* with the already-chosen markers — labels with a single
+    candidate are processed first, then ambiguous labels resolve to whichever
+    candidate sits closest in x or y to that anchor set.
+    """
     candidates: List[OptionMarker] = []
     for s in spans:
         t = s.text.strip()
@@ -99,18 +106,39 @@ def find_option_markers(spans: List[Span], region: BBox) -> List[OptionMarker]:
             continue
         candidates.append(OptionMarker(label=t, bbox=s.bbox, line_bbox=s.bbox))
 
-    # Keep the best 4 (one per label) using simple heuristics: lowest y first, then x order
     by_label: dict[str, List[OptionMarker]] = {l: [] for l in OPTION_LABELS}
     for c in candidates:
         by_label[c.label].append(c)
 
     chosen: List[OptionMarker] = []
+    deferred: List[Tuple[str, List[OptionMarker]]] = []
+    # Pass 1 — singletons (these are unambiguous anchors).
     for label in OPTION_LABELS:
         items = by_label[label]
         if not items:
             continue
-        items.sort(key=lambda m: (m.bbox[1], m.bbox[0]))
-        chosen.append(items[0])
+        if len(items) == 1:
+            chosen.append(items[0])
+        else:
+            deferred.append((label, items))
+
+    # Pass 2 — multi-candidate labels: pick the option whose row OR column lines
+    # up with an already-chosen marker. Falls back to lowest-y-first when no
+    # anchors exist yet.
+    for label, items in deferred:
+        if chosen:
+            ref_ys = [m.y for m in chosen]
+            ref_xs = [m.x for m in chosen]
+
+            def _score(m: OptionMarker) -> float:
+                dy = min(abs(m.y - ry) for ry in ref_ys)
+                dx = min(abs(m.x - rx) for rx in ref_xs)
+                return min(dy, dx)
+
+            items_sorted = sorted(items, key=_score)
+        else:
+            items_sorted = sorted(items, key=lambda m: (m.bbox[1], m.bbox[0]))
+        chosen.append(items_sorted[0])
 
     chosen.sort(key=lambda m: (m.bbox[1], m.bbox[0]))
     return chosen

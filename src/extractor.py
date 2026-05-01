@@ -74,13 +74,54 @@ def _is_cover_page(page_text: str) -> bool:
     )
 
 
+_DATA_KEYWORDS = (
+    r"acceleration of free fall",
+    r"speed of light",
+    r"elementary charge",
+    r"unified atomic mass",
+    r"avogadro constant",
+    r"molar gas constant",
+    r"boltzmann constant",
+    r"gravitational constant",
+    r"planck constant",
+    r"rest mass of proton",
+    r"rest mass of electron",
+    r"stefan[- ]boltzmann",
+    r"permittivity of free space",
+)
+
+_FORMULAE_KEYWORDS = (
+    r"uniformly accelerated motion",
+    r"hydrostatic pressure",
+    r"doppler effect",
+    r"resistors in series",
+    r"resistors in parallel",
+    r"upthrust",
+    r"electric current",
+)
+
+
 def _is_data_formulae_page(page_text: str) -> bool:
+    """Pages 2/3 of every Cambridge MCQ paper list physical constants and a
+    formulae sheet. We must skip them so their numeric tokens (1/2, 10⁻¹⁹, …)
+    don't get mistaken for question starts.
+
+    The earlier heuristic ("contains the word 'formulae'") was too loose: a
+    real question may mention the formulae sheet in passing (e.g.
+    "the unit of current i is given in the list of formulae on page 3"),
+    which then drops every question on that page from the search.
+
+    Tightened rule: require >= 3 named physical constants, OR the standalone
+    "Formulae" heading paired with at least one canonical formula label.
+    """
     t = page_text.lower()
-    has_data = bool(re.search(r"\bdata\b", t)) and bool(
-        re.search(r"acceleration of free fall|speed of light|elementary charge", t)
-    )
-    has_formulae = "formulae" in t
-    return has_data or has_formulae
+    n_constants = sum(1 for kw in _DATA_KEYWORDS if re.search(kw, t))
+    if n_constants >= 3:
+        return True
+    has_formulae_heading = bool(re.search(r"(?m)^\s*formulae\s*$", t))
+    if has_formulae_heading and any(re.search(p, t) for p in _FORMULAE_KEYWORDS):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -303,14 +344,33 @@ def _gather_spans(
     return out
 
 
+def _normalize_bbox(bbox: BBox) -> BBox:
+    """Swap inverted coordinates so x0<=x1 and y0<=y1 (PIL crashes otherwise)."""
+    x0, y0, x1, y1 = bbox
+    if x0 > x1:
+        x0, x1 = x1, x0
+    if y0 > y1:
+        y0, y1 = y1, y0
+    return (float(x0), float(y0), float(x1), float(y1))
+
+
 def _crop_asset(
     page_image_path: Path,
     bbox: BBox,
     dpi: int,
     out_path: Path,
     pad: int = 6,
-) -> None:
+    min_side: int = 4,
+) -> bool:
+    """Crop ``bbox`` from the rendered page PNG, save to ``out_path``.
+
+    Defensive against degenerate bboxes — they crashed earlier papers
+    (m18 grid logic produced y_top > y_bot in one case). Returns ``True`` if
+    a crop was written, ``False`` if the bbox was unusable so the caller can
+    add a warning and continue instead of aborting the whole paper.
+    """
     img = Image.open(page_image_path).convert("RGB")
+    bbox = _normalize_bbox(bbox)
     px = pdf_bbox_to_pixel(bbox, dpi)
     px = (
         max(0, px[0] - pad),
@@ -318,9 +378,12 @@ def _crop_asset(
         min(img.width, px[2] + pad),
         min(img.height, px[3] + pad),
     )
+    if px[2] - px[0] < min_side or px[3] - px[1] < min_side:
+        return False
     crop = img.crop(px)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     crop.save(out_path)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -483,16 +546,22 @@ class PaperExtractor:
         grid_crops: Dict[str, BBox] = {}
         if marker_layout == "grid":
             grid_crops = self._compute_grid_option_crops(markers, last_slice)
-            for label, crop_bbox in grid_crops.items():
+            for label, crop_bbox in list(grid_crops.items()):
                 img_id = f"q{region.number:03d}_option_{label}"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(
+                ok = _crop_asset(
                     pages_by_idx[last_pidx].image_path,
                     crop_bbox,
                     self.dpi,
                     img_path,
                     pad=0,
                 )
+                if not ok:
+                    warnings.append(
+                        f"Option {label} crop bbox is degenerate; skipped."
+                    )
+                    grid_crops.pop(label, None)
+                    continue
                 rel = img_path.relative_to(self.output_root).as_posix()
                 cap = caption_for_option_image(label, nearby_text)
                 option_images_by_label[label].append(
@@ -524,10 +593,24 @@ class PaperExtractor:
         horizontal_crops: Dict[str, BBox] = {}
         if not grid_crops and marker_layout == "horizontal" and len(markers) == 4:
             marker_y_bot = max(m.bbox[3] for m in markers)
+            # Include drawings AND any pdfplumber-detected tables that are NOT
+            # option_tables (i.e. don't have rows beginning with A/B/C/D).
+            # m20 Q33 hits this case: pdfplumber wraps one option diagram as a
+            # 1-row table and the original "v.kind != 'table'" filter then left
+            # visuals_below empty, which suppressed the horizontal repair.
+            def _is_option_table(v: VisualRegion) -> bool:
+                if v.kind != "table" or not v.table_data:
+                    return False
+                rows = v.table_data.get("rows", []) or []
+                return any(
+                    r and (r[0] or "").strip() in OPTION_LABELS
+                    for r in rows
+                )
+
             visuals_below = [
                 v for (pidx, v) in visuals_q
                 if pidx == last_pidx
-                and v.kind != "table"
+                and not _is_option_table(v)
                 and v.bbox[1] >= marker_y_bot - 4
             ]
             marker_x_centres = sorted((m.bbox[0] + m.bbox[2]) / 2 for m in markers)
@@ -537,13 +620,11 @@ class PaperExtractor:
                 return covered >= 2
 
             giant_visual = any(_spans_multiple_markers(v) for v in visuals_below)
-            # Inline option text would already have been extracted by
-            # extract_option_text on the prior pass; but since we don't yet have
-            # it here we check spans directly via spans_q for any text on the
-            # marker row beyond the marker glyphs themselves.
+            # Marker row text inspection: if there's text on the marker row
+            # other than the A/B/C/D letters, options are likely text-style.
+            marker_y_centre = (markers[0].bbox[1] + markers[0].bbox[3]) / 2
             extra_text_on_row = any(
-                abs(((s.bbox[1] + s.bbox[3]) / 2)
-                    - ((markers[0].bbox[1] + markers[0].bbox[3]) / 2)) <= 3
+                abs(((s.bbox[1] + s.bbox[3]) / 2) - marker_y_centre) <= 3
                 and s.text.strip() not in OPTION_LABELS
                 and s.text.strip()
                 for (_, s) in spans_q
@@ -552,16 +633,22 @@ class PaperExtractor:
                 horizontal_crops = self._compute_horizontal_option_crops(
                     markers, last_slice, visuals_below
                 )
-                for label, crop_bbox in horizontal_crops.items():
+                for label, crop_bbox in list(horizontal_crops.items()):
                     img_id = f"q{region.number:03d}_option_{label}"
                     img_path = self.images_dir / f"{img_id}.png"
-                    _crop_asset(
+                    ok = _crop_asset(
                         pages_by_idx[last_pidx].image_path,
                         crop_bbox,
                         self.dpi,
                         img_path,
                         pad=0,
                     )
+                    if not ok:
+                        warnings.append(
+                            f"Option {label} crop bbox is degenerate; skipped."
+                        )
+                        horizontal_crops.pop(label, None)
+                        continue
                     rel = img_path.relative_to(self.output_root).as_posix()
                     cap = caption_for_option_image(label, nearby_text)
                     option_images_by_label[label].append(
@@ -608,7 +695,10 @@ class PaperExtractor:
                 option_table_source_bbox = v.bbox
                 img_id = f"q{region.number:03d}_table_01"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+                if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                    warnings.append(
+                        "Option table crop bbox is degenerate; image skipped."
+                    )
                 with_symbols = _table_has_symbol_rows(rows)
                 option_table = OptionTable(
                     headers=data.get("headers", []),
@@ -675,7 +765,11 @@ class PaperExtractor:
                 idx = len(option_images_by_label[assigned_label]) + 1
                 img_id = f"q{region.number:03d}_option_{assigned_label}{('_'+str(idx)) if idx > 1 else ''}"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+                if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                    warnings.append(
+                        f"Option {assigned_label} image crop bbox is degenerate; skipped."
+                    )
+                    continue
                 rel = img_path.relative_to(self.output_root).as_posix()
                 cap = caption_for_option_image(assigned_label, nearby_text)
                 asset = ImageAsset(
@@ -729,7 +823,11 @@ class PaperExtractor:
                 h_threshold=80.0,
                 v_threshold=30.0,
             )
-            _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+            if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                warnings.append(
+                    f"Question diagram crop bbox is degenerate; skipped."
+                )
+                continue
             rel = img_path.relative_to(self.output_root).as_posix()
             cap = caption_for_question_diagram(nearby_text, placement)
             asset = ImageAsset(
