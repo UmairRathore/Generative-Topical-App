@@ -453,6 +453,194 @@ def extract_option_text(
     return out
 
 
+def _span_inside_any(bbox: BBox, others: List[BBox]) -> bool:
+    cx = (bbox[0] + bbox[2]) / 2
+    cy = (bbox[1] + bbox[3]) / 2
+    for o in others:
+        if o[0] <= cx <= o[2] and o[1] <= cy <= o[3]:
+            return True
+    return False
+
+
+def _proper_two_by_two(markers: List["OptionMarker"]) -> bool:
+    """True when 4 markers form a clean A=TL, B=TR, C=BL, D=BR grid.
+
+    This guards the grid-recovery pass against "scattered diagram labels
+    masquerading as markers" (e.g. an A/B/C/D-labelled vector diagram inside
+    a force-question region) — those would otherwise have recovery sweep
+    text from the diagram interior into option text.
+    """
+    if len(markers) != 4:
+        return False
+    by_label = {m.label: m for m in markers}
+    if set(by_label) != set(OPTION_LABELS):
+        return False
+    a, b, c, d = (by_label[l] for l in OPTION_LABELS)
+    ys = sorted([a.y, b.y, c.y, d.y])
+    median_y = (ys[1] + ys[2]) / 2
+    above = [m for m in (a, b, c, d) if m.y < median_y]
+    below = [m for m in (a, b, c, d) if m.y >= median_y]
+    if len(above) != 2 or len(below) != 2:
+        return False
+    if a not in above or b not in above:
+        return False
+    if c not in below or d not in below:
+        return False
+    if a.bbox[0] >= b.bbox[0]:
+        return False
+    if c.bbox[0] >= d.bbox[0]:
+        return False
+    row_gap = min(m.y for m in below) - max(m.y for m in above)
+    return row_gap >= 8.0
+
+
+def recover_option_text_from_marker_bands(
+    page_lines: List[dict],
+    markers: List[OptionMarker],
+    next_boundary_y: float,
+    visual_bboxes: Optional[List[BBox]] = None,
+    band_horizontal: float = 18.0,
+    band_grid: float = 18.0,
+) -> dict[str, str]:
+    """Fallback option-text recovery with **wider y-bands** than
+    ``extract_option_text``.
+
+    Designed for cases where the primary extractor returned empty option text:
+
+      * stacked fractions ("k over mg") in horizontal layouts where the
+        numerator and denominator land 6-12 pt above / below the marker row,
+        outside the primary ±7 pt band;
+      * vertically-laid options whose text wraps onto multiple lines below
+        the marker;
+      * proper 2x2 grid layouts where each option's text spans nearby y-bands.
+
+    The function is intentionally only a *recovery* pass — callers should
+    apply its output **only** to options that came back empty from the
+    primary extractor. Real option markers (bold standalone A/B/C/D) found
+    inside the per-option band are skipped so they're not absorbed as text.
+
+    Spans whose centre falls inside any of ``visual_bboxes`` are excluded so
+    that recovery never sweeps diagram-interior text into option text. For
+    grid layouts, the function refuses to fire unless the 4 markers form a
+    proper A=TL / B=TR / C=BL / D=BR 2x2 — preventing fabrication when the
+    "markers" are actually scattered diagram labels.
+    """
+    out: dict[str, str] = {m.label: "" for m in markers}
+    if not markers:
+        return out
+    layout = classify_option_layout(markers)
+    visual_bboxes = list(visual_bboxes or [])
+
+    def _ok(s: Span) -> bool:
+        """Span is eligible for recovery: not a marker letter, not inside a
+        diagram, has non-empty text."""
+        t = s.text.strip()
+        if not t:
+            return False
+        if t in OPTION_LABELS and s.is_bold:
+            return False
+        if _span_inside_any(s.bbox, visual_bboxes):
+            return False
+        return True
+
+    # Horizontal: wide y-band around the marker row, x-bounded by neighbours
+    if layout == "horizontal":
+        line_y = sum(m.y for m in markers) / len(markers)
+        spans_band: List[Span] = []
+        x_max = 0.0
+        for line in page_lines:
+            ly = (line["bbox"][1] + line["bbox"][3]) / 2
+            if abs(ly - line_y) <= band_horizontal:
+                spans_band.extend(line["spans"])
+                x_max = max(x_max, line["bbox"][2])
+        sorted_m = sorted(markers, key=lambda m: m.bbox[0])
+        for i, m in enumerate(sorted_m):
+            x_start = m.bbox[2]
+            x_end = sorted_m[i + 1].bbox[0] - 0.5 if i + 1 < len(sorted_m) else x_max
+            pieces: List[Tuple[float, float, str]] = []
+            for s in spans_band:
+                cx = (s.bbox[0] + s.bbox[2]) / 2
+                if not (x_start <= cx <= x_end):
+                    continue
+                if not _ok(s):
+                    continue
+                pieces.append((s.bbox[1], s.bbox[0], s.text))
+            pieces.sort()
+            out[m.label] = " ".join(p[2] for p in pieces).strip()
+        return out
+
+    # Vertical: capture multi-line wrapped text below each marker until next
+    if layout == "vertical":
+        sorted_m = sorted(markers, key=lambda m: m.y)
+        for i, m in enumerate(sorted_m):
+            y_start = m.bbox[1] - 2
+            y_end = (
+                sorted_m[i + 1].bbox[1] - 2
+                if i + 1 < len(sorted_m)
+                else next_boundary_y
+            )
+            pieces2: List[Tuple[float, str]] = []
+            for line in page_lines:
+                ly = (line["bbox"][1] + line["bbox"][3]) / 2
+                if not (y_start <= ly <= y_end):
+                    continue
+                line_text_pieces: List[str] = []
+                for s in line["spans"]:
+                    if s.bbox[0] < m.bbox[2] - 4:
+                        continue
+                    if not _ok(s):
+                        continue
+                    line_text_pieces.append(s.text)
+                line_text = "".join(line_text_pieces).strip()
+                if line_text:
+                    pieces2.append((ly, line_text))
+            pieces2.sort()
+            out[m.label] = " ".join(p[1] for p in pieces2).strip()
+        return out
+
+    # Grid: only fire for a clean 2x2 layout (A=TL, B=TR, C=BL, D=BR). Anything
+    # else ("scattered diagram labels") is left empty so recovery never invents
+    # option text from diagram interiors.
+    if layout == "grid":
+        if not _proper_two_by_two(markers):
+            return out
+        by_label = {m.label: m for m in markers}
+        # Per marker: x bounded by its same-row sibling, y bounded by ±band_grid
+        same_row = {
+            "A": ("A", "B"), "B": ("A", "B"),
+            "C": ("C", "D"), "D": ("C", "D"),
+        }
+        for label, (left_lbl, right_lbl) in same_row.items():
+            m = by_label[label]
+            if label == left_lbl:
+                x_start = m.bbox[2]
+                x_end = by_label[right_lbl].bbox[0] - 1
+            else:
+                x_start = m.bbox[2]
+                # Right column: stretch to far right of any line
+                x_end = max(
+                    (line["bbox"][2] for line in page_lines), default=600.0
+                )
+            pieces3: List[Tuple[float, float, str]] = []
+            for line in page_lines:
+                ly = (line["bbox"][1] + line["bbox"][3]) / 2
+                if abs(ly - m.y) > band_grid:
+                    continue
+                for s in line["spans"]:
+                    cx = (s.bbox[0] + s.bbox[2]) / 2
+                    if not (x_start <= cx <= x_end):
+                        continue
+                    if not _ok(s):
+                        continue
+                    pieces3.append((s.bbox[1], s.bbox[0], s.text))
+            pieces3.sort()
+            out[label] = " ".join(p[2] for p in pieces3).strip()
+        return out
+
+    # Partial / unknown layouts — do not fabricate.
+    return out
+
+
 def _inside(bbox: BBox, region: BBox) -> bool:
     cx = (bbox[0] + bbox[2]) / 2
     cy = (bbox[1] + bbox[3]) / 2

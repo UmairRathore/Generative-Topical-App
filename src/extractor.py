@@ -38,6 +38,7 @@ from .options import (
     find_option_markers,
     get_lines,
     get_spans,
+    recover_option_text_from_marker_bands,
 )
 from .utils import (
     BBox,
@@ -855,9 +856,14 @@ class PaperExtractor:
             )
             debug_annos.append((pidx, (v.bbox, kind_label, f"Q{region.number}")))
 
-        # Build options list
+        # Build options list (passes ``warnings`` so the recovery pass can
+        # record per-option "remained empty after recovery" notes; visuals
+        # are forwarded so recovery never sweeps diagram-interior text into
+        # option text).
         options = self._build_options(
-            markers, lines_q, last_pidx, next_boundary_y, option_images_by_label, option_table
+            markers, lines_q, last_pidx, next_boundary_y,
+            option_images_by_label, option_table, warnings=warnings,
+            visual_bboxes=[v.bbox for (pp, v) in visuals_q if pp == last_pidx],
         )
 
         # Validate options A-D
@@ -1143,8 +1149,12 @@ class PaperExtractor:
         next_boundary_y: float,
         option_images: Dict[str, List[ImageAsset]],
         option_table: Optional[OptionTable],
+        warnings: Optional[List[str]] = None,
+        visual_bboxes: Optional[List[BBox]] = None,
     ) -> List[Option]:
         options: List[Option] = []
+        warnings = warnings if warnings is not None else []
+        visual_bboxes = list(visual_bboxes or [])
 
         # 1) If we have an option_table, synthesize 4 Options from its rows.
         if option_table:
@@ -1174,16 +1184,39 @@ class PaperExtractor:
 
         text_by_label = extract_option_text(last_page_lines, markers, next_boundary_y)
 
-        for label in OPTION_LABELS:
-            if label not in {m.label for m in markers}:
-                continue
-            options.append(
-                Option(
-                    label=label,
-                    text=text_by_label.get(label, "").strip(),
-                    images=option_images.get(label, []),
-                )
+        # ---- Fallback: marker-band recovery ---------------------------------
+        # When the primary extractor returns empty for one or more options
+        # (typically stacked fractions, multi-line wraps, or grid/partial
+        # layouts), retry with wider y-bands. We only *fill* empty entries —
+        # never overwrite text that the primary extractor already produced.
+        marker_labels = {m.label for m in markers}
+        empty_labels = [
+            lbl for lbl in marker_labels
+            if not (text_by_label.get(lbl) or "").strip()
+            and not option_images.get(lbl)
+        ]
+        if empty_labels:
+            recovered = recover_option_text_from_marker_bands(
+                last_page_lines, markers, next_boundary_y,
+                visual_bboxes=visual_bboxes,
             )
+            for lbl in empty_labels:
+                rec = (recovered.get(lbl) or "").strip()
+                if rec:
+                    text_by_label[lbl] = rec
+
+        for label in OPTION_LABELS:
+            if label not in marker_labels:
+                continue
+            text = (text_by_label.get(label) or "").strip()
+            imgs = option_images.get(label, [])
+            options.append(
+                Option(label=label, text=text, images=imgs)
+            )
+            if not text and not imgs:
+                warnings.append(
+                    f"Option {label} remained empty after marker-band recovery."
+                )
         return options
 
     def _expand_visual(
