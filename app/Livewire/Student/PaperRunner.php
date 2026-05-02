@@ -118,6 +118,6 @@ class PaperRunner extends Component
         return view('livewire.student.paper-runner', [
             'data' => $data,
             'total' => $this->questions->count(),
-        ])->layout('components.layouts.site');
+        ])->layout('components.layouts.public');
     }
 }

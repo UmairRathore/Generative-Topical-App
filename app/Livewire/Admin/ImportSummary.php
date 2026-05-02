@@ -32,6 +32,6 @@ class ImportSummary extends Component
         return view('livewire.admin.import-summary', [
             'batches' => $batches,
             'stats' => $stats,
-        ])->layout('components.layouts.site');
+        ])->layout('components.layouts.dashboard');
     }
 }

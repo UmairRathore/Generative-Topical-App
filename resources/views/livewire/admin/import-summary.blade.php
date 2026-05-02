@@ -1,11 +1,24 @@
-<div class="mx-auto w-full max-w-5xl space-y-8 p-6">
-    <header>
-        <h1 class="text-2xl font-bold">Import summary</h1>
-        <p class="text-sm text-neutral-500">Run <code>php artisan cambpast:import</code> from the project root to add new papers.</p>
+<div class="mx-auto w-full max-w-5xl space-y-8 p-6 lg:p-10">
+    <header class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate">Admin</div>
+            <h1 class="font-display text-3xl font-semibold tracking-tight text-brand-emerald">Import summary</h1>
+            <p class="mt-2 text-sm text-brand-charcoal/70">Run <code class="rounded bg-brand-surface px-1 py-0.5 text-brand-emerald">php artisan cambpast:import</code> from the project root to add new papers.</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('admin.papers') }}"
+               class="rounded-md border border-brand-border bg-white px-4 py-2 text-sm font-semibold text-brand-emerald transition hover:border-brand-gold">
+                Manage papers &rarr;
+            </a>
+            <a href="{{ route('admin.questions') }}"
+               class="rounded-md bg-brand-emerald px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-forest">
+                Browse questions &rarr;
+            </a>
+        </div>
     </header>
 
     <section>
-        <h2 class="mb-3 text-lg font-semibold">Counts</h2>
+        <h2 class="mb-3 font-display text-xl font-semibold text-brand-emerald">Counts</h2>
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
             @foreach ([
                 ['papers',       'Papers'],
@@ -19,20 +32,20 @@
                 ['failed',       'Failed'],
                 ['needs_review', 'Needs review'],
             ] as [$key, $label])
-                <div class="rounded-md border border-neutral-200 p-3 dark:border-neutral-700">
-                    <div class="text-xl font-bold">{{ $stats[$key] }}</div>
-                    <div class="text-xs uppercase text-neutral-500">{{ $label }}</div>
+                <div class="rounded-xl border border-brand-border bg-white p-4 shadow-sm">
+                    <div class="font-display text-2xl font-semibold text-brand-emerald">{{ $stats[$key] }}</div>
+                    <div class="mt-1 text-[11px] uppercase tracking-[0.18em] text-brand-slate">{{ $label }}</div>
                 </div>
             @endforeach
         </div>
     </section>
 
     <section>
-        <h2 class="mb-3 text-lg font-semibold">Recent import batches</h2>
+        <h2 class="mb-3 font-display text-xl font-semibold text-brand-emerald">Recent import batches</h2>
         @if ($batches->isEmpty())
-            <p class="text-neutral-500">No batches recorded yet.</p>
+            <p class="text-brand-slate">No batches recorded yet.</p>
         @else
-            <ul class="divide-y divide-neutral-200 rounded-md border border-neutral-200 dark:divide-neutral-700 dark:border-neutral-700">
+            <ul class="divide-y divide-brand-border rounded-xl border border-brand-border bg-white shadow-sm">
                 @foreach ($batches as $batch)
                     <li class="space-y-1 p-3 text-sm">
                         <div class="flex items-center justify-between">

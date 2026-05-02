@@ -32,6 +32,6 @@ class SubjectShow extends Component
         return view('livewire.student.subject-show', [
             'papers' => $papers,
             'totalDemoSafe' => $totalDemoSafe,
-        ])->layout('components.layouts.site');
+        ])->layout('components.layouts.public');
     }
 }

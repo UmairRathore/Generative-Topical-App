@@ -10,6 +10,24 @@
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: 'Fraunces', ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
+
+    /* Generative Topical brand */
+    --color-brand-emerald: #0B3D2E;
+    --color-brand-forest: #14532D;
+    --color-brand-gold: #D4A437;
+    --color-brand-gold-soft: #E9C063;
+    --color-brand-ivory: #FAF7EF;
+    --color-brand-charcoal: #111827;
+    --color-brand-slate: #64748B;
+
+    /* Functional / status colors */
+    --color-status-success: #16A34A;
+    --color-status-warning: #F59E0B;
+    --color-status-error: #DC2626;
+    --color-status-info: #475569;
+    --color-brand-border: #E5E7EB;
+    --color-brand-surface: #F8FAFC;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -23,16 +41,16 @@
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    --color-accent: var(--color-brand-emerald);
+    --color-accent-content: var(--color-brand-emerald);
     --color-accent-foreground: var(--color-white);
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-brand-gold);
+        --color-accent-content: var(--color-brand-gold);
+        --color-accent-foreground: var(--color-brand-charcoal);
     }
 }
 
@@ -44,6 +62,17 @@
     ::backdrop,
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
+    }
+
+    body {
+        background-color: var(--color-brand-ivory);
+        color: var(--color-brand-charcoal);
+    }
+
+    .font-display {
+        font-family: var(--font-serif);
+        font-feature-settings: "ss01", "ss02";
+        letter-spacing: -0.01em;
     }
 }
 
@@ -60,7 +89,3 @@ textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
-
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */

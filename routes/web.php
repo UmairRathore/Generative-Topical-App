@@ -1,6 +1,11 @@
 <?php
 
 use App\Livewire\Admin\ImportSummary;
+use App\Livewire\Admin\PaperForm;
+use App\Livewire\Admin\PaperIndex;
+use App\Livewire\Admin\PaperQuestions;
+use App\Livewire\Admin\QuestionBrowser;
+use App\Livewire\Admin\QuestionForm;
 use App\Livewire\Student\PaperRunner;
 use App\Livewire\Student\PracticeRunner;
 use App\Livewire\Student\ResultSummary;
@@ -23,6 +28,14 @@ Route::view('dashboard', 'dashboard')
 
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('imports', ImportSummary::class)->name('imports');
+    Route::get('questions', QuestionBrowser::class)->name('questions');
+
+    Route::get('papers', PaperIndex::class)->name('papers');
+    Route::get('papers/create', PaperForm::class)->name('papers.create');
+    Route::get('papers/{paper}/edit', PaperForm::class)->name('papers.edit');
+    Route::get('papers/{paper}/questions', PaperQuestions::class)->name('papers.questions');
+    Route::get('papers/{paper}/questions/create', QuestionForm::class)->name('papers.questions.create');
+    Route::get('papers/{paper}/questions/{question}/edit', QuestionForm::class)->name('papers.questions.edit');
 });
 
 Route::middleware(['auth'])->group(function () {

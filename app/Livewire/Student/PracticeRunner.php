@@ -124,6 +124,6 @@ class PracticeRunner extends Component
 
         return view('livewire.student.practice-runner', [
             'data' => $data,
-        ])->layout('components.layouts.site');
+        ])->layout('components.layouts.public');
     }
 }

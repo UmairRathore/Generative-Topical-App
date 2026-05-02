@@ -28,6 +28,6 @@ class ResultSummary extends Component
             'correct' => $correct,
             'incorrect' => $incorrect,
             'unscored' => $unscored,
-        ])->layout('components.layouts.site');
+        ])->layout('components.layouts.public');
     }
 }
