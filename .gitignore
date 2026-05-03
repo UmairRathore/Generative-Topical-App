@@ -31,3 +31,6 @@ yarn-error.log
 CLAUDE.md
 /storage/output
 /storage/papers/marksheets
+
+# Local screenshot captures
+/screenshots

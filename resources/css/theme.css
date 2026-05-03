@@ -1,0 +1,206 @@
+/* ╔═══════════════════════════════════════════════════════════════════╗
+   ║                                                                   ║
+   ║   GENERATIVE TOPICAL — THEME COLORS                               ║
+   ║                                                                   ║
+   ║   Edit the hex codes below to re-skin the entire app.             ║
+   ║   No other file needs to change.                                  ║
+   ║                                                                   ║
+   ║   After editing, run:                                             ║
+   ║     npm run build                 (production build)              ║
+   ║     npm run dev                   (HMR while developing)          ║
+   ║                                                                   ║
+   ║   Sections:                                                       ║
+   ║     1. Brand emerald  (primary)                                   ║
+   ║     2. Brand gold     (accent)                                    ║
+   ║     3. Neutrals       (page background, cards, borders)           ║
+   ║     4. Text & slate   (typography)                                ║
+   ║     5. Semantic       (success / warning / error / info)          ║
+   ║     6. QA badges      (domain-specific)                           ║
+   ║     7. Dark theme     (overrides for opt-in dark mode)            ║
+   ║                                                                   ║
+   ╚═══════════════════════════════════════════════════════════════════╝ */
+
+/* ──────────────────────────────────────────────────────────────────────
+   TAILWIND TOKENS — referenced by class names like `bg-brand-emerald`
+   ────────────────────────────────────────────────────────────────────── */
+@theme {
+    /* Fonts */
+    --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-serif: 'Cormorant Garamond', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
+    --font-mono:  'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+
+    /* 1. Brand emerald (primary) */
+    --color-brand-emerald:    #0B3D2E;   /* primary brand */
+    --color-brand-forest:     #14532D;   /* hover, slightly lighter emerald */
+
+    /* 2. Brand gold (accent) */
+    --color-brand-gold:       #D4A437;
+    --color-brand-gold-soft:  #E5BC5C;
+
+    /* 3. Neutrals */
+    --color-brand-ivory:      #FAF7EF;
+    --color-brand-charcoal:   #111827;
+    --color-brand-slate:      #64748B;
+    --color-brand-border:     #E5E7EB;
+    --color-brand-surface:    #F8FAFC;
+
+    /* 5. Semantic */
+    --color-status-success: #16A34A;
+    --color-status-warning: #F59E0B;
+    --color-status-error:   #DC2626;
+    --color-status-info:    #475569;
+
+    /* Tailwind zinc scale (kept for compat with starter kit components) */
+    --color-zinc-50:  #fafafa;
+    --color-zinc-100: #f5f5f5;
+    --color-zinc-200: #e5e5e5;
+    --color-zinc-300: #d4d4d4;
+    --color-zinc-400: #a3a3a3;
+    --color-zinc-500: #737373;
+    --color-zinc-600: #525252;
+    --color-zinc-700: #404040;
+    --color-zinc-800: #262626;
+    --color-zinc-900: #171717;
+    --color-zinc-950: #0a0a0a;
+
+    /* Flux accent shortcuts (used by Flux components) */
+    --color-accent:             var(--color-brand-emerald);
+    --color-accent-content:     var(--color-brand-emerald);
+    --color-accent-foreground:  var(--color-white);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   DESIGN-SYSTEM TOKENS — referenced everywhere via var(--xxx)
+   These are what the .btn, .card, .badge, sidebar, etc. read from.
+   IF YOU CHANGE A HEX HERE, ALSO CHANGE THE MATCHING ONE IN @theme ABOVE
+   so the Tailwind utility classes stay in sync.
+   ────────────────────────────────────────────────────────────────────── */
+:root {
+    /* 1. Brand emerald (primary) — used for sidebar, buttons, links */
+    --emerald-900: #082A20;   /* darkest, hero gradient end */
+    --emerald-800: #0B3D2E;   /* primary brand color (sidebar bg, btn-primary) */
+    --emerald-700: #14532D;   /* hover, gradient mid */
+    --emerald-600: #1B6B3F;
+    --emerald-500: #2C8559;
+    --emerald-50:  #ECF4EE;   /* tinted backgrounds, badges */
+
+    /* 2. Brand gold (accent) — used for CTAs, highlights, gold accents */
+    --gold-700: #A8801F;
+    --gold-600: #BC8E26;
+    --gold-500: #D4A437;      /* primary gold accent */
+    --gold-400: #E5BC5C;
+    --gold-100: #F6E7BE;
+    --gold-50:  #FBF5E2;
+
+    /* 3. Neutrals (page surface) */
+    --ivory:        #FAF7EF;  /* main page background */
+    --ivory-deep:   #F4EFE2;  /* slightly darker (e.g. login left panel) */
+    --paper:        #FFFFFF;  /* cards, inputs */
+    --soft-surface: #F8FAFC;  /* subtle hover/section bg */
+    --border:       #E5E7EB;  /* card / input borders */
+    --border-soft:  #EEF1F4;  /* table row borders */
+
+    /* 4. Text & slate scale */
+    --charcoal:     #111827;  /* primary text */
+    --slate-900:    #0F172A;
+    --slate-700:    #334155;
+    --slate-600:    #475569;  /* secondary text */
+    --slate-500:    #64748B;  /* tertiary text / faint */
+    --slate-400:    #94A3B8;
+    --slate-300:    #CBD5E1;
+    --slate-200:    #E2E8F0;
+    --slate-100:    #F1F5F9;
+
+    /* 5. Semantic (status messages, alerts) */
+    --success:      #16A34A;
+    --success-soft: #DCFCE7;
+    --warning:      #F59E0B;
+    --warning-soft: #FEF3C7;
+    --error:        #DC2626;
+    --error-soft:   #FEE2E2;
+    --info:         #475569;
+    --info-soft:    #E2E8F0;
+
+    /* 6. QA badges (domain-specific — Cambridge MCQ pipeline) */
+    --qa-pass:     #16A34A;
+    --qa-review:   #F59E0B;
+    --qa-blocker:  #DC2626;
+    --qa-render:   #475569;
+    --qa-fallback: #BC8E26;
+
+    /* App role-derived (don't usually need to edit these) */
+    --bg:            var(--ivory);
+    --surface:       var(--paper);
+    --text:          var(--charcoal);
+    --text-soft:     var(--slate-600);
+    --text-faint:    var(--slate-500);
+    --accent:        var(--gold-500);
+    --accent-soft:   var(--gold-100);
+    --primary:       var(--emerald-800);
+    --primary-hover: var(--emerald-700);
+}
+
+/* Accent gold variants (toggle via <html data-accent="brass|champagne">) */
+[data-accent="brass"] {
+    --gold-700: #8C6A1B;
+    --gold-600: #A07D24;
+    --gold-500: #B8902C;
+    --gold-400: #CFA64C;
+    --gold-100: #EFE0B6;
+    --gold-50:  #F6EDD2;
+    --accent:      var(--gold-500);
+    --accent-soft: var(--gold-100);
+}
+[data-accent="champagne"] {
+    --gold-700: #B5904A;
+    --gold-600: #C9A865;
+    --gold-500: #DCBE82;
+    --gold-400: #E8D2A4;
+    --gold-100: #F5E9CF;
+    --gold-50:  #FAF1DE;
+    --accent:      var(--gold-500);
+    --accent-soft: var(--gold-100);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   7. DARK THEME — overrides triggered by either:
+      <html class="dark">             (Flux's appearance toggle)
+      <html data-theme="dark">         (custom switcher)
+   ────────────────────────────────────────────────────────────────────── */
+.dark,
+[data-theme="dark"] {
+    --ivory:        #0E1A15;
+    --ivory-deep:   #0A1410;
+    --paper:        #131F1A;
+    --soft-surface: #0F1A16;
+    --border:       #1E2B25;
+    --border-soft:  #182520;
+
+    --bg:           #0A1410;
+    --surface:      #131F1A;
+    --text:         #ECF4EE;
+    --text-soft:    #A6B5AC;
+    --text-faint:   #7A8A82;
+
+    --charcoal:     #ECF4EE;
+
+    --slate-900:    #ECF4EE;
+    --slate-700:    #C5D2CB;
+    --slate-600:    #9AAAA1;
+    --slate-500:    #7E8E85;
+    --slate-400:    #6A7A72;
+    --slate-300:    #4A5851;
+    --slate-200:    #2A352F;
+    --slate-100:    #1E2A24;
+
+    --primary:       #1B6B3F;
+    --primary-hover: #2C8559;
+
+    --emerald-800:  #0F4A37;
+    --emerald-700:  #14532D;
+
+    /* Shadows softer for dark surfaces */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40), 0 1px 3px rgba(0, 0, 0, 0.30);
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.40), 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.50), 0 2px 6px rgba(0, 0, 0, 0.35);
+}

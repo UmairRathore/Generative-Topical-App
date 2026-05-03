@@ -156,6 +156,7 @@
                 </div>
                 <div class="flex-1"></div>
                 <button class="btn btn-ghost btn-sm" style="padding: 8px;"><x-icon name="bell" size="17"/></button>
+                <x-theme-toggle />
                 <button class="btn btn-ghost btn-sm" style="padding: 8px;"><x-icon name="settings" size="17"/></button>
             </header>
 

@@ -1,4 +1,13 @@
+/*
+ *  Generative Topical — global stylesheet
+ *
+ *  Colour tokens live in `theme.css` (edit hex codes there to re-skin the app).
+ *  This file owns: Tailwind setup, layout primitives (radii / shadows / density),
+ *  base typography, and the .btn / .card / .badge / .tbl / .chip utilities.
+ */
+
 @import 'tailwindcss';
+@import './theme.css';
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 @source "../views";
@@ -8,103 +17,17 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@theme {
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    --font-serif: 'Cormorant Garamond', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
-    --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
-
-    /* Brand tokens (kept for backward compat with earlier work) */
-    --color-brand-emerald: #0B3D2E;
-    --color-brand-forest: #14532D;
-    --color-brand-gold: #D4A437;
-    --color-brand-gold-soft: #E5BC5C;
-    --color-brand-ivory: #FAF7EF;
-    --color-brand-charcoal: #111827;
-    --color-brand-slate: #64748B;
-    --color-status-success: #16A34A;
-    --color-status-warning: #F59E0B;
-    --color-status-error: #DC2626;
-    --color-status-info: #475569;
-    --color-brand-border: #E5E7EB;
-    --color-brand-surface: #F8FAFC;
-
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
-    --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
-
-    --color-accent: var(--color-brand-emerald);
-    --color-accent-content: var(--color-brand-emerald);
-    --color-accent-foreground: var(--color-white);
-}
-
 /* ─────────────────────────────────────────────────────────────────
-   Generative Topical — Design Tokens (ported from Examined design)
+   LAYOUT PRIMITIVES — radii, shadows, density, font aliases
+   (Colour tokens are NOT here. See theme.css.)
    ─────────────────────────────────────────────────────────────── */
 :root {
-    /* Brand */
-    --emerald-900: #082A20;
-    --emerald-800: #0B3D2E;
-    --emerald-700: #14532D;
-    --emerald-600: #1B6B3F;
-    --emerald-500: #2C8559;
-    --emerald-50:  #ECF4EE;
-
-    /* Gold accents */
-    --gold-700: #A8801F;
-    --gold-600: #BC8E26;
-    --gold-500: #D4A437;
-    --gold-400: #E5BC5C;
-    --gold-100: #F6E7BE;
-    --gold-50:  #FBF5E2;
-
-    /* Neutrals */
-    --ivory:        #FAF7EF;
-    --ivory-deep:   #F4EFE2;
-    --paper:        #FFFFFF;
-    --soft-surface: #F8FAFC;
-    --border:       #E5E7EB;
-    --border-soft:  #EEF1F4;
-    --slate-900:    #0F172A;
-    --charcoal:     #111827;
-    --slate-700:    #334155;
-    --slate-600:    #475569;
-    --slate-500:    #64748B;
-    --slate-400:    #94A3B8;
-    --slate-300:    #CBD5E1;
-    --slate-200:    #E2E8F0;
-    --slate-100:    #F1F5F9;
-
-    /* Semantic */
-    --success: #16A34A;
-    --success-soft: #DCFCE7;
-    --warning: #F59E0B;
-    --warning-soft: #FEF3C7;
-    --error:   #DC2626;
-    --error-soft: #FEE2E2;
-    --info:    #475569;
-    --info-soft: #E2E8F0;
-
-    /* QA badges */
-    --qa-pass: #16A34A;
-    --qa-review: #F59E0B;
-    --qa-blocker: #DC2626;
-    --qa-render: #475569;
-    --qa-fallback: #BC8E26;
-
-    /* Type */
+    /* Type aliases (the actual font stacks are in theme.css's @theme block) */
     --serif: 'Cormorant Garamond', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
     --sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     --mono:  'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 
-    /* Radius */
+    /* Radii */
     --r-xs: 4px;
     --r-sm: 6px;
     --r-md: 8px;
@@ -128,42 +51,8 @@
     --gap-2: 16px;
     --gap-3: 24px;
     --gap-4: 32px;
-
-    /* App */
-    --bg: var(--ivory);
-    --surface: var(--paper);
-    --text: var(--charcoal);
-    --text-soft: var(--slate-600);
-    --text-faint: var(--slate-500);
-    --accent: var(--gold-500);
-    --accent-soft: var(--gold-100);
-    --primary: var(--emerald-800);
-    --primary-hover: var(--emerald-700);
 }
 
-/* Accent variants */
-[data-accent="brass"] {
-    --gold-700: #8C6A1B;
-    --gold-600: #A07D24;
-    --gold-500: #B8902C;
-    --gold-400: #CFA64C;
-    --gold-100: #EFE0B6;
-    --gold-50:  #F6EDD2;
-    --accent: var(--gold-500);
-    --accent-soft: var(--gold-100);
-}
-[data-accent="champagne"] {
-    --gold-700: #B5904A;
-    --gold-600: #C9A865;
-    --gold-500: #DCBE82;
-    --gold-400: #E8D2A4;
-    --gold-100: #F5E9CF;
-    --gold-50:  #FAF1DE;
-    --accent: var(--gold-500);
-    --accent-soft: var(--gold-100);
-}
-
-/* Density */
 [data-density="spacious"] {
     --row-h: 52px;
     --pad-card: 32px;
@@ -181,42 +70,11 @@
     --gap-3: 18px;
 }
 
-/* Dark theme */
-[data-theme="dark"] {
-    --ivory:        #0E1A15;
-    --ivory-deep:   #0A1410;
-    --paper:        #131F1A;
-    --soft-surface: #0F1A16;
-    --border:       #1E2B25;
-    --border-soft:  #182520;
-    --bg: #0A1410;
-    --surface: #131F1A;
-    --text: #ECF4EE;
-    --text-soft: #A6B5AC;
-    --text-faint: #7A8A82;
-    --charcoal: #ECF4EE;
-    --slate-900: #ECF4EE;
-    --slate-700: #C5D2CB;
-    --slate-600: #9AAAA1;
-    --slate-500: #7E8E85;
-    --slate-400: #6A7A72;
-    --slate-300: #4A5851;
-    --slate-200: #2A352F;
-    --slate-100: #1E2A24;
-    --primary: #1B6B3F;
-    --primary-hover: #2C8559;
-    --emerald-800: #0F4A37;
-    --emerald-700: #14532D;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md: 0 2px 4px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.35);
-    --shadow-lg: 0 8px 24px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.35);
-}
-
 @layer theme {
     .dark {
-        --color-accent: var(--color-brand-gold);
-        --color-accent-content: var(--color-brand-gold);
-        --color-accent-foreground: var(--color-brand-charcoal);
+        --color-accent:             var(--color-brand-gold);
+        --color-accent-content:     var(--color-brand-gold);
+        --color-accent-foreground:  var(--color-brand-charcoal);
     }
 }
 

@@ -22,6 +22,7 @@
             <a href="{{ route('about') }}" wire:navigate style="color: var(--text-soft);">About</a>
         </nav>
         <div class="flex-1"></div>
+        <x-theme-toggle class="mr-1" />
         @auth
             <a href="{{ route('dashboard') }}" wire:navigate class="btn btn-primary btn-sm">Dashboard</a>
         @else
