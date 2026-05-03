@@ -246,10 +246,16 @@
                                 <span class="italic">Answer key pending</span>
                             @endif
                         </div>
-                        <button type="button" wire:click="toggleRaw({{ $question->id }})"
-                                class="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-600 dark:hover:bg-neutral-800">
-                            {{ $rawExpanded ? 'Hide' : 'View' }} raw payload
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('admin.questions.review', $question) }}" wire:navigate
+                               class="rounded border border-brand-emerald/40 bg-brand-emerald/5 px-2 py-1 font-semibold text-brand-emerald hover:bg-brand-emerald hover:text-white transition">
+                                Open QA review →
+                            </a>
+                            <button type="button" wire:click="toggleRaw({{ $question->id }})"
+                                    class="rounded border border-neutral-300 px-2 py-1 hover:bg-neutral-100 dark:border-neutral-600 dark:hover:bg-neutral-800">
+                                {{ $rawExpanded ? 'Hide' : 'View' }} raw payload
+                            </button>
+                        </div>
                     </div>
 
                     @if ($rawExpanded)

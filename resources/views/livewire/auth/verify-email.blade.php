@@ -7,55 +7,42 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
-    /**
-     * Send an email verification notification to the user.
-     */
     public function sendVerification(): void
     {
         if (Auth::user()->hasVerifiedEmail()) {
             $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
-
             return;
         }
-
         Auth::user()->sendEmailVerificationNotification();
-
         Session::flash('status', 'verification-link-sent');
     }
 
-    /**
-     * Log the current user out of the application.
-     */
     public function logout(Logout $logout): void
     {
         $logout();
-
         $this->redirect('/', navigate: true);
     }
 }; ?>
 
-<div class="mt-4 flex flex-col gap-6">
-    <div class="text-center text-sm text-gray-600">
-        {{ __('Please verify your email address by clicking on the link we just emailed to you.') }}
-    </div>
+<div class="flex items-center justify-center" style="min-height: 100vh; padding: 60px 20px;">
+    <div style="width: 100%; max-width: 460px; background: var(--surface); border-radius: 14px; padding: 44px; box-shadow: var(--shadow-md); border: 1px solid var(--border); text-align: center;">
+        <x-crest size="48" style="margin: 0 auto;"/>
+        <div class="uppercase-eyebrow" style="justify-content: center; margin-top: 18px;">Almost there</div>
+        <h1 class="serif" style="font-size: 28px; font-weight: 600; margin-top: 8px;">Check your inbox</h1>
+        <p style="color: var(--text-soft); margin-top: 8px; font-size: 14px;">We've sent a verification link to your email address.</p>
 
-    @if (session('status') == 'verification-link-sent')
-        <div class="font-medium text-center text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
-        </div>
-    @endif
+        @if (session('status') == 'verification-link-sent')
+            <div style="margin-top: 18px; padding: 12px 14px; border: 1px solid #BBF7D0; background: var(--success-soft); color: #15803D; border-radius: 8px; font-size: 13px;">
+                A new verification link has just been sent.
+            </div>
+        @endif
 
-    <div class="flex flex-col items-center justify-between space-y-3">
-        <flux:button wire:click="sendVerification" variant="primary" class="w-full">
-            {{ __('Resend verification email') }}
-        </flux:button>
+        <button wire:click="sendVerification" class="btn btn-primary" style="width: 100%; margin-top: 22px; padding: 14px 20px;">
+            Resend verification email <x-icon name="send" size="14"/>
+        </button>
 
-        <button
-            wire:click="logout"
-            type="submit"
-            class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-            {{ __('Log out') }}
+        <button wire:click="logout" type="button" style="margin-top: 14px; background: transparent; border: 0; font-size: 13px; color: var(--text-soft); text-decoration: underline; text-decoration-color: var(--gold-700);">
+            Log out
         </button>
     </div>
 </div>

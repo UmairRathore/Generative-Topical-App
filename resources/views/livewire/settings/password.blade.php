@@ -4,16 +4,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new #[Layout('components.layouts.dashboard')] class extends Component {
     public string $current_password = '';
     public string $password = '';
     public string $password_confirmation = '';
 
-    /**
-     * Update the password for the currently authenticated user.
-     */
     public function updatePassword(): void
     {
         try {
@@ -23,62 +21,30 @@ new class extends Component {
             ]);
         } catch (ValidationException $e) {
             $this->reset('current_password', 'password', 'password_confirmation');
-
             throw $e;
         }
-
-        Auth::user()->update([
-            'password' => Hash::make($validated['password']),
-        ]);
-
+        Auth::user()->update(['password' => Hash::make($validated['password'])]);
         $this->reset('current_password', 'password', 'password_confirmation');
-
         $this->dispatch('password-updated');
     }
 }; ?>
 
-<section class="w-full">
-    @include('partials.settings-heading')
+<x-settings.layout heading="Password & security" subheading="Use a long, unique password to keep your account secure.">
+    <form wire:submit="updatePassword">
+        <label class="label">Current password</label>
+        <input class="input" type="password" wire:model="current_password" required autocomplete="current-password"/>
+        @error('current_password')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-    <x-settings.layout heading="Update password" subheading="Ensure your account is using a long, random password to stay secure">
-        <form wire:submit="updatePassword" class="mt-6 space-y-6">
-            <flux:input
-                wire:model="current_password"
-                id="update_password_current_passwordpassword"
-                label="{{ __('Current password') }}"
-                type="password"
-                name="current_password"
-                required
-                autocomplete="current-password"
-            />
-            <flux:input
-                wire:model="password"
-                id="update_password_password"
-                label="{{ __('New password') }}"
-                type="password"
-                name="password"
-                required
-                autocomplete="new-password"
-            />
-            <flux:input
-                wire:model="password_confirmation"
-                id="update_password_password_confirmation"
-                label="{{ __('Confirm Password') }}"
-                type="password"
-                name="password_confirmation"
-                required
-                autocomplete="new-password"
-            />
+        <label class="label" style="margin-top: 14px;">New password</label>
+        <input class="input" type="password" wire:model="password" required autocomplete="new-password"/>
+        @error('password')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full">{{ __('Save') }}</flux:button>
-                </div>
+        <label class="label" style="margin-top: 14px;">Confirm new password</label>
+        <input class="input" type="password" wire:model="password_confirmation" required autocomplete="new-password"/>
 
-                <x-action-message class="me-3" on="password-updated">
-                    {{ __('Saved.') }}
-                </x-action-message>
-            </div>
-        </form>
-    </x-settings.layout>
-</section>
+        <div class="flex items-center" style="gap: 10px; margin-top: 28px;">
+            <button type="submit" class="btn btn-primary">Update password</button>
+            <x-action-message on="password-updated" style="font-size: 12px; color: var(--success);">Saved.</x-action-message>
+        </div>
+    </form>
+</x-settings.layout>

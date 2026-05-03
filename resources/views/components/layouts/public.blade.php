@@ -1,51 +1,57 @@
+@props(['title' => null])
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-accent="gold" data-density="comfortable" data-theme="light" data-grain="on">
 <head>
     @include('partials.head')
     @livewireStyles
 </head>
-<body class="min-h-screen bg-brand-ivory text-brand-charcoal antialiased">
-    <header class="bg-brand-emerald text-white">
-        <div class="border-b border-brand-gold/30">
-            <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-                <a href="{{ route('home') }}" class="flex items-baseline gap-2">
-                    <span class="font-display text-xl font-semibold tracking-tight text-white">Generative Topical</span>
-                    <span class="hidden text-xs uppercase tracking-[0.2em] text-brand-gold-soft sm:inline">Cambridge · Practice</span>
-                </a>
-                <nav class="flex items-center gap-6 text-sm">
-                    <a href="{{ route('subjects.show', 'a-level-physics') }}" class="hidden text-white/90 transition hover:text-brand-gold-soft sm:inline">A-Level Physics</a>
-                    <a href="{{ route('practice.random', 'a-level-physics') }}" class="hidden text-white/90 transition hover:text-brand-gold-soft sm:inline">Practice</a>
-                    @auth
-                        <a href="{{ route('dashboard') }}" class="text-white/90 transition hover:text-brand-gold-soft">Dashboard</a>
-                        <form method="POST" action="{{ route('logout') }}" class="inline">
-                            @csrf
-                            <button type="submit" class="text-white/70 transition hover:text-brand-gold-soft">Log out</button>
-                        </form>
-                    @else
-                        <a href="{{ route('login') }}" class="rounded-md border border-brand-gold/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-brand-gold-soft transition hover:bg-brand-gold hover:text-brand-emerald">
-                            Log in
-                        </a>
-                    @endauth
-                </nav>
+<body style="background: var(--ivory-deep); min-height: 100vh;">
+    {{-- Sticky blurred nav --}}
+    <header class="sticky top-0 z-10 flex items-center"
+            style="padding: 16px 60px; gap: 32px; background: rgba(250,247,239,0.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-soft);"
+            x-data="{ open: false }">
+        <a href="{{ route('home') }}" class="flex items-center gap-3" wire:navigate>
+            <x-crest size="30"/>
+            <div class="serif" style="font-size: 19px; font-weight: 600;">Generative Topical</div>
+        </a>
+        <nav class="hidden md:flex" style="gap: 28px; margin-left: 24px; font-size: 13px;">
+            <a href="{{ route('subjects.show', 'a-level-physics') }}" wire:navigate style="color: var(--text-soft);">Subjects</a>
+            <a href="#" style="color: var(--text-soft);">For Schools</a>
+            <a href="#" style="color: var(--text-soft);">For Teachers</a>
+            <a href="{{ route('pricing') }}" wire:navigate style="color: var(--text-soft);">Pricing</a>
+            <a href="{{ route('about') }}" wire:navigate style="color: var(--text-soft);">About</a>
+        </nav>
+        <div class="flex-1"></div>
+        @auth
+            <a href="{{ route('dashboard') }}" wire:navigate class="btn btn-primary btn-sm">Dashboard</a>
+        @else
+            <a href="{{ route('login') }}" wire:navigate class="btn btn-ghost btn-sm">Sign in</a>
+            <a href="{{ route('register') }}" wire:navigate class="btn btn-primary btn-sm">Get started</a>
+        @endauth
+        <button @click="open = !open" class="md:hidden" style="background: transparent; border: 0; padding: 6px;"><x-icon name="menu" size="20"/></button>
+        <div x-show="open" x-cloak @click.away="open = false" class="md:hidden absolute top-full left-0 right-0 bg-white border-b" style="border-color: var(--border);">
+            <div class="grid gap-3 p-6 text-sm">
+                <a href="{{ route('subjects.show', 'a-level-physics') }}" wire:navigate>Subjects</a>
+                <a href="{{ route('pricing') }}" wire:navigate>Pricing</a>
+                <a href="{{ route('about') }}" wire:navigate>About</a>
+                <a href="{{ route('contact') }}" wire:navigate>Contact</a>
             </div>
         </div>
-        <div class="h-1 bg-gradient-to-r from-brand-gold via-brand-gold-soft to-brand-gold"></div>
     </header>
 
-    <main>
-        {{ $slot }}
-    </main>
+    <main>{{ $slot }}</main>
 
-    <footer class="mt-16 border-t border-brand-border bg-white/60">
-        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-xs text-brand-slate">
-            <div>
-                <span class="font-display text-sm text-brand-emerald">Generative Topical</span>
-                <span class="ml-2">AI-Powered Assessment Platform</span>
-            </div>
-            <div class="text-[11px] uppercase tracking-[0.2em]">Cambridge · O Level · A Level · IGCSE</div>
+    {{-- Footer --}}
+    <footer class="flex justify-between" style="padding: 40px 60px; border-top: 1px solid var(--border-soft); margin-top: 40px; font-size: 12px; color: var(--text-faint);">
+        <div>© {{ date('Y') }} Generative Topical · Lahore · Karachi · Islamabad</div>
+        <div class="flex" style="gap: 18px;">
+            <a href="#" style="color: inherit;">Privacy</a>
+            <a href="#" style="color: inherit;">Terms</a>
+            <a href="{{ route('contact') }}" wire:navigate style="color: inherit;">Contact</a>
         </div>
     </footer>
 
     @livewireScripts
+    @fluxScripts
 </body>
 </html>

@@ -50,14 +50,43 @@ class User extends Authenticatable // implements MustVerifyEmail
         ];
     }
 
+    public function isStudent(): bool
+    {
+        return $this->role === UserRole::Student;
+    }
+
+    public function isTeacher(): bool
+    {
+        return $this->role === UserRole::Teacher;
+    }
+
+    /** True for school admins AND platform super admins. */
     public function isAdmin(): bool
+    {
+        return in_array($this->role, [UserRole::Admin, UserRole::SuperAdmin], true);
+    }
+
+    /** Strict: only school-level admin. */
+    public function isSchoolAdmin(): bool
     {
         return $this->role === UserRole::Admin;
     }
 
-    public function isStudent(): bool
+    /** Platform super admin (Generative Topical staff). */
+    public function isSuperAdmin(): bool
     {
-        return $this->role === UserRole::Student;
+        return $this->role === UserRole::SuperAdmin;
+    }
+
+    public function roleLabel(): string
+    {
+        return match ($this->role) {
+            UserRole::SuperAdmin => 'Super Admin',
+            UserRole::Admin      => 'School Admin',
+            UserRole::Teacher    => 'Teacher',
+            UserRole::Student    => 'Student',
+            default              => 'Member',
+        };
     }
 
     /**

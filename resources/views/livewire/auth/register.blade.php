@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -9,86 +10,102 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('components.layouts.auth')] class extends Component {
-    public string $name = '';
+    public string $first_name = '';
+    public string $last_name = '';
     public string $email = '';
+    public string $institution = '';
+    public string $city = 'Lahore';
     public string $password = '';
-    public string $password_confirmation = '';
+    public string $role_choice = 'student';
 
-    /**
-     * Handle an incoming registration request.
-     */
     public function register(): void
     {
         $validated = $this->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'first_name' => ['required', 'string', 'max:120'],
+            'last_name'  => ['required', 'string', 'max:120'],
+            'email'      => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'password'   => ['required', 'string', 'confirmed:password', Rules\Password::defaults()],
+            'role_choice'=> ['required', 'in:student,teacher,admin'],
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
+        $user = User::create([
+            'name' => trim($validated['first_name'].' '.$validated['last_name']),
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => match($validated['role_choice']) {
+                'teacher' => UserRole::Teacher,
+                'admin' => UserRole::Admin,
+                default => UserRole::Student,
+            },
+        ]);
 
-        event(new Registered(($user = User::create($validated))));
-
+        event(new Registered($user));
         Auth::login($user);
-
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }
 }; ?>
 
-<div class="flex flex-col gap-6">
-    <x-auth-header title="Create an account" description="Enter your details below to create your account" />
-
-    <!-- Session Status -->
-    <x-auth-session-status class="text-center" :status="session('status')" />
-
-    <form wire:submit="register" class="flex flex-col gap-6">
-        <!-- Name -->
-        <div class="grid gap-2">
-            <flux:input wire:model="name" id="name" label="{{ __('Name') }}" type="text" name="name" required autofocus autocomplete="name" placeholder="Full name" />
+<div class="flex items-center justify-center" style="min-height: 100vh; padding: 60px 20px;">
+    <div style="width: 100%; max-width: 540px; background: var(--surface); border-radius: 14px; padding: 44px; box-shadow: var(--shadow-md); border: 1px solid var(--border);">
+        <div class="flex items-center" style="gap: 12px; margin-bottom: 24px;">
+            <x-crest size="32"/>
+            <div class="serif" style="font-size: 19px; font-weight: 600;">Generative Topical</div>
         </div>
+        <div class="uppercase-eyebrow">Create account</div>
+        <h1 class="serif" style="font-size: 32px; font-weight: 600; margin-top: 8px; letter-spacing: -0.015em;">Start your 14-day free trial</h1>
+        <p style="color: var(--text-soft); margin-top: 6px; font-size: 14px;">No card required. Cancel anytime.</p>
 
-        <!-- Email Address -->
-        <div class="grid gap-2">
-            <flux:input wire:model="email" id="email" label="{{ __('Email address') }}" type="email" name="email" required autocomplete="email" placeholder="email@example.com" />
-        </div>
+        <form wire:submit="register">
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px;">
+                <div>
+                    <label class="label">First name</label>
+                    <input class="input" wire:model="first_name" placeholder="Ayesha" required autofocus/>
+                    @error('first_name')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="label">Last name</label>
+                    <input class="input" wire:model="last_name" placeholder="Farooq" required/>
+                    @error('last_name')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
+                </div>
+            </div>
 
-        <!-- Password -->
-        <div class="grid gap-2">
-            <flux:input
-                wire:model="password"
-                id="password"
-                label="{{ __('Password') }}"
-                type="password"
-                name="password"
-                required
-                autocomplete="new-password"
-                placeholder="Password"
-            />
-        </div>
+            <label class="label" style="margin-top: 14px;">Email</label>
+            <input class="input" type="email" wire:model="email" placeholder="you@school.edu.pk" required autocomplete="email"/>
+            @error('email')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-        <!-- Confirm Password -->
-        <div class="grid gap-2">
-            <flux:input
-                wire:model="password_confirmation"
-                id="password_confirmation"
-                label="{{ __('Confirm password') }}"
-                type="password"
-                name="password_confirmation"
-                required
-                autocomplete="new-password"
-                placeholder="Confirm password"
-            />
-        </div>
+            <label class="label" style="margin-top: 14px;">I am a</label>
+            <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                @foreach([['student', 'Student'], ['teacher', 'Teacher'], ['admin', 'School Admin']] as [$k, $l])
+                    <button type="button" wire:click="$set('role_choice', '{{ $k }}')"
+                            class="chip {{ $role_choice === $k ? 'chip-active' : '' }}"
+                            style="padding: 10px 12px; font-size: 13px; justify-content: center;">{{ $l }}</button>
+                @endforeach
+            </div>
 
-        <div class="flex items-center justify-end">
-            <flux:button type="submit" variant="primary" class="w-full">
-                {{ __('Create account') }}
-            </flux:button>
-        </div>
-    </form>
+            <label class="label" style="margin-top: 14px;">School / institution</label>
+            <input class="input" wire:model="institution" placeholder="Lahore Grammar School"/>
 
-    <div class="space-x-1 text-center text-sm text-zinc-600 dark:text-zinc-400">
-        Already have an account?
-        <x-text-link href="{{ route('login') }}">Log in</x-text-link>
+            <label class="label" style="margin-top: 14px;">City</label>
+            <select class="select" wire:model="city">
+                @foreach(['Lahore', 'Karachi', 'Islamabad', 'Rawalpindi', 'Faisalabad', 'Other'] as $c)
+                    <option value="{{ $c }}">{{ $c }}</option>
+                @endforeach
+            </select>
+
+            <label class="label" style="margin-top: 14px;">Password</label>
+            <input class="input" type="password" wire:model="password" placeholder="At least 8 characters" required autocomplete="new-password"/>
+            @error('password')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 24px; padding: 14px 20px; font-size: 14px;">
+                Create account &amp; start trial
+            </button>
+        </form>
+
+        <p class="text-center" style="margin-top: 18px; font-size: 12px; color: var(--text-faint); line-height: 1.55;">
+            By creating an account, you agree to our Terms of Service and Privacy Policy.
+        </p>
+        <p class="text-center" style="margin-top: 14px; font-size: 13px; color: var(--text-soft);">
+            Already have an account? <a href="{{ route('login') }}" wire:navigate style="color: var(--gold-700); font-weight: 600;">Sign in</a>
+        </p>
     </div>
 </div>

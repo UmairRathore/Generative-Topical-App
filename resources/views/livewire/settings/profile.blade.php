@@ -4,114 +4,82 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new #[Layout('components.layouts.dashboard')] class extends Component {
     public string $name = '';
     public string $email = '';
 
-    /**
-     * Mount the component.
-     */
     public function mount(): void
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
     }
 
-    /**
-     * Update the profile information for the currently authenticated user.
-     */
     public function updateProfileInformation(): void
     {
         $user = Auth::user();
-
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-
-            'email' => [
-                'required',
-                'string',
-                'lowercase',
-                'email',
-                'max:255',
-                Rule::unique(User::class)->ignore($user->id)
-            ],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique(User::class)->ignore($user->id)],
         ]);
-
         $user->fill($validated);
-
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
-
+        if ($user->isDirty('email')) $user->email_verified_at = null;
         $user->save();
-
         $this->dispatch('profile-updated', name: $user->name);
     }
 
-    /**
-     * Send an email verification notification to the current user.
-     */
     public function resendVerificationNotification(): void
     {
         $user = Auth::user();
-
         if ($user->hasVerifiedEmail()) {
             $this->redirectIntended(default: route('dashboard', absolute: false));
-
             return;
         }
-
         $user->sendEmailVerificationNotification();
-
         Session::flash('status', 'verification-link-sent');
     }
 }; ?>
 
-<section class="w-full">
-    @include('partials.settings-heading')
+<x-settings.layout heading="Profile" subheading="Your name and details visible to teachers and classmates.">
+    <div class="flex items-center" style="gap: 18px; margin-bottom: 24px;">
+        <div class="flex items-center justify-center serif" style="width: 78px; height: 78px; border-radius: 50%; background: var(--emerald-800); color: var(--ivory); font-size: 26px; font-weight: 600;">
+            {{ auth()->user()->initials() }}
+        </div>
+        <div>
+            <button type="button" class="btn btn-ghost btn-sm">Upload new photo</button>
+            <p style="font-size: 11px; color: var(--text-faint); margin-top: 6px;">JPG or PNG · max 4MB</p>
+        </div>
+    </div>
 
-    <x-settings.layout heading="Profile" subheading="Update your name and email address">
-        <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <flux:input wire:model="name" label="{{ __('Name') }}" type="text" name="name" required autofocus autocomplete="name" />
+    <form wire:submit="updateProfileInformation">
+        <label class="label">Name</label>
+        <input class="input" wire:model="name" required autofocus autocomplete="name"/>
+        @error('name')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-            <div>
-                <flux:input wire:model="email" label="{{ __('Email') }}" type="email" name="email" required autocomplete="email" />
+        <label class="label" style="margin-top: 14px;">Email</label>
+        <input class="input" type="email" wire:model="email" required autocomplete="email"/>
+        @error('email')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-                @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
-                    <div>
-                        <p class="mt-2 text-sm text-gray-800">
-                            {{ __('Your email address is unverified.') }}
-
-                            <button
-                                wire:click.prevent="resendVerificationNotification"
-                                class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            >
-                                {{ __('Click here to re-send the verification email.') }}
-                            </button>
-                        </p>
-
-                        @if (session('status') === 'verification-link-sent')
-                            <p class="mt-2 text-sm font-medium text-green-600">
-                                {{ __('A new verification link has been sent to your email address.') }}
-                            </p>
-                        @endif
-                    </div>
+        @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail && ! auth()->user()->hasVerifiedEmail())
+            <div style="margin-top: 14px; padding: 12px 14px; border: 1px solid #FDE68A; background: var(--warning-soft); color: #B45309; border-radius: 8px; font-size: 12px;">
+                Your email address is unverified.
+                <button type="button" wire:click.prevent="resendVerificationNotification" style="margin-left: 6px; background: transparent; border: 0; text-decoration: underline; color: inherit; font-weight: 600;">
+                    Resend verification email
+                </button>
+                @if (session('status') === 'verification-link-sent')
+                    <p style="margin-top: 6px; color: var(--success); font-weight: 500;">A new verification link has been sent.</p>
                 @endif
             </div>
+        @endif
 
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-end">
-                    <flux:button variant="primary" type="submit" class="w-full">{{ __('Save') }}</flux:button>
-                </div>
+        <div class="flex items-center" style="gap: 10px; margin-top: 28px;">
+            <button type="submit" class="btn btn-primary">Save changes</button>
+            <x-action-message on="profile-updated" style="font-size: 12px; color: var(--success);">Saved.</x-action-message>
+        </div>
+    </form>
 
-                <x-action-message class="me-3" on="profile-updated">
-                    {{ __('Saved.') }}
-                </x-action-message>
-            </div>
-        </form>
-
-        <livewire:settings.delete-user-form />
-    </x-settings.layout>
-</section>
+    <hr class="divider" style="margin: 28px 0 20px;"/>
+    <livewire:settings.delete-user-form/>
+</x-settings.layout>

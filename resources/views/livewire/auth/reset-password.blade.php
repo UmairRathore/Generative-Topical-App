@@ -17,19 +17,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
     public string $password = '';
     public string $password_confirmation = '';
 
-    /**
-     * Mount the component.
-     */
     public function mount(string $token): void
     {
         $this->token = $token;
-
         $this->email = request()->string('email');
     }
 
-    /**
-     * Reset the password for the given user.
-     */
     public function resetPassword(): void
     {
         $this->validate([
@@ -38,9 +31,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
             $this->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) {
@@ -48,70 +38,43 @@ new #[Layout('components.layouts.auth')] class extends Component {
                     'password' => Hash::make($this->password),
                     'remember_token' => Str::random(60),
                 ])->save();
-
                 event(new PasswordReset($user));
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
         if ($status != Password::PasswordReset) {
             $this->addError('email', __($status));
-
             return;
         }
 
         Session::flash('status', __($status));
-
         $this->redirectRoute('login', navigate: true);
     }
 }; ?>
 
-<div class="flex flex-col gap-6">
-    <x-auth-header title="Reset password" description="Please enter your new password below" />
-
-    <!-- Session Status -->
-    <x-auth-session-status class="text-center" :status="session('status')" />
-
-    <form wire:submit="resetPassword" class="flex flex-col gap-6">
-        <!-- Email Address -->
-        <div class="grid gap-2">
-            <flux:input wire:model="email" id="email" label="{{ __('Email') }}" type="email" name="email" required autocomplete="email" />
+<div class="flex items-center justify-center" style="min-height: 100vh; padding: 60px 20px;">
+    <div style="width: 100%; max-width: 460px; background: var(--surface); border-radius: 14px; padding: 44px; box-shadow: var(--shadow-md); border: 1px solid var(--border);">
+        <div class="flex items-center" style="gap: 12px; margin-bottom: 24px;">
+            <x-crest size="32"/>
+            <div class="serif" style="font-size: 19px; font-weight: 600;">Generative Topical</div>
         </div>
+        <div class="uppercase-eyebrow">Reset password</div>
+        <h1 class="serif" style="font-size: 28px; font-weight: 600; margin-top: 8px;">Choose a new password</h1>
+        <p style="color: var(--text-soft); margin-top: 6px; font-size: 14px;">Pick something strong — at least 8 characters.</p>
 
-        <!-- Password -->
-        <div class="grid gap-2">
-            <flux:input
-                wire:model="password"
-                id="password"
-                label="{{ __('Password') }}"
-                type="password"
-                name="password"
-                required
-                autocomplete="new-password"
-                placeholder="Password"
-            />
-        </div>
+        <form wire:submit="resetPassword" style="margin-top: 24px;">
+            <label class="label">Email</label>
+            <input class="input" type="email" wire:model="email" required autocomplete="email"/>
+            @error('email')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-        <!-- Confirm Password -->
-        <div class="grid gap-2">
-            <flux:input
-                wire:model="password_confirmation"
-                id="password_confirmation"
-                label="{{ __('Confirm password') }}"
-                type="password"
-                name="password_confirmation"
-                required
-                autocomplete="new-password"
-                placeholder="Confirm password"
-            />
-        </div>
+            <label class="label" style="margin-top: 14px;">New password</label>
+            <input class="input" type="password" wire:model="password" required autocomplete="new-password"/>
+            @error('password')<p style="color: var(--error); font-size: 12px; margin-top: 4px;">{{ $message }}</p>@enderror
 
-        <div class="flex items-center justify-end">
-            <flux:button type="submit" variant="primary" class="w-full">
-                {{ __('Reset password') }}
-            </flux:button>
-        </div>
-    </form>
+            <label class="label" style="margin-top: 14px;">Confirm new password</label>
+            <input class="input" type="password" wire:model="password_confirmation" required autocomplete="new-password"/>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 22px; padding: 14px 20px;">Reset password</button>
+        </form>
+    </div>
 </div>

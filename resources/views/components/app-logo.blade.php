@@ -1,6 +1,29 @@
-<div class="flex aspect-square size-8 items-center justify-center rounded-md bg-accent-content text-accent-foreground">
-    <x-app-logo-icon class="size-5 fill-current text-white dark:text-black" />
-</div>
-<div class="ml-1 grid flex-1 text-left text-sm">
-    <span class="mb-0.5 truncate leading-none font-semibold">Laravel Starter Kit</span>
+@props(['variant' => 'auto'])
+{{-- variant: auto = emerald plate (light surface), on-dark = transparent (emerald sidebars), mark = icon only --}}
+@php
+    $isDark = $variant === 'on-dark';
+    $isMark = $variant === 'mark';
+@endphp
+
+<div class="flex items-center gap-2.5">
+    <div @class([
+        'flex aspect-square size-9 items-center justify-center rounded-lg',
+        'bg-brand-emerald ring-1 ring-brand-emerald/40' => ! $isDark,
+    ])>
+        <x-app-logo-icon class="size-7" />
+    </div>
+    @unless($isMark)
+        <div class="grid leading-tight">
+            <span @class([
+                'font-display text-base font-semibold tracking-tight',
+                'text-white' => $isDark,
+                'text-brand-emerald' => ! $isDark,
+            ])>Generative Topical</span>
+            <span @class([
+                'text-[11px] uppercase tracking-[0.2em] font-medium',
+                'text-brand-gold-soft' => $isDark,
+                'text-brand-gold' => ! $isDark,
+            ])>Cambridge MCQ Platform</span>
+        </div>
+    @endunless
 </div>
