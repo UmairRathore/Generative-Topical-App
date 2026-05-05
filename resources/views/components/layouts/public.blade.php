@@ -5,7 +5,7 @@
     @include('partials.head')
     @livewireStyles
 </head>
-<body style="background: var(--ivory-deep); min-height: 100vh;">
+<body class="paper-grain" style="background: var(--ivory-deep); min-height: 100vh;">
     {{-- Sticky blurred nav --}}
     <header class="sticky top-0 z-10 flex items-center"
             style="padding: 16px 60px; gap: 32px; background: rgba(250,247,239,0.85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-soft);"

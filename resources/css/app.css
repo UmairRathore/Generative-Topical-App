@@ -105,7 +105,12 @@
     .mono { font-family: var(--mono); }
 }
 
-/* ===== Grain texture ===== */
+/* ===== Grain texture =====
+   Two flavours:
+   .grain        — dark grain for emerald/dark surfaces (overlay blend, ::before)
+   .paper-grain  — warm sepia grain for ivory/light surfaces (multiply blend,
+                   fixed-position so it stays put as the page scrolls).
+*/
 .grain::before {
     content: "";
     position: absolute;
@@ -116,6 +121,27 @@
     pointer-events: none;
 }
 [data-grain="off"] .grain::before { display: none; }
+
+/* Paper grain — apply to <body> on light/ivory pages.
+   Sepia-tinted noise, multiply-blended at low opacity, fixed-positioned
+   so it doesn't repeat on scroll. Sits behind page content (z-index: 0
+   with body{position:relative} so cards/text render on top). */
+.paper-grain { position: relative; }
+.paper-grain::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch' seed='5'/><feColorMatrix values='0 0 0 0 0.55  0 0 0 0 0.42  0 0 0 0 0.18  0 0 0 0.55 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-repeat: repeat;
+    opacity: 0.18;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    z-index: 0;
+}
+.paper-grain > * { position: relative; z-index: 1; }
+[data-grain="off"] .paper-grain::before { display: none; }
+[data-theme="dark"] .paper-grain::before,
+.dark .paper-grain::before { display: none; } /* paper grain is for light pages */
 
 /* ===== Buttons ===== */
 .btn {

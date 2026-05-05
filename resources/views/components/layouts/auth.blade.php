@@ -4,7 +4,7 @@
     @include('partials.head')
     @livewireStyles
 </head>
-<body style="background: var(--ivory-deep); min-height: 100vh;">
+<body class="paper-grain" style="background: var(--ivory-deep); min-height: 100vh;">
     {{ $slot }}
     @livewireScripts
     @fluxScripts
