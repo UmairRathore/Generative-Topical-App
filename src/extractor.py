@@ -38,6 +38,7 @@ from .options import (
     find_option_markers,
     get_lines,
     get_spans,
+    recover_option_text_from_marker_bands,
 )
 from .utils import (
     BBox,
@@ -74,13 +75,54 @@ def _is_cover_page(page_text: str) -> bool:
     )
 
 
+_DATA_KEYWORDS = (
+    r"acceleration of free fall",
+    r"speed of light",
+    r"elementary charge",
+    r"unified atomic mass",
+    r"avogadro constant",
+    r"molar gas constant",
+    r"boltzmann constant",
+    r"gravitational constant",
+    r"planck constant",
+    r"rest mass of proton",
+    r"rest mass of electron",
+    r"stefan[- ]boltzmann",
+    r"permittivity of free space",
+)
+
+_FORMULAE_KEYWORDS = (
+    r"uniformly accelerated motion",
+    r"hydrostatic pressure",
+    r"doppler effect",
+    r"resistors in series",
+    r"resistors in parallel",
+    r"upthrust",
+    r"electric current",
+)
+
+
 def _is_data_formulae_page(page_text: str) -> bool:
+    """Pages 2/3 of every Cambridge MCQ paper list physical constants and a
+    formulae sheet. We must skip them so their numeric tokens (1/2, 10⁻¹⁹, …)
+    don't get mistaken for question starts.
+
+    The earlier heuristic ("contains the word 'formulae'") was too loose: a
+    real question may mention the formulae sheet in passing (e.g.
+    "the unit of current i is given in the list of formulae on page 3"),
+    which then drops every question on that page from the search.
+
+    Tightened rule: require >= 3 named physical constants, OR the standalone
+    "Formulae" heading paired with at least one canonical formula label.
+    """
     t = page_text.lower()
-    has_data = bool(re.search(r"\bdata\b", t)) and bool(
-        re.search(r"acceleration of free fall|speed of light|elementary charge", t)
-    )
-    has_formulae = "formulae" in t
-    return has_data or has_formulae
+    n_constants = sum(1 for kw in _DATA_KEYWORDS if re.search(kw, t))
+    if n_constants >= 3:
+        return True
+    has_formulae_heading = bool(re.search(r"(?m)^\s*formulae\s*$", t))
+    if has_formulae_heading and any(re.search(p, t) for p in _FORMULAE_KEYWORDS):
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -303,14 +345,33 @@ def _gather_spans(
     return out
 
 
+def _normalize_bbox(bbox: BBox) -> BBox:
+    """Swap inverted coordinates so x0<=x1 and y0<=y1 (PIL crashes otherwise)."""
+    x0, y0, x1, y1 = bbox
+    if x0 > x1:
+        x0, x1 = x1, x0
+    if y0 > y1:
+        y0, y1 = y1, y0
+    return (float(x0), float(y0), float(x1), float(y1))
+
+
 def _crop_asset(
     page_image_path: Path,
     bbox: BBox,
     dpi: int,
     out_path: Path,
     pad: int = 6,
-) -> None:
+    min_side: int = 4,
+) -> bool:
+    """Crop ``bbox`` from the rendered page PNG, save to ``out_path``.
+
+    Defensive against degenerate bboxes — they crashed earlier papers
+    (m18 grid logic produced y_top > y_bot in one case). Returns ``True`` if
+    a crop was written, ``False`` if the bbox was unusable so the caller can
+    add a warning and continue instead of aborting the whole paper.
+    """
     img = Image.open(page_image_path).convert("RGB")
+    bbox = _normalize_bbox(bbox)
     px = pdf_bbox_to_pixel(bbox, dpi)
     px = (
         max(0, px[0] - pad),
@@ -318,9 +379,12 @@ def _crop_asset(
         min(img.width, px[2] + pad),
         min(img.height, px[3] + pad),
     )
+    if px[2] - px[0] < min_side or px[3] - px[1] < min_side:
+        return False
     crop = img.crop(px)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     crop.save(out_path)
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -450,7 +514,8 @@ class PaperExtractor:
         last_slice = region.slices[-1][1]
         for pidx, slice_bbox in region.slices:
             page = pages_by_idx[pidx]
-            ms = find_option_markers(page.spans, slice_bbox)
+            visual_bboxes = [v.bbox for v in page.visuals]
+            ms = find_option_markers(page.spans, slice_bbox, visual_bboxes=visual_bboxes)
             if len(ms) > len(markers):
                 markers = ms
                 last_pidx = pidx
@@ -483,16 +548,22 @@ class PaperExtractor:
         grid_crops: Dict[str, BBox] = {}
         if marker_layout == "grid":
             grid_crops = self._compute_grid_option_crops(markers, last_slice)
-            for label, crop_bbox in grid_crops.items():
+            for label, crop_bbox in list(grid_crops.items()):
                 img_id = f"q{region.number:03d}_option_{label}"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(
+                ok = _crop_asset(
                     pages_by_idx[last_pidx].image_path,
                     crop_bbox,
                     self.dpi,
                     img_path,
                     pad=0,
                 )
+                if not ok:
+                    warnings.append(
+                        f"Option {label} crop bbox is degenerate; skipped."
+                    )
+                    grid_crops.pop(label, None)
+                    continue
                 rel = img_path.relative_to(self.output_root).as_posix()
                 cap = caption_for_option_image(label, nearby_text)
                 option_images_by_label[label].append(
@@ -524,10 +595,24 @@ class PaperExtractor:
         horizontal_crops: Dict[str, BBox] = {}
         if not grid_crops and marker_layout == "horizontal" and len(markers) == 4:
             marker_y_bot = max(m.bbox[3] for m in markers)
+            # Include drawings AND any pdfplumber-detected tables that are NOT
+            # option_tables (i.e. don't have rows beginning with A/B/C/D).
+            # m20 Q33 hits this case: pdfplumber wraps one option diagram as a
+            # 1-row table and the original "v.kind != 'table'" filter then left
+            # visuals_below empty, which suppressed the horizontal repair.
+            def _is_option_table(v: VisualRegion) -> bool:
+                if v.kind != "table" or not v.table_data:
+                    return False
+                rows = v.table_data.get("rows", []) or []
+                return any(
+                    r and (r[0] or "").strip() in OPTION_LABELS
+                    for r in rows
+                )
+
             visuals_below = [
                 v for (pidx, v) in visuals_q
                 if pidx == last_pidx
-                and v.kind != "table"
+                and not _is_option_table(v)
                 and v.bbox[1] >= marker_y_bot - 4
             ]
             marker_x_centres = sorted((m.bbox[0] + m.bbox[2]) / 2 for m in markers)
@@ -537,13 +622,11 @@ class PaperExtractor:
                 return covered >= 2
 
             giant_visual = any(_spans_multiple_markers(v) for v in visuals_below)
-            # Inline option text would already have been extracted by
-            # extract_option_text on the prior pass; but since we don't yet have
-            # it here we check spans directly via spans_q for any text on the
-            # marker row beyond the marker glyphs themselves.
+            # Marker row text inspection: if there's text on the marker row
+            # other than the A/B/C/D letters, options are likely text-style.
+            marker_y_centre = (markers[0].bbox[1] + markers[0].bbox[3]) / 2
             extra_text_on_row = any(
-                abs(((s.bbox[1] + s.bbox[3]) / 2)
-                    - ((markers[0].bbox[1] + markers[0].bbox[3]) / 2)) <= 3
+                abs(((s.bbox[1] + s.bbox[3]) / 2) - marker_y_centre) <= 3
                 and s.text.strip() not in OPTION_LABELS
                 and s.text.strip()
                 for (_, s) in spans_q
@@ -552,16 +635,22 @@ class PaperExtractor:
                 horizontal_crops = self._compute_horizontal_option_crops(
                     markers, last_slice, visuals_below
                 )
-                for label, crop_bbox in horizontal_crops.items():
+                for label, crop_bbox in list(horizontal_crops.items()):
                     img_id = f"q{region.number:03d}_option_{label}"
                     img_path = self.images_dir / f"{img_id}.png"
-                    _crop_asset(
+                    ok = _crop_asset(
                         pages_by_idx[last_pidx].image_path,
                         crop_bbox,
                         self.dpi,
                         img_path,
                         pad=0,
                     )
+                    if not ok:
+                        warnings.append(
+                            f"Option {label} crop bbox is degenerate; skipped."
+                        )
+                        horizontal_crops.pop(label, None)
+                        continue
                     rel = img_path.relative_to(self.output_root).as_posix()
                     cap = caption_for_option_image(label, nearby_text)
                     option_images_by_label[label].append(
@@ -608,7 +697,10 @@ class PaperExtractor:
                 option_table_source_bbox = v.bbox
                 img_id = f"q{region.number:03d}_table_01"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+                if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                    warnings.append(
+                        "Option table crop bbox is degenerate; image skipped."
+                    )
                 with_symbols = _table_has_symbol_rows(rows)
                 option_table = OptionTable(
                     headers=data.get("headers", []),
@@ -675,7 +767,11 @@ class PaperExtractor:
                 idx = len(option_images_by_label[assigned_label]) + 1
                 img_id = f"q{region.number:03d}_option_{assigned_label}{('_'+str(idx)) if idx > 1 else ''}"
                 img_path = self.images_dir / f"{img_id}.png"
-                _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+                if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                    warnings.append(
+                        f"Option {assigned_label} image crop bbox is degenerate; skipped."
+                    )
+                    continue
                 rel = img_path.relative_to(self.output_root).as_posix()
                 cap = caption_for_option_image(assigned_label, nearby_text)
                 asset = ImageAsset(
@@ -729,7 +825,11 @@ class PaperExtractor:
                 h_threshold=80.0,
                 v_threshold=30.0,
             )
-            _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path)
+            if not _crop_asset(page.image_path, expanded_bbox, self.dpi, img_path):
+                warnings.append(
+                    f"Question diagram crop bbox is degenerate; skipped."
+                )
+                continue
             rel = img_path.relative_to(self.output_root).as_posix()
             cap = caption_for_question_diagram(nearby_text, placement)
             asset = ImageAsset(
@@ -756,9 +856,257 @@ class PaperExtractor:
             )
             debug_annos.append((pidx, (v.bbox, kind_label, f"Q{region.number}")))
 
-        # Build options list
+        # ---- Post-classification repair pass --------------------------------
+        # Two families of mis-classification the standard pass can't catch:
+        #
+        #   Group A — vertical 4x1 image-option block:
+        #     A/B/C/D markers are stacked at the left margin and a single
+        #     tall drawing to their right contains 4 stacked option graphs.
+        #     The drawing gets matched as a `question_diagram` instead of
+        #     being sliced into 4 option images.
+        #
+        #   Group B — horizontal 1xN image-option row, partially split:
+        #     4 horizontal markers, with a visual below that got matched as
+        #     a single option (often expanded to span all 4 columns) — so
+        #     option_images comes back with only 1-3 entries.
+        #
+        # Both are repaired here using marker geometry to compute 4 crops
+        # and replace whatever the previous step assigned. The repair never
+        # fires when option images already came back from grid_crops or
+        # horizontal_crops — those marker-driven paths are trusted.
+        n_existing_image_options = sum(
+            1 for lbl in OPTION_LABELS if option_images_by_label[lbl]
+        )
+
+        # ---- Group A: vertical force-split ----
+        if (
+            not grid_crops
+            and not horizontal_crops
+            and marker_layout == "vertical"
+            and len(markers) == 4
+            and n_existing_image_options < 4
+        ):
+            by_y = sorted(markers, key=lambda m: m.bbox[1])
+            marker_x_right = max(m.bbox[2] for m in by_y)
+            y_top_anchor = by_y[0].bbox[1]
+            y_bot_anchor = by_y[-1].bbox[3]
+            # Use the **raw** visuals_q (pre-expansion) for candidate detection
+            # because Diagram Context Expansion may have absorbed the marker
+            # column into the asset bbox, hiding the "to the right of markers"
+            # signal. We pick the largest visual on the marker page whose y
+            # range covers all four marker rows AND extends well to the right
+            # of the marker column.
+            # First look for a single tall block encompassing all 4 markers.
+            cand_visuals = [
+                v for (pp, v) in visuals_q
+                if pp == last_pidx
+                and v.kind != "table"
+                and v.bbox[2] > marker_x_right + 80
+                and v.bbox[1] <= y_top_anchor + 40
+                and v.bbox[3] >= y_bot_anchor - 40
+                and (v.bbox[3] - v.bbox[1]) >= 100
+            ]
+            # Fallback: 4 smaller per-option visuals to the right of markers,
+            # each within the marker y-range. Q29 of s15_qp_11 hits this path.
+            opt_zone_visuals: List[VisualRegion] = [
+                v for (pp, v) in visuals_q
+                if pp == last_pidx
+                and v.kind != "table"
+                and v.bbox[2] > marker_x_right + 4
+                and v.bbox[3] > y_top_anchor - 4
+                and v.bbox[1] < y_bot_anchor + 30
+            ]
+            opt_zone_total_area = sum(
+                (v.bbox[3] - v.bbox[1]) * (v.bbox[2] - v.bbox[0])
+                for v in opt_zone_visuals
+            )
+
+            chosen_v: Optional[VisualRegion] = None
+            v_crops: Dict[str, BBox] = {}
+            if cand_visuals:
+                chosen_v = max(
+                    cand_visuals,
+                    key=lambda v: (v.bbox[3] - v.bbox[1]) * (v.bbox[2] - v.bbox[0]),
+                )
+                v_crops = self._compute_vertical_option_crops(
+                    markers, last_slice, chosen_v.bbox
+                )
+            elif len(opt_zone_visuals) >= 1 and opt_zone_total_area >= 3000:
+                v_crops = self._compute_vertical_option_crops(
+                    markers, last_slice, opt_zone_visuals=opt_zone_visuals
+                )
+
+            if len(v_crops) == 4:
+                page = pages_by_idx[last_pidx]
+                success = True
+                new_assets: Dict[str, ImageAsset] = {}
+                for label, crop_bbox in v_crops.items():
+                    img_id = f"q{region.number:03d}_option_{label}"
+                    img_path = self.images_dir / f"{img_id}.png"
+                    if not _crop_asset(
+                        page.image_path, crop_bbox, self.dpi, img_path, pad=0
+                    ):
+                        success = False
+                        break
+                    rel = img_path.relative_to(self.output_root).as_posix()
+                    new_assets[label] = ImageAsset(
+                        id=img_id,
+                        image_path=rel,
+                        page=last_pidx,
+                        bbox=list(crop_bbox),
+                        role="option_image",
+                        caption=caption_for_option_image(label, nearby_text),
+                        confidence=0.75,
+                    )
+                if success:
+                    for label, asset in new_assets.items():
+                        option_images_by_label[label] = [asset]
+                        caption_payloads.append(
+                            CaptionPayload(
+                                image_path=asset.image_path,
+                                nearby_text=nearby_text,
+                                question_number=region.number,
+                                option_label=label,
+                                suggested_role="option_image",
+                            )
+                        )
+                        debug_annos.append(
+                            (last_pidx, (asset.bbox, "option_image", f"opt {label}"))
+                        )
+
+                    # Remove question-diagram assets that overlap the source
+                    # block (expansion may have widened them to include the
+                    # marker column).
+                    def _overlaps_block(asset: ImageAsset) -> bool:
+                        ab = asset.bbox
+                        if chosen_v is not None:
+                            cb = chosen_v.bbox
+                            return not (
+                                ab[2] < cb[0]
+                                or cb[2] < ab[0]
+                                or ab[3] < cb[1]
+                                or cb[3] < ab[1]
+                            )
+                        # Multi-visual case — drop any question_diagram that
+                        # overlaps any of the per-option visuals.
+                        for v in opt_zone_visuals:
+                            cb = v.bbox
+                            if not (
+                                ab[2] < cb[0]
+                                or cb[2] < ab[0]
+                                or ab[3] < cb[1]
+                                or cb[3] < ab[1]
+                            ):
+                                return True
+                        return False
+
+                    question_images_between = [
+                        a for a in question_images_between if not _overlaps_block(a)
+                    ]
+                    question_images_after = [
+                        a for a in question_images_after if not _overlaps_block(a)
+                    ]
+                    n_existing_image_options = 4
+
+        # ---- Group B: horizontal force-split ----
+        if (
+            not grid_crops
+            and not horizontal_crops
+            and marker_layout == "horizontal"
+            and len(markers) == 4
+            and 1 <= n_existing_image_options <= 3
+        ):
+            marker_y_top = min(m.bbox[1] for m in markers)
+            marker_y_bot = max(m.bbox[3] for m in markers)
+            # Accept visuals that are below the markers OR that encompass them
+            # vertically (option strips often surround the marker letters).
+            visuals_below = [
+                v for (pp, v) in visuals_q
+                if pp == last_pidx
+                and v.kind != "table"
+                and v.bbox[3] > marker_y_bot - 4
+                and v.bbox[1] < marker_y_bot + 60
+                and v.bbox[1] >= marker_y_top - 50
+            ]
+            if visuals_below:
+                by_x = sorted(markers, key=lambda m: m.bbox[0])
+                # Default: crop region starts just below markers and runs to
+                # the slice bottom. When the visual *encompasses* the marker
+                # row (e.g. option diagrams sit both above and below the
+                # marker letter), pull y_top up to the visual's top so the
+                # whole option content is captured.
+                y_top = marker_y_bot + 2
+                min_v_top = min(v.bbox[1] for v in visuals_below)
+                if min_v_top < marker_y_bot:
+                    y_top = max(
+                        last_slice[1] + 4,
+                        min_v_top - 4,
+                        marker_y_top - 50,
+                    )
+                y_bot = last_slice[3]
+                if y_bot - y_top >= 30:
+                    x_left = min(last_slice[0], by_x[0].bbox[0] - 2)
+                    x_right = max(last_slice[2], by_x[-1].bbox[2] + 2)
+                    dividers = [
+                        (by_x[i].bbox[2] + by_x[i + 1].bbox[0]) / 2
+                        for i in range(len(by_x) - 1)
+                    ]
+                    edges = [x_left] + dividers + [x_right]
+                    h_crops = {
+                        by_x[i].label: (edges[i], y_top, edges[i + 1], y_bot)
+                        for i in range(4)
+                    }
+                    page = pages_by_idx[last_pidx]
+                    success = True
+                    new_assets: Dict[str, ImageAsset] = {}
+                    for label, crop_bbox in h_crops.items():
+                        img_id = f"q{region.number:03d}_option_{label}"
+                        img_path = self.images_dir / f"{img_id}.png"
+                        if not _crop_asset(
+                            page.image_path, crop_bbox, self.dpi, img_path, pad=0
+                        ):
+                            success = False
+                            break
+                        rel = img_path.relative_to(self.output_root).as_posix()
+                        new_assets[label] = ImageAsset(
+                            id=img_id,
+                            image_path=rel,
+                            page=last_pidx,
+                            bbox=list(crop_bbox),
+                            role="option_image",
+                            caption=caption_for_option_image(label, nearby_text),
+                            confidence=0.75,
+                        )
+                    if success:
+                        for label in OPTION_LABELS:
+                            option_images_by_label[label] = []
+                        for label, asset in new_assets.items():
+                            option_images_by_label[label] = [asset]
+                            caption_payloads.append(
+                                CaptionPayload(
+                                    image_path=asset.image_path,
+                                    nearby_text=nearby_text,
+                                    question_number=region.number,
+                                    option_label=label,
+                                    suggested_role="option_image",
+                                )
+                            )
+                            debug_annos.append(
+                                (last_pidx, (asset.bbox, "option_image", f"opt {label}"))
+                            )
+                        # Mark crops as marker-driven so downstream "giant crop"
+                        # validation does not refire on the wide x-edge crops
+                        # (they're meant to span full option columns).
+                        horizontal_crops = h_crops
+
+        # Build options list (passes ``warnings`` so the recovery pass can
+        # record per-option "remained empty after recovery" notes; visuals
+        # are forwarded so recovery never sweeps diagram-interior text into
+        # option text).
         options = self._build_options(
-            markers, lines_q, last_pidx, next_boundary_y, option_images_by_label, option_table
+            markers, lines_q, last_pidx, next_boundary_y,
+            option_images_by_label, option_table, warnings=warnings,
+            visual_bboxes=[v.bbox for (pp, v) in visuals_q if pp == last_pidx],
         )
 
         # Validate options A-D
@@ -1044,8 +1392,12 @@ class PaperExtractor:
         next_boundary_y: float,
         option_images: Dict[str, List[ImageAsset]],
         option_table: Optional[OptionTable],
+        warnings: Optional[List[str]] = None,
+        visual_bboxes: Optional[List[BBox]] = None,
     ) -> List[Option]:
         options: List[Option] = []
+        warnings = warnings if warnings is not None else []
+        visual_bboxes = list(visual_bboxes or [])
 
         # 1) If we have an option_table, synthesize 4 Options from its rows.
         if option_table:
@@ -1075,16 +1427,39 @@ class PaperExtractor:
 
         text_by_label = extract_option_text(last_page_lines, markers, next_boundary_y)
 
-        for label in OPTION_LABELS:
-            if label not in {m.label for m in markers}:
-                continue
-            options.append(
-                Option(
-                    label=label,
-                    text=text_by_label.get(label, "").strip(),
-                    images=option_images.get(label, []),
-                )
+        # ---- Fallback: marker-band recovery ---------------------------------
+        # When the primary extractor returns empty for one or more options
+        # (typically stacked fractions, multi-line wraps, or grid/partial
+        # layouts), retry with wider y-bands. We only *fill* empty entries —
+        # never overwrite text that the primary extractor already produced.
+        marker_labels = {m.label for m in markers}
+        empty_labels = [
+            lbl for lbl in marker_labels
+            if not (text_by_label.get(lbl) or "").strip()
+            and not option_images.get(lbl)
+        ]
+        if empty_labels:
+            recovered = recover_option_text_from_marker_bands(
+                last_page_lines, markers, next_boundary_y,
+                visual_bboxes=visual_bboxes,
             )
+            for lbl in empty_labels:
+                rec = (recovered.get(lbl) or "").strip()
+                if rec:
+                    text_by_label[lbl] = rec
+
+        for label in OPTION_LABELS:
+            if label not in marker_labels:
+                continue
+            text = (text_by_label.get(label) or "").strip()
+            imgs = option_images.get(label, [])
+            options.append(
+                Option(label=label, text=text, images=imgs)
+            )
+            if not text and not imgs:
+                warnings.append(
+                    f"Option {label} remained empty after marker-band recovery."
+                )
         return options
 
     def _expand_visual(
@@ -1162,6 +1537,63 @@ class PaperExtractor:
         crops: Dict[str, BBox] = {}
         for i, m in enumerate(by_x):
             crops[m.label] = (edges[i], y_top, edges[i + 1], y_bot)
+        return crops
+
+    def _compute_vertical_option_crops(
+        self,
+        markers: List[OptionMarker],
+        region_bbox: BBox,
+        visual_bbox: Optional[BBox] = None,
+        opt_zone_visuals: Optional[List[VisualRegion]] = None,
+    ) -> Dict[str, BBox]:
+        """Vertical 4x1 image-option layout: A/B/C/D markers stacked at left
+        margin with option diagrams to their right.
+
+        Two sub-cases supported:
+
+          * ``visual_bbox`` is provided (one tall block encompassing all four
+            options) — slice it horizontally per marker.
+          * ``opt_zone_visuals`` is provided (4+ smaller visuals, one per
+            option row) — use their union x extent and the deepest y as the
+            D-row anchor.
+
+        Slices per marker:
+          x_left  = just right of the marker letter (extended to visual left)
+          x_right = visual right edge (or region right)
+          y_top   = marker.y_top - 4
+          y_bot   = next marker.y_top - 4  (or last_y_bot for D)
+        """
+        if len(markers) != 4:
+            return {}
+        by_y = sorted(markers, key=lambda m: m.bbox[1])
+        marker_x_right = max(m.bbox[2] for m in by_y)
+
+        if opt_zone_visuals:
+            min_v_left = min(v.bbox[0] for v in opt_zone_visuals)
+            max_v_right = max(v.bbox[2] for v in opt_zone_visuals)
+            max_v_bot = max(v.bbox[3] for v in opt_zone_visuals)
+            x_left = max(marker_x_right + 4, min_v_left - 8)
+            x_right = max(max_v_right + 4, region_bbox[2])
+            last_y_bot = min(region_bbox[3], max_v_bot + 6)
+        elif visual_bbox:
+            x_left = max(marker_x_right + 4, visual_bbox[0] - 8)
+            x_right = max(visual_bbox[2] + 4, region_bbox[2])
+            last_y_bot = min(region_bbox[3], visual_bbox[3] + 6)
+        else:
+            x_left = marker_x_right + 4
+            x_right = region_bbox[2]
+            last_y_bot = region_bbox[3]
+
+        crops: Dict[str, BBox] = {}
+        for i, m in enumerate(by_y):
+            y_top = m.bbox[1] - 4
+            if i + 1 < len(by_y):
+                y_bot = by_y[i + 1].bbox[1] - 4
+            else:
+                y_bot = last_y_bot
+            if y_bot - y_top < 10:
+                continue
+            crops[m.label] = (x_left, y_top, x_right, y_bot)
         return crops
 
     def _compute_grid_option_crops(
