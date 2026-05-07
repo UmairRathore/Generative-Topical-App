@@ -12,6 +12,29 @@ class QuestionRenderDataFactory
     }
 
     /**
+     * Build a public asset URL.
+     *
+     * Returns root-relative URLs (e.g. `/storage/cambpast-assets/foo.png`) so the
+     * browser uses whatever host:port loaded the page. This avoids `Storage::url()`
+     * which prefixes APP_URL and would lock URLs to the host configured in .env
+     * (so a page served on :8001 wouldn't fetch images from :8000).
+     */
+    private function publicAssetUrl(?string $imagePath, ?string $disk): ?string
+    {
+        if (! $imagePath) {
+            return null;
+        }
+
+        // For non-public disks (S3, etc.) keep the full URL — they need the host.
+        $disk = $disk ?: 'public';
+        if ($disk !== 'public') {
+            return Storage::disk($disk)->url($imagePath);
+        }
+
+        return '/storage/'.ltrim($imagePath, '/');
+    }
+
+    /**
      * @return array<string,mixed>
      */
     public function make(Question $question): array
@@ -32,7 +55,7 @@ class QuestionRenderDataFactory
                 ->where('role', $role)
                 ->sortBy('sort_order')
                 ->map(fn ($a) => [
-                    'url' => Storage::disk($a->disk ?: 'public')->url($a->image_path),
+                    'url' => $this->publicAssetUrl($a->image_path, $a->disk),
                     'caption' => $a->caption,
                 ])
                 ->values()
@@ -52,7 +75,7 @@ class QuestionRenderDataFactory
             ], true))
             ->sortBy('sort_order')
             ->map(fn ($a) => [
-                'url' => Storage::disk($a->disk ?: 'public')->url($a->image_path),
+                'url' => $this->publicAssetUrl($a->image_path, $a->disk),
                 'caption' => $a->caption,
             ])
             ->values()
@@ -63,7 +86,7 @@ class QuestionRenderDataFactory
             ->map(function ($opt) {
                 $images = $opt->assets
                     ->sortBy('sort_order')
-                    ->map(fn ($a) => Storage::disk($a->disk ?: 'public')->url($a->image_path))
+                    ->map(fn ($a) => $this->publicAssetUrl($a->image_path, $a->disk))
                     ->values()
                     ->all();
 
@@ -81,9 +104,7 @@ class QuestionRenderDataFactory
             $t = $question->optionTable;
             $optionTable = [
                 'use_fallback_image' => (bool) $t->use_fallback_image,
-                'image_url' => $t->image_path
-                    ? Storage::disk($t->disk ?: 'public')->url($t->image_path)
-                    : null,
+                'image_url' => $this->publicAssetUrl($t->image_path, $t->disk),
                 'headers' => is_array($t->headers) ? $t->headers : null,
                 'rows' => is_array($t->rows) ? $t->rows : null,
             ];
