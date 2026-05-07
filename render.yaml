@@ -1,0 +1,89 @@
+# Optional Render Blueprint.
+#
+# You can deploy without this file by creating a Web Service manually
+# in the Render dashboard (recommended for first-time setup — see
+# docs/DEPLOYMENT.md). Use this file later to codify the same setup
+# so future deploys (or other engineers) are reproducible.
+#
+# To use:
+#   1. Commit this file at repo root.
+#   2. In Render dashboard: New → Blueprint → connect this repo.
+#   3. Render reads this file and provisions the service.
+#   4. Fill in the env vars marked `sync: false` afterwards.
+
+services:
+  - type: web
+    name: generative-topical
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon              # change if you prefer singapore / frankfurt
+    healthCheckPath: /up
+    autoDeploy: true            # redeploy on push to the connected branch
+
+    envVars:
+      # ─── App ────────────────────────────────────────────────────
+      - key: APP_NAME
+        value: "Generative Topical"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        sync: false             # paste `php artisan key:generate --show` output
+      - key: APP_URL
+        sync: false             # set to https://<your-service>.onrender.com after first deploy
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: info
+
+      # ─── Database (Aiven MySQL) ────────────────────────────────
+      - key: DB_CONNECTION
+        value: mysql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      # Demo-friendly: encrypted but no cert verification (no secret file needed).
+      # For verified TLS, leave this OFF and instead upload the Aiven CA via
+      # Render → Environment → Secret Files → /etc/secrets/aiven-ca.pem
+      # then set MYSQL_ATTR_SSL_CA=/etc/secrets/aiven-ca.pem
+      - key: MYSQL_ATTR_SSL_VERIFY_SERVER_CERT
+        value: "false"
+
+      # ─── Sessions / cache / queue (file-driven, free-tier friendly) ─
+      - key: CACHE_STORE
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: SESSION_LIFETIME
+        value: "120"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: BROADCAST_CONNECTION
+        value: log
+
+      # ─── Filesystem / mail ─────────────────────────────────────
+      - key: FILESYSTEM_DISK
+        value: local
+      - key: MAIL_MAILER
+        value: log
+
+      # ─── Proxy trust (Render fronts every request with HTTPS) ─
+      - key: TRUSTED_PROXIES
+        value: "*"
+
+      # ─── Optional: seed catalog + demo users on first boot ────
+      # Set to "true" for the FIRST deploy, then set back to "false"
+      # so you don't re-seed on every restart.
+      - key: RUN_SEEDERS
+        value: "false"

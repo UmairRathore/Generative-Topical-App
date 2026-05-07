@@ -57,9 +57,13 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => 'InnoDB',
+            // Aiven (and most managed MySQL) require TLS. Supply ONE of:
+            //   MYSQL_ATTR_SSL_CA=/etc/secrets/aiven-ca.pem    (verified TLS)
+            //   MYSQL_ATTR_SSL_VERIFY_SERVER_CERT=false        (encrypted, no cert verify)
             'options' => extension_loaded('pdo_mysql') ? array_filter([
-                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
-            ]) : [],
+                PDO::MYSQL_ATTR_SSL_CA                 => env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT'),
+            ], static fn ($v) => $v !== null) : [],
         ],
 
         'mariadb' => [

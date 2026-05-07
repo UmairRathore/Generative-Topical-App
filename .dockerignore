@@ -1,0 +1,69 @@
+# ─── VCS / IDE ───────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+.zed
+.fleet
+
+# ─── PHP / Composer (we install fresh inside the build) ─────────
+vendor
+
+# ─── Node (we install fresh inside the build) ───────────────────
+node_modules
+npm-debug.log
+yarn-error.log
+
+# ─── Vite / built assets (we rebuild inside the image) ──────────
+public/build
+public/hot
+
+# ─── Local env / secrets ─────────────────────────────────────────
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+.env.testing
+auth.json
+
+# ─── SQLite / dev DB ─────────────────────────────────────────────
+database/database.sqlite
+database/*.sqlite-journal
+
+# ─── Storage runtime data — never bake into the image ───────────
+storage/app/public/cambpast-assets
+storage/app/private
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/testing/*
+storage/framework/views/*
+storage/logs/*
+storage/output
+storage/papers
+servedata
+
+# ─── Tests + dev artifacts ───────────────────────────────────────
+tests
+phpunit.xml
+.phpunit.result.cache
+
+# ─── Local screenshot captures ───────────────────────────────────
+screenshots
+scripts
+
+# ─── Misc dev junk ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+*.zip
+*.tar.gz
+docs
+CLAUDE.md
+README.md
+.claude
+.dockerignore
+Dockerfile
+
+# (we keep docker/ — nginx + supervisor configs are needed in the image)
