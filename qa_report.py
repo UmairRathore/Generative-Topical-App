@@ -263,6 +263,10 @@ def _is_misclassified_option_block(q: Dict[str, Any]) -> bool:
         return False
     has_large = False
     for a in after:
+        # Assets attached by the manual-QA reconciliation pass were visually
+        # verified as genuine question diagrams — never an unsplit option block.
+        if a.get("source") == "manual_qa_reconciliation":
+            continue
         bb = a.get("bbox") or []
         if len(bb) < 4:
             continue

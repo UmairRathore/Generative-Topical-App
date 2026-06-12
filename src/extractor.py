@@ -355,13 +355,71 @@ def _normalize_bbox(bbox: BBox) -> BBox:
     return (float(x0), float(y0), float(x1), float(y1))
 
 
+# Question text that names a figure — used by the rule-8 zero-image check.
+# Bare "shown" is included deliberately: stems like "Their directions are
+# shown." reference a figure whose labels were swallowed into the text.
+_FIGURE_REF_RE = re.compile(
+    r"(?i)\b(diagrams?|figure|graph|circuit|shown)\b"
+)
+
+
+def _ink_extend_px(
+    img: Image.Image,
+    px: Tuple[int, int, int, int],
+    max_ltrb: Tuple[int, int, int, int],
+    band: int = 2,
+    step: int = 12,
+    threshold: int = 200,
+) -> Tuple[int, int, int, int]:
+    """Grow crop edges whose border band still contains ink.
+
+    Manual QA showed the dominant crop defect is content sitting flush on a
+    crop edge (half-cut letters, clipped arrowheads, truncated ground lines).
+    This mechanically reproduces the manual fix: while a ``band``-px strip
+    along an edge contains dark pixels, push that edge out by ``step`` px, up
+    to a per-edge budget ``max_ltrb`` (L, T, R, B; 0 locks an edge — used for
+    marker-driven option crops whose column dividers must not bleed into the
+    neighboring option).
+    """
+    import numpy as np
+
+    arr = np.asarray(img.convert("L"))
+    l, t, r, b = px
+    budget = list(max_ltrb)
+    for _ in range(12):
+        sub = arr[t:b, l:r]
+        if sub.size == 0:
+            break
+        h, w = sub.shape
+        bd = min(band, h, w)
+        mask = sub < threshold
+        grew = False
+        if mask[:, :bd].any() and budget[0] > 0 and l > 0:
+            d = min(step, budget[0], l)
+            l -= d; budget[0] -= d; grew = True
+        if mask[:bd, :].any() and budget[1] > 0 and t > 0:
+            d = min(step, budget[1], t)
+            t -= d; budget[1] -= d; grew = True
+        if mask[:, w - bd:].any() and budget[2] > 0 and r < img.width:
+            d = min(step, budget[2], img.width - r)
+            r += d; budget[2] -= d; grew = True
+        if mask[h - bd:, :].any() and budget[3] > 0 and b < img.height:
+            d = min(step, budget[3], img.height - b)
+            b += d; budget[3] -= d; grew = True
+        if not grew:
+            break
+    return (l, t, r, b)
+
+
 def _crop_asset(
     page_image_path: Path,
     bbox: BBox,
     dpi: int,
     out_path: Path,
-    pad: int = 6,
+    pad: int = 14,
     min_side: int = 4,
+    pad_ltrb: Tuple[int, int, int, int] | None = None,
+    ink_extend_ltrb: Tuple[int, int, int, int] | None = (36, 36, 36, 36),
 ) -> bool:
     """Crop ``bbox`` from the rendered page PNG, save to ``out_path``.
 
@@ -369,18 +427,25 @@ def _crop_asset(
     (m18 grid logic produced y_top > y_bot in one case). Returns ``True`` if
     a crop was written, ``False`` if the bbox was unusable so the caller can
     add a warning and continue instead of aborting the whole paper.
+
+    ``pad_ltrb`` overrides the uniform ``pad`` with per-edge pixel padding
+    (L, T, R, B). ``ink_extend_ltrb`` gives per-edge budgets for the flush-ink
+    auto-extension (None disables it).
     """
     img = Image.open(page_image_path).convert("RGB")
     bbox = _normalize_bbox(bbox)
     px = pdf_bbox_to_pixel(bbox, dpi)
+    pl, pt, pr, pb = pad_ltrb if pad_ltrb is not None else (pad, pad, pad, pad)
     px = (
-        max(0, px[0] - pad),
-        max(0, px[1] - pad),
-        min(img.width, px[2] + pad),
-        min(img.height, px[3] + pad),
+        max(0, px[0] - pl),
+        max(0, px[1] - pt),
+        min(img.width, px[2] + pr),
+        min(img.height, px[3] + pb),
     )
     if px[2] - px[0] < min_side or px[3] - px[1] < min_side:
         return False
+    if ink_extend_ltrb is not None:
+        px = _ink_extend_px(img, px, ink_extend_ltrb)
     crop = img.crop(px)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     crop.save(out_path)
@@ -532,6 +597,10 @@ class PaperExtractor:
         option_images_by_label: Dict[str, List[ImageAsset]] = {l: [] for l in OPTION_LABELS}
         option_table: Optional[OptionTable] = None
         unknown_visuals: List[ImageAsset] = []
+        # Visuals silently removed during classification — tracked so a
+        # figure-referencing question that ends with zero images can warn
+        # instead of masquerading as text_only (rule-8 root cause).
+        dropped_visuals: List[Tuple[int, BBox, str]] = []
 
         warnings: List[str] = []
         caption_payloads: List[CaptionPayload] = []
@@ -556,7 +625,10 @@ class PaperExtractor:
                     crop_bbox,
                     self.dpi,
                     img_path,
-                    pad=0,
+                    # Column dividers are shared with the neighboring option —
+                    # lock horizontal edges; allow vertical breathing room.
+                    pad_ltrb=(0, 8, 0, 12),
+                    ink_extend_ltrb=(0, 28, 0, 28),
                 )
                 if not ok:
                     warnings.append(
@@ -643,7 +715,8 @@ class PaperExtractor:
                         crop_bbox,
                         self.dpi,
                         img_path,
-                        pad=0,
+                        pad_ltrb=(0, 8, 0, 12),
+                        ink_extend_ltrb=(0, 28, 0, 28),
                     )
                     if not ok:
                         warnings.append(
@@ -685,6 +758,17 @@ class PaperExtractor:
             first_col = [
                 (r[0].strip() if r and r[0] else "") for r in rows
             ]
+            if any(c in OPTION_LABELS for c in first_col) and not _looks_like_real_table(data):
+                # Sparse/degenerate "table": pdfplumber sometimes wraps a
+                # circuit or diagram as a table whose cells are empty or
+                # garbage (manual QA: q037 s23_qp_12, q036 s24_qp_12,
+                # q032 s24_qp_13). Let it fall through to the question-diagram
+                # branch instead of producing a broken option_table.
+                warnings.append(
+                    f"table-like visual on page {pidx} has sparse/degenerate "
+                    f"cells; treated as question diagram instead of option_table"
+                )
+                continue
             if any(c in OPTION_LABELS for c in first_col):
                 page = pages_by_idx[pidx]
                 # find page slice for this pidx
@@ -744,6 +828,7 @@ class PaperExtractor:
             if covered_crops and pidx == last_pidx and any(
                 _bbox_intersects(v.bbox, crop) for crop in covered_crops
             ):
+                dropped_visuals.append((pidx, v.bbox, "covered by marker-driven option crops"))
                 continue
 
             page = pages_by_idx[pidx]
@@ -944,7 +1029,11 @@ class PaperExtractor:
                     img_id = f"q{region.number:03d}_option_{label}"
                     img_path = self.images_dir / f"{img_id}.png"
                     if not _crop_asset(
-                        page.image_path, crop_bbox, self.dpi, img_path, pad=0
+                        page.image_path, crop_bbox, self.dpi, img_path,
+                        # Vertical 4x1 slices share horizontal row dividers —
+                        # lock vertical edges; allow horizontal breathing room.
+                        pad_ltrb=(8, 0, 8, 4),
+                        ink_extend_ltrb=(24, 0, 24, 0),
                     ):
                         success = False
                         break
@@ -1000,6 +1089,11 @@ class PaperExtractor:
                                 return True
                         return False
 
+                    for a in question_images_between + question_images_after:
+                        if _overlaps_block(a):
+                            dropped_visuals.append(
+                                (last_pidx, tuple(a.bbox), "overlapped repaired option block")
+                            )
                     question_images_between = [
                         a for a in question_images_between if not _overlaps_block(a)
                     ]
@@ -1035,12 +1129,13 @@ class PaperExtractor:
                 # row (e.g. option diagrams sit both above and below the
                 # marker letter), pull y_top up to the visual's top so the
                 # whole option content is captured.
-                y_top = marker_y_bot + 2
+                # Start above the marker letters so A/B/C/D stay in the crop.
+                y_top = marker_y_top - 4
                 min_v_top = min(v.bbox[1] for v in visuals_below)
                 if min_v_top < marker_y_bot:
                     y_top = max(
                         last_slice[1] + 4,
-                        min_v_top - 4,
+                        min(min_v_top - 4, marker_y_top - 4),
                         marker_y_top - 50,
                     )
                 y_bot = last_slice[3]
@@ -1063,7 +1158,9 @@ class PaperExtractor:
                         img_id = f"q{region.number:03d}_option_{label}"
                         img_path = self.images_dir / f"{img_id}.png"
                         if not _crop_asset(
-                            page.image_path, crop_bbox, self.dpi, img_path, pad=0
+                            page.image_path, crop_bbox, self.dpi, img_path,
+                            pad_ltrb=(0, 8, 0, 12),
+                            ink_extend_ltrb=(0, 28, 0, 28),
                         ):
                             success = False
                             break
@@ -1119,6 +1216,24 @@ class PaperExtractor:
         layout_type = self._derive_layout_type(
             options, option_table, question_images_between, question_images_after
         )
+
+        # Rule-8 detection: a question whose text references a figure must not
+        # silently end up with zero image assets (the manual QA found 10 such
+        # never-extracted figures across s20-s25).
+        has_any_image = (
+            bool(question_images_between or question_images_after)
+            or any(o.images for o in options)
+            or option_table is not None
+        )
+        if not has_any_image and _FIGURE_REF_RE.search(question_text or ""):
+            detail = (
+                f" ({len(dropped_visuals)} visual(s) were dropped during classification)"
+                if dropped_visuals else ""
+            )
+            warnings.append(
+                "question text references a figure but no image asset was extracted"
+                + detail
+            )
 
         # ---- post-classification validation ----------------------------
         # Empty image-options: any A/B/C/D with neither text nor any image, in a
@@ -1526,7 +1641,9 @@ class PaperExtractor:
         ]
         edges = [x_left] + dividers + [x_right]
 
-        y_top = max(m.bbox[3] for m in markers) + 2
+        # Start ABOVE the marker letters so A/B/C/D are inside the crop
+        # (criterion 6 — manual QA found letters excluded by construction).
+        y_top = min(m.bbox[1] for m in markers) - 4
         if visuals_below:
             y_bot = min(region_bbox[3], max(v.bbox[3] for v in visuals_below) + 6)
         else:
@@ -1566,21 +1683,23 @@ class PaperExtractor:
         if len(markers) != 4:
             return {}
         by_y = sorted(markers, key=lambda m: m.bbox[1])
-        marker_x_right = max(m.bbox[2] for m in by_y)
+        # Start LEFT of the marker letters so A/B/C/D are inside each slice
+        # (criterion 6 — manual QA found letters excluded by construction).
+        marker_x_left = min(m.bbox[0] for m in by_y) - 4
 
         if opt_zone_visuals:
             min_v_left = min(v.bbox[0] for v in opt_zone_visuals)
             max_v_right = max(v.bbox[2] for v in opt_zone_visuals)
             max_v_bot = max(v.bbox[3] for v in opt_zone_visuals)
-            x_left = max(marker_x_right + 4, min_v_left - 8)
+            x_left = min(marker_x_left, min_v_left - 8)
             x_right = max(max_v_right + 4, region_bbox[2])
             last_y_bot = min(region_bbox[3], max_v_bot + 6)
         elif visual_bbox:
-            x_left = max(marker_x_right + 4, visual_bbox[0] - 8)
+            x_left = min(marker_x_left, visual_bbox[0] - 8)
             x_right = max(visual_bbox[2] + 4, region_bbox[2])
             last_y_bot = min(region_bbox[3], visual_bbox[3] + 6)
         else:
-            x_left = marker_x_right + 4
+            x_left = marker_x_left
             x_right = region_bbox[2]
             last_y_bot = region_bbox[3]
 
@@ -1623,9 +1742,12 @@ class PaperExtractor:
             + ((bot[0].bbox[2] + bot[1].bbox[0]) / 2)
         ) / 2
 
-        y_top_top = max(top[0].bbox[3], top[1].bbox[3]) + 2
-        y_top_bot = min(bot[0].bbox[1], bot[1].bbox[1]) - 4
-        y_bot_top = max(bot[0].bbox[3], bot[1].bbox[3]) + 2
+        # Each row's crop starts ABOVE its marker letters so A/B/C/D are
+        # inside the crop (criterion 6); the top row ends just above the
+        # bottom row's letters.
+        y_top_top = min(top[0].bbox[1], top[1].bbox[1]) - 4
+        y_top_bot = min(bot[0].bbox[1], bot[1].bbox[1]) - 6
+        y_bot_top = min(bot[0].bbox[1], bot[1].bbox[1]) - 4
         y_bot_bot = region_bbox[3]
 
         return {
@@ -1661,6 +1783,36 @@ class PaperExtractor:
 
 def _bbox_intersects(a: BBox, b: BBox) -> bool:
     return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
+
+
+def _looks_like_real_table(data: dict) -> bool:
+    """True when pdfplumber's table data describes genuinely tabular content.
+
+    Circuits and diagrams sometimes get wrapped as "tables" with degenerate
+    cells (e.g. rows [['A'], ['sliding contact']] or headers ['B C'] with one
+    row ['D']). A real option table has at least a 2x2 shape and mostly
+    non-empty word-bearing cells outside the A-D label column.
+
+    Symbol-row tables (tick/cross cells rendered as (cid:NN) glyphs) are still
+    real tables — their cells are non-empty, just unmapped — and continue to
+    pass through to the existing fallback handling.
+    """
+    rows = data.get("rows") or []
+    if len(rows) < 2:
+        return False
+    width = max((len(r) for r in rows), default=0)
+    if width < 2:
+        return False
+    cells = []
+    for r in rows:
+        for j, c in enumerate(r):
+            if j == 0 and (c or "").strip() in OPTION_LABELS:
+                continue
+            cells.append((c or "").strip())
+    if not cells:
+        return False
+    filled = sum(1 for c in cells if c)
+    return filled / len(cells) >= 0.5
 
 
 def _table_has_symbol_rows(rows: list[list[str]]) -> bool:

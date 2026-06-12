@@ -24,6 +24,7 @@ Filter rules applied throughout:
 """
 from __future__ import annotations
 
+import re
 from typing import List, Tuple
 
 from .utils import BBox, bbox_union
@@ -73,8 +74,8 @@ def _bbox_overlap(a: BBox, b: BBox) -> bool:
 
 def merge_split_diagrams(
     visuals: List[VisualRegion],
-    h_gap: float = 35.0,
-    v_gap: float = 18.0,
+    h_gap: float = 50.0,
+    v_gap: float = 28.0,
     overlap_thresh: float = 0.4,
 ) -> List[VisualRegion]:
     """Merge regions that share a baseline / column with a small gap.
@@ -133,15 +134,31 @@ _SENTENCE_STARTERS = (
     "There ", "Here ", "Their ", "Its ",
 )
 
+# Figure captions that belong inside the crop even though they read like
+# multi-word text. Manual QA found these systematically excluded ("NOT TO
+# SCALE", "before/after collision", "view from above", "eye of student").
+_CAPTION_WHITELIST = re.compile(
+    r"(?i)^\(?\s*("
+    r"not to scale"
+    r"|view from (above|the side|behind)"
+    r"|(before|after)( the)? (collision|impact)"
+    r"|eye of (the )?(student|observer)"
+    r"|diagram \d"
+    r")\s*\)?$"
+)
+
 
 def _is_label_like(line_bbox: BBox, text: str, max_width: float = 160.0) -> bool:
     """Reject paragraph-style sentences. Genuine diagram labels (force values,
     axis labels, ticks, p/q/r markers, single-word callouts) are always short
     and never look like full sentences."""
+    t_raw = (text or "").strip()
+    if _CAPTION_WHITELIST.match(t_raw):
+        return True
     width = line_bbox[2] - line_bbox[0]
     if width > max_width:
         return False
-    t = (text or "").strip()
+    t = t_raw
     if not t:
         return False
     if t.endswith("?") or t.endswith("."):
