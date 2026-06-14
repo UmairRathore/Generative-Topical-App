@@ -1,0 +1,31 @@
+# Generated output — never committed
+input/
+input_targeted
+output/
+output_probe
+output_targeted
+input_extras
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# PDFs (asset files — keep them local)
+*.pdf
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo

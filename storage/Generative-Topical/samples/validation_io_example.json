@@ -1,0 +1,72 @@
+{
+  "_comment": "Reference shape for the LLM validation pass. The provider receives the system+user prompts and the listed images; it must return JSON conforming to validation_result.v1. The enrichment pass uses the same provider.complete_json() interface with schema id enrichment.v1.",
+
+  "validation_pass": {
+    "system_prompt": "You are an exam paper QA tool. You are given the JSON we extracted for one Cambridge MCQ question, the debug image showing how we cropped it, and the actual cropped images. Verify whether the JSON is faithful to the page. Do not invent content. If something is unclear, mark it for human review. Reply ONLY with JSON matching the provided schema. Allowed issue codes: MISSING_QUESTION_TEXT, MISSING_OPTION, WRONG_OPTION_IMAGE, MISSING_DIAGRAM, EXTRA_DIAGRAM, BAD_TABLE_ROWS, LABEL_OUT_OF_DIAGRAM, OCR_NEEDED, LAYOUT_AMBIGUOUS.",
+
+    "user_prompt_example": "QUESTION_NUMBER: 8\nLAYOUT_TYPE: question_diagram_and_option_images\nQUESTION_TEXT: Two balls P and Q, of equal mass, move along a straight line directly towards each other as shown. Ball P has velocity 1.30 m s-1 to the right. Ball Q has velocity 0.50 m s-1 to the left. P and Q collide with one another. The collision is perfectly elastic and the total momentum is conserved. Which diagram correctly shows the motion of P and Q after the collision?\nOPTIONS:\n  A: <empty>  images=1\n  B: <empty>  images=1\n  C: <empty>  images=1\n  D: <empty>  images=1\nHAS_OPTION_TABLE: false\nEXTRACTOR_WARNINGS: []",
+
+    "image_attachments_example": [
+      "papers/9702_m24_qp_12/debug/q008_debug.png",
+      "papers/9702_m24_qp_12/images/q008_question_diagram_01.png",
+      "papers/9702_m24_qp_12/images/q008_question_diagram_02.png",
+      "papers/9702_m24_qp_12/images/q008_option_A.png",
+      "papers/9702_m24_qp_12/images/q008_option_B.png",
+      "papers/9702_m24_qp_12/images/q008_option_C.png",
+      "papers/9702_m24_qp_12/images/q008_option_D.png"
+    ],
+
+    "expected_output_schema_id": "validation_result.v1",
+
+    "expected_output_example_ok": {
+      "status": "ok",
+      "confidence": 0.92,
+      "issues": [],
+      "checked_assets": [
+        "papers/9702_m24_qp_12/debug/q008_debug.png",
+        "papers/9702_m24_qp_12/images/q008_option_A.png"
+      ]
+    },
+
+    "expected_output_example_flagged": {
+      "status": "needs_review",
+      "confidence": 0.6,
+      "issues": [
+        {
+          "code": "WRONG_OPTION_IMAGE",
+          "field": "options.B",
+          "severity": "high",
+          "message": "The crop saved as q008_option_B.png appears to show option C's diagram (balls touching with both moving right)."
+        },
+        {
+          "code": "LABEL_OUT_OF_DIAGRAM",
+          "field": "question_images_after_text[0]",
+          "severity": "low",
+          "message": "Velocity label 1.30 m s-1 is missing from the right-hand crop."
+        }
+      ],
+      "checked_assets": [
+        "papers/9702_m24_qp_12/debug/q008_debug.png"
+      ]
+    }
+  },
+
+  "enrichment_pass": {
+    "system_prompt": "You are a Cambridge International AS/A-Level subject expert. Classify the given question against the syllabus. Return strict JSON. If the syllabus reference is uncertain, leave it blank rather than guessing.",
+
+    "user_prompt_example": "PAPER: 9702/12 (Physics, February/March 2024)\nQUESTION_NUMBER: 8\nQUESTION_TEXT: Two balls P and Q ... perfectly elastic ...\nOPTIONS_PREVIEW: A: ; B: ; C: ; D: \nLAYOUT_TYPE: question_diagram_and_option_images",
+
+    "expected_output_schema_id": "enrichment.v1",
+
+    "expected_output_example": {
+      "topic": "momentum",
+      "subtopic": "elastic collisions",
+      "syllabus_ref": "9702/3.4",
+      "concepts": ["conservation of momentum", "elastic collision"],
+      "difficulty": "medium",
+      "keywords": ["collision", "momentum", "elastic", "balls"],
+      "student_friendly_explanation_placeholder": "TODO: explain how to apply conservation of momentum to a 1D elastic collision between equal masses.",
+      "estimated_time_seconds": 90
+    }
+  }
+}

@@ -1,0 +1,86 @@
+# Cambridge MCQ PDF Extraction Pipeline — Project Summary
+
+## Project Goal
+
+Build a Python-only PDF extraction pipeline for Cambridge-style MCQ question papers.
+
+The system extracts each question as reusable structured data, not just plain text. The output will later be imported into a website/database to create:
+
+- topical question banks
+- mock tests
+- reusable worksheets/books
+- dashboard-based MCQ practice
+- future LLM-assisted classification/enrichment
+
+This project must remain Python-only for now.
+
+Do not build:
+
+- frontend
+- database
+- API
+- web app
+- external LLM integration inside the extractor
+
+---
+
+## Current Baseline
+
+The current extractor already has a good foundation.
+
+It can already detect:
+
+- 40 questions
+- question diagrams
+- option tables
+- option images
+- graph-based options
+- table-based options
+- cropped PNG assets
+- page numbers
+- bounding boxes
+- debug images
+
+Important:
+
+The current bounded boxes / image crops are mostly correct and should be preserved.
+
+Do not rewrite the crop detection logic unless a specific crop is clearly missing or broken.
+
+---
+
+## Main Problem To Fix Now
+
+The problem is not image cropping.
+
+The problem is JSON layout reconstruction.
+
+Currently, some questions flatten everything into one `question_text` string.
+
+Example issue:
+
+A question with this original layout:
+
+1. text before diagram
+2. diagram
+3. text after diagram
+4. options
+
+is currently stored as one mixed string containing:
+
+- question number
+- text before diagram
+- diagram label text
+- text after diagram
+- option values
+
+This makes it difficult to rebuild the original layout in a UI or regenerated PDF.
+
+---
+
+## Main New Requirement
+
+Add an ordered layout layer using:
+
+```json
+"content_blocks": []

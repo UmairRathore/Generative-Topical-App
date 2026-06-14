@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la \"C:/Users/umair/bin/\" 2>&1 | head)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; Get-ChildItem -Path \"C:\\\\Users\\\\umair\\\\AppData\\\\Local\\\\Temp\\\\..\\\\..\\\\..\\\\..\\\\..\\\\..\\\\tmp\\\\9702_pages\" -ErrorAction SilentlyContinue | ForEach-Object { $img = [System.Drawing.Image]::FromFile\\($_.FullName\\); \"$\\($_.Name\\): $\\($img.Width\\)x$\\($img.Height\\)\"; $img.Dispose\\(\\) })",
+      "Read(//tmp/9702_pages/**)",
+      "Bash(export PATH=\"/c/Users/umair/AppData/Local/Microsoft/WinGet/Packages/oschwartz10612.Poppler_Microsoft.Winget.Source_8wekyb3d8bbwe/poppler-25.07.0/Library/bin:$PATH\")",
+      "Bash(pdfinfo \"C:/campbpast/Generative-Topical/input/9702_m16_qp_12.pdf\")"
+    ]
+  }
+}

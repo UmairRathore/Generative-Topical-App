@@ -1,0 +1,9 @@
+PyMuPDF>=1.24
+pdfplumber>=0.11
+Pillow>=10.0
+opencv-python>=4.9
+numpy>=1.26
+pandas>=2.0
+pytesseract>=0.3.10
+# pydantic was originally listed but the project uses dataclasses
+# (avoids pydantic_core native-DLL issues on locked-down Windows boxes)
