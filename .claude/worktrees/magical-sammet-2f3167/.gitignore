@@ -1,10 +1,6 @@
 # Generated output — never committed
 input/
-input_targeted
 output/
-output_probe
-output_targeted
-input_extras
 
 # Python
 __pycache__/
