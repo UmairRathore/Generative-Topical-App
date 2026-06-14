@@ -1,0 +1,392 @@
+# Generative Topical
+
+> A Cambridge MCQ revision platform for Pakistani O & A Level students.
+> Take past-paper PDFs, extract questions with a Python pipeline, import into a Laravel + Livewire app, and serve them to students/teachers/admins.
+
+This repo is the **Laravel app** (the front end + database). The PDF-extraction pipeline lives in a sibling repo and produces a `storage/output/` directory that this app imports.
+
+```
++----------------------+    JSON + assets    +----------------------+    HTTP    +--------+
+|  Python extractor    | ------------------> |  Laravel app (this   | ---------> | Browser|
+|  (sibling repo)      |                     |  repo)               |            |        |
+|  PDF -> questions.json|                    |  cambpast:import->DB |            +--------+
++----------------------+                     +----------------------+
+```
+
+---
+
+## Table of contents
+
+1. [Stack](#stack)
+2. [Quick start](#quick-start)
+3. [The data pipeline](#the-data-pipeline)
+4. [Working on the Laravel app](#working-on-the-laravel-app)
+5. [Roles and demo accounts](#roles-and-demo-accounts)
+6. [Routes](#routes)
+7. [Theming](#theming)
+8. [Screenshot capture script](#screenshot-capture-script)
+9. [Running tests](#running-tests)
+10. [Project structure](#project-structure)
+
+---
+
+## Stack
+
+| Concern | Choice |
+|---|---|
+| Framework | Laravel 11 (Livewire/Volt starter kit, Flux UI) |
+| UI | Blade + Livewire 3 + Alpine.js + Tailwind v4 |
+| DB | SQLite by default (file at `database/database.sqlite`) - Postgres/MySQL fine |
+| PHP | 8.2+ |
+| Node | 20+ (for Vite + Tailwind v4) |
+| Auth | Volt-based Breeze scaffold (login / register / forgot / reset / verify) |
+| Roles | `student` / `teacher` / `admin` (school) / `super_admin` (platform) |
+
+---
+
+## Quick start
+
+```bash
+git clone <repo>
+cd cambpast-app
+
+# 1. PHP deps + env
+composer install
+cp .env.example .env
+php artisan key:generate
+
+# 2. Database
+touch database/database.sqlite
+php artisan migrate
+php artisan db:seed                # creates catalog + 4 demo accounts (see below)
+
+# 3. Frontend
+npm install
+npm run build
+php artisan storage:link           # exposes storage/app/public via /storage/
+
+# 4. Run
+php artisan serve                  # http://127.0.0.1:8000
+```
+
+Open `http://127.0.0.1:8000`, sign in as `super@gt.test` / `password` to land on the admin dashboard. The site loads with no questions yet - see the next section to import some.
+
+---
+
+## The data pipeline
+
+This is the part most people get stuck on. There are **three steps**, performed in order.
+
+### Step 1 - produce the extracted output (Python repo)
+
+The Python extractor is a separate repo. It takes a Cambridge past-paper PDF (e.g. `9702/12 May/June 2024`) plus its mark scheme, runs OCR + layout analysis, and writes a directory tree like this:
+
+```
+output/
+├── manifest.json                              # index of every paper extracted
+├── marks_manifest.json                        # mark-scheme metadata
+├── papers/
+│   ├── 9702_s24_qp_12/                        # one folder per paper-stem
+│   │   ├── questions.json                     # what the import reads
+│   │   └── assets/
+│   │       ├── q1_diagram.png
+│   │       ├── q2_option_a.png
+│   │       ├── q19_option_table.html
+│   │       └── ...
+│   ├── 9702_s24_qp_13/
+│   └── ...
+└── qa/
+    └── blocker_worklist.json                  # questions flagged as un-shippable by QA
+```
+
+Each `questions.json` carries the paper metadata at the top (`paper_code`, `paper_number`, `variant`, `session`, `year`, `total_questions`, `source_file`) plus an array of question objects (stem, options A-D, correct answer, page numbers, asset references, layout hints, warnings).
+
+### Step 2 - drop the output into this app's `storage/`
+
+Copy (or symlink) the entire extracted folder so it lands here:
+
+```
+cambpast-app/
+└── storage/
+    └── output/                  ← match this exact name
+        ├── manifest.json
+        ├── marks_manifest.json
+        ├── papers/
+        │   ├── 9702_s24_qp_12/...
+        │   └── ...
+        └── qa/
+            └── blocker_worklist.json
+```
+
+`storage/output/` is git-ignored - it's bulk data, not source. On Windows you can use a **directory junction** so you don't have to re-copy on every extractor run:
+
+```bash
+# from the cambpast-app root, in a Windows shell with admin
+mklink /J storage\output ..\cambpast-extractor\output
+```
+
+The path is configurable - pass any directory as the first arg of the import command (see step 3).
+
+### Step 3 - run the import command (DB mapping)
+
+```bash
+php artisan cambpast:import                    # defaults to storage/output
+# or
+php artisan cambpast:import path/to/output     # any other location
+```
+
+What happens, in order:
+
+1. **Pre-flight checks** - verifies that the catalog tables (`exam_boards`, `qualifications`, `subjects`) are populated. If not, run `php artisan db:seed --class=CatalogSeeder` first.
+2. **Discover papers** - recursively finds every `papers/*/questions.json` under the given path.
+3. **Read QA blocker list** - `qa/blocker_worklist.json` flags individual questions as `qa_status=blocker` and `visibility=hidden` so they never appear publicly even if they imported successfully.
+4. **Create an `ImportBatch` row** - tracks this run for auditing (papers attempted, imported question count, errors, duration).
+5. **For each paper**, in a transaction:
+   - `Paper::updateOrCreate(['source_file' => $stem], ...)` - idempotent. Re-running the import doesn't duplicate.
+   - For every question in the JSON, populate `Question`, `QuestionOption[]` (A/B/C/D), `QuestionAsset[]` (diagrams, option crops), and an optional `OptionTable` (HTML for tabular options).
+   - Each question gets a derived `qa_status`, `review_status`, `visibility`. Demo-safe questions (`pass` / `approved` / `render_fix` / `acceptable_fallback` + `visibility=public`) are eligible for student-facing UI via the `Question::demoSafe()` scope.
+6. **Copy assets** to `storage/app/public/cambpast-assets/{paperStem}/{filename}` so they're served via `/storage/cambpast-assets/...` URLs. Requires `php artisan storage:link` to have run once.
+7. **Update the `ImportBatch`** with final counts and `status=completed` (or `failed` with errors).
+
+The command is **idempotent** - running it again over the same `storage/output/` updates papers in place rather than duplicating.
+
+```bash
+# Verify the import worked
+php artisan tinker
+>>> \App\Models\Paper::count();
+>>> \App\Models\Question::count();
+>>> \App\Models\Question::demoSafe()->count();   # the public-eligible subset
+```
+
+### Step 4 - clear / re-import (when you re-extract)
+
+If the Python extractor produces a new output directory and you want to wipe and re-import:
+
+```bash
+php artisan migrate:fresh --seed         # nukes the DB, re-runs all seeders
+php artisan cambpast:import              # re-imports from storage/output
+```
+
+For partial updates (just one paper changed), let the idempotent `updateOrCreate` handle it - re-run the import without `migrate:fresh`.
+
+---
+
+## Working on the Laravel app
+
+### Daily dev loop
+
+```bash
+# Terminal 1 - Vite (HMR for Tailwind + Blade)
+npm run dev
+
+# Terminal 2 - Laravel
+php artisan serve
+```
+
+Open `http://127.0.0.1:8000`. Hot-reload works for `.blade.php`, `.css`, `.js`. Livewire updates are server-side so they show up on the next interaction.
+
+For a one-off production-like check:
+
+```bash
+php artisan view:clear
+npm run build
+php artisan serve
+```
+
+### Useful artisan helpers
+
+```bash
+php artisan route:list --except-vendor       # see every route
+php artisan tinker                           # poke models from a REPL
+php artisan migrate:fresh --seed             # wipe + re-seed (then re-import)
+php artisan db:seed --class=DemoUsersSeeder  # re-create the four demo logins
+php artisan view:clear                       # blow away compiled Blade views
+```
+
+### Where the new UI lives
+
+Most of the front end was rebuilt to match the **Examined** design (a Cambridge MCQ design system). Key touch-points:
+
+- **Design tokens**: [`resources/css/theme.css`](resources/css/theme.css) - every colour in one file. Edit hex codes there to re-skin.
+- **Utilities**: [`resources/css/app.css`](resources/css/app.css) - `.btn`, `.card`, `.badge`, `.tbl`, `.chip`, `.serif`, `.uppercase-eyebrow`, `.gold-rule`, `.paper-grain`, etc.
+- **Layouts**: `resources/views/components/layouts/`
+  - `public.blade.php` - marketing pages (home / pricing / about / contact / login / register), with paper-grain ivory bg
+  - `dashboard.blade.php` - the emerald-sidebar shell used by every authed page
+  - `auth.blade.php` - wraps login/register
+  - `test-shell.blade.php` - clean header for the timed test attempt
+- **Components**: `resources/views/components/`
+  - `<x-crest>` - brand crest SVG (size, variant, showWordmark props)
+  - `<x-icon name="...">` - 45 lucide-style line icons
+  - `<x-stat-card>`, `<x-score-ring>`, `<x-stub-screen>`, `<x-theme-toggle>`
+  - `<x-gt.button>`, `<x-gt.card>`, `<x-gt.badge>`, `<x-gt.field>`, `<x-gt.page-header>`, etc.
+  - `<x-question.renderer>` - shared question display (text + diagrams + options + states)
+
+### Adding a new page
+
+1. Pick a layout (`<x-layouts.dashboard>` for authed, `<x-layouts.public>` for marketing).
+2. For static pages, register `Route::view('/path', 'view.name')->name('path.name')`.
+3. For dynamic, create a Livewire class:
+   ```php
+   // app/Livewire/Foo/Bar.php
+   public function render() {
+       return view('livewire.foo.bar')->layout('components.layouts.dashboard');
+   }
+   ```
+   The view should **not** wrap itself in `<x-layouts.dashboard>` - the `->layout()` call handles it. Use `<x-gt.page-header>` at the top instead.
+4. Wire it into the sidebar by editing the `$navByRole` array in [`resources/views/components/layouts/dashboard.blade.php`](resources/views/components/layouts/dashboard.blade.php).
+
+---
+
+## Roles and demo accounts
+
+The app has four roles defined in [`app/Enums/UserRole.php`](app/Enums/UserRole.php):
+
+| Role | Sees | Description |
+|---|---|---|
+| `Student` | student dashboard, practice, mock tests, mistake review | classroom user |
+| `Teacher` | teacher dashboard, 40Q wizard, hand-pick test, submissions | school staff |
+| `Admin` | everything admin sees + teacher pages | **school-level** admin |
+| `SuperAdmin` | everything | **platform-level** (Generative Topical staff) |
+
+`User::isAdmin()` returns true for both `Admin` and `SuperAdmin`. The dashboard layout's role pill differentiates them.
+
+After `php artisan db:seed`, four demo accounts exist:
+
+| Email | Password | Role | Lands on |
+|---|---|---|---|
+| `student@gt.test` | `password` | Student | `/student` |
+| `teacher@gt.test` | `password` | Teacher | `/teacher` |
+| `school@gt.test` | `password` | School admin | `/admin` |
+| `super@gt.test` | `password` | Super admin | `/admin` (full access) |
+
+Re-create at any time with `php artisan db:seed --class=DemoUsersSeeder` (idempotent).
+
+---
+
+## Routes
+
+39 named routes total. Run `php artisan route:list --except-vendor` for the canonical list. Key groups:
+
+- **Public** - `/`, `/pricing`, `/about`, `/contact`
+- **Auth** - `/login`, `/register`, `/forgot-password`, `/reset-password/{token}`, `/verify-email`, `/confirm-password`
+- **Student** - `/student`, `/student/tests`, `/student/tests/{id}`, `/student/results/{id}`, `/student/review`, `/student/practice`, `/student/analytics`
+- **Teacher** - `/teacher`, `/teacher/test-generator`, `/teacher/question-picker`, `/teacher/submissions`, `/teacher/bank`, `/teacher/classes`
+- **Admin** - `/admin`, `/admin/questions`, `/admin/questions/{question}/review`, `/admin/papers`, `/admin/papers/{paper}/questions`, `/admin/topics`, `/admin/users`, `/admin/imports`, `/admin/analytics`
+- **Existing student practice** - `/subjects/{slug}`, `/practice/{slug}`, `/papers/{paper}`, `/practice/session/{session}/result`
+- **Settings** - `/settings/profile`, `/settings/password`, `/settings/appearance`
+
+---
+
+## Theming
+
+The brand is light-first (ivory + emerald + gold). Dark mode is opt-in via the moon/sun toggle in the navbar.
+
+To re-skin:
+
+1. Open [`resources/css/theme.css`](resources/css/theme.css)
+2. Change hex codes in the section you want (brand emerald, gold, neutrals, semantic, dark theme).
+3. `npm run build` (or keep `npm run dev` running for live HMR).
+
+The file's header lists every section and what each colour controls. Both the Tailwind `@theme` block (powers `bg-brand-emerald`, `text-brand-gold` utility classes) and the `:root` block (powers raw `var(--emerald-800)` usage in the design system) live in this one file.
+
+---
+
+## Screenshot capture script
+
+A Playwright-based capture script is wired up to take desktop + mobile screenshots of every important route, with per-role login.
+
+```bash
+# one-time
+npm install -D playwright
+npx playwright install chromium
+
+# every run
+php artisan serve            # in another terminal
+npm run capture:screens
+```
+
+Output: `screenshots/routes/index.html` (gallery) + `report.md` (table) + `shots/<route>-<viewport>.png`.
+
+Override credentials via env vars (`STUDENT_EMAIL`, `TEACHER_EMAIL`, `ADMIN_EMAIL`, `SUPER_ADMIN_EMAIL`, etc.) - defaults match the seeded demo accounts.
+
+---
+
+## Running tests
+
+```bash
+php artisan test                              # all
+php artisan test --filter=PracticeRunner      # one suite
+```
+
+Test suites under `tests/Feature/`:
+
+- `Admin/PaperManagementTest`, `Admin/QuestionBrowserTest` - admin Livewire flows
+- `Import/CambPastImportTest` - import command happy / error paths
+- `Practice/DemoSafeScopeTest` - confirms the public-eligible scope filters correctly
+- `Practice/PracticeRunnerTest` - student practice flow
+
+---
+
+## Project structure
+
+```
+cambpast-app/
+├── app/
+│   ├── Console/Commands/CambPastImport.php       # the import command
+│   ├── Enums/                                    # UserRole, QaStatus, ReviewStatus, Visibility, LayoutType
+│   ├── Http/Middleware/EnsureUserIs{Admin,Teacher}.php
+│   ├── Livewire/                                 # Admin/, Teacher/, Student/ namespaces
+│   ├── Models/                                   # Paper, Question, QuestionOption, ...
+│   └── Services/
+│       ├── Import/CambPastImportService.php      # JSON -> models (called by the import command)
+│       └── Rendering/QuestionRenderDataFactory.php
+├── database/
+│   ├── migrations/                               # all schema
+│   └── seeders/
+│       ├── DatabaseSeeder.php                    # runs CatalogSeeder + DemoUsersSeeder
+│       ├── CatalogSeeder.php                     # exam_boards, qualifications, subjects
+│       └── DemoUsersSeeder.php                   # the four demo accounts
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── DATABASE_SCHEMA_DRAFT.md
+│   ├── PROJECT_REQUIREMENTS.md
+│   └── SETUP_PLAN.md
+├── resources/
+│   ├── css/
+│   │   ├── theme.css                             # all colours, edit here to re-skin
+│   │   └── app.css                               # utilities (.btn, .card, .badge, .tbl, ...)
+│   └── views/
+│       ├── components/                           # Blade + gt.* design components
+│       ├── layouts/                              # public, dashboard, auth, test-shell
+│       └── livewire/                             # full-page Livewire views (admin / teacher / student)
+├── routes/web.php
+├── scripts/
+│   ├── capture-route-screenshots.js              # Playwright route capture
+│   └── download_papers.sh                        # bestexamhelp PDF downloader
+├── storage/
+│   ├── output/                                   # drop the Python extractor's output here
+│   └── app/public/cambpast-assets/               # destination for imported question images
+└── tests/
+```
+
+---
+
+## Common tasks cheat-sheet
+
+| I want to... | Run this |
+|---|---|
+| Spin up a fresh dev environment | `composer install && cp .env.example .env && php artisan key:generate && php artisan migrate --seed && npm install && npm run build && php artisan storage:link && php artisan serve` |
+| Re-import after the Python extractor produced new JSON | `php artisan cambpast:import` |
+| Wipe & re-import everything | `php artisan migrate:fresh --seed && php artisan cambpast:import` |
+| Re-create demo logins | `php artisan db:seed --class=DemoUsersSeeder` |
+| Change the brand colour | edit `resources/css/theme.css`, then `npm run build` |
+| Add a new icon | extend the `$paths` array in `resources/views/components/icon.blade.php` |
+| Capture screenshots of every route | `npm run capture:screens` (with `php artisan serve` running) |
+| See the full route map | `php artisan route:list --except-vendor` |
+| Promote a user to teacher | `php artisan tinker` then `\App\Models\User::where('email','x')->first()->update(['role'=>'teacher']);` |
+
+---
+
+## License
+
+Proprietary. Generative Topical, all rights reserved.
