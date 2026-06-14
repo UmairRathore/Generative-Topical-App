@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -51,6 +52,12 @@ KNOWN_MISCLASSIFIED = {
     ("9702_s23_qp_12", 37, "q037_table_01.png"): "attach",
     ("9702_s24_qp_12", 36, "q036_table_01.png"): "attach",
     ("9702_s24_qp_13", 32, "q032_table_01.png"): "options_from_assets",
+    # Batch 3 (reviewed 2026-06-13): 2x2 resistor-circuit grids wrapped as
+    # degenerate option_tables; A/B/C/D are circuit arrangements.
+    ("9702_s10_qp_11", 36, "q036_table_01.png"): "options_from_assets",
+    ("9702_s10_qp_12", 32, "q032_table_01.png"): "options_from_assets",
+    ("9702_s10_qp_13", 34, "q034_table_01.png"): "options_from_assets",
+    ("9702_s11_qp_11", 35, "q035_table_01.png"): "attach",
 }
 
 
@@ -110,14 +117,18 @@ def derive_provenance(paper_dir: Path, fix_path: Path, q: dict, prov: dict):
     return None, None
 
 
+OPTION_FILE_RE = re.compile(r"_option_([A-D])(?:_\d+)?\.png$")
+
+
 def build_asset(stem: str, fix_name: str, page, px_rect) -> dict:
     qid = fix_name.rsplit(".", 1)[0]
+    is_option = bool(OPTION_FILE_RE.search(fix_name))
     return {
         "id": qid,
         "image_path": f"papers/{stem}/images_fix/{fix_name}",
         "page": page if page is not None else None,
         "bbox": px_rect_to_pdf_bbox(px_rect, DPI) if px_rect else [],
-        "role": "question_image_after_text",
+        "role": "option_image" if is_option else "question_image_after_text",
         "caption": "",
         "ocr_text": "",
         "confidence": 0.5,
@@ -127,11 +138,23 @@ def build_asset(stem: str, fix_name: str, page, px_rect) -> dict:
 
 
 def attach_asset(q: dict, asset: dict) -> bool:
-    existing_ids = {a.get("id") for a in (q.get("question_images_after_text") or [])}
-    existing_ids |= {a.get("id") for a in (q.get("assets") or [])}
+    """Attach a reconciled orphan. Option-image files route into the matching
+    options[label].images; everything else into question_images_after_text.
+    Both also append to the question-level assets[] mirror."""
+    existing_ids = {a.get("id") for a in (q.get("assets") or [])}
     if asset["id"] in existing_ids:
         return False
-    q.setdefault("question_images_after_text", []).append(asset)
+    m = OPTION_FILE_RE.search(asset["id"] + ".png")
+    if m:
+        label = m.group(1)
+        opt = next((o for o in (q.get("options") or []) if o.get("label") == label), None)
+        if opt is not None:
+            opt.setdefault("images", []).append(asset)
+        else:
+            # no matching option entry — fall back to after-text so it still renders
+            q.setdefault("question_images_after_text", []).append(asset)
+    else:
+        q.setdefault("question_images_after_text", []).append(asset)
     q.setdefault("assets", []).append(asset)
     return True
 
