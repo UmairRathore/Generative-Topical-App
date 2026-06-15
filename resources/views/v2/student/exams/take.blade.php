@@ -43,23 +43,30 @@
 
                         @include('v2.partials.options_divider', ['q' => $q])
 
-                        <div class="space-y-2">
+                        @php $hasOptImgs = $optionImages->isNotEmpty(); @endphp
+                        <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                             @foreach ($q->options as $opt)
                                 @php $oi = $optionImages[$opt->label] ?? null; @endphp
-                                <label class="flex items-center gap-3" style="cursor: pointer; padding: 11px 14px; border: 1px solid var(--border); border-radius: 9px; transition: all .12s;"
-                                       :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
-                                    <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
-                                    <span style="font-weight: 700; font-size: 13px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
-                                    @if (trim((string) $opt->text) !== '')
-                                        <span style="font-size: 14px;">{{ $opt->text }}</span>
-                                    @endif
-                                    @if ($oi)
-                                        {{-- uniform tile: every choice the same size, aspect preserved (contain) --}}
-                                        <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy"
-                                             onerror="this.style.display='none'"
-                                             style="width: 190px; height: 120px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; background:#fff; flex: none;">
-                                    @endif
-                                </label>
+                                @if ($oi)
+                                    {{-- image option: card in the 2x2 grid, borderless image --}}
+                                    <label style="cursor: pointer; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; transition: all .12s;"
+                                           :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
+                                        <span class="flex items-center gap-2">
+                                            <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
+                                            <span style="font-weight: 700; font-size: 13px; color: var(--text-soft);">{{ $opt->label }}</span>
+                                        </span>
+                                        <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
+                                    </label>
+                                @else
+                                    <label class="flex items-center gap-3" style="cursor: pointer; padding: 11px 14px; border: 1px solid var(--border); border-radius: 9px; transition: all .12s;"
+                                           :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
+                                        <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
+                                        <span style="font-weight: 700; font-size: 13px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
+                                        @if (trim((string) $opt->text) !== '')
+                                            <span style="font-size: 14px;">{{ $opt->text }}</span>
+                                        @endif
+                                    </label>
+                                @endif
                             @endforeach
                         </div>
                     </div>

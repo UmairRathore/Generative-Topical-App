@@ -14,6 +14,7 @@
 <head>
     @include('partials.head')
     @livewireStyles
+    @include('v2.partials.responsive')
 </head>
 <body class="antialiased" x-data="{ sidebarOpen: false }">
 <div class="flex min-h-screen" style="background: var(--bg);">

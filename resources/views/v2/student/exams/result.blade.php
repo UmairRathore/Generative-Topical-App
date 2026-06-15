@@ -58,7 +58,8 @@
 
                     @include('v2.partials.options_divider', ['q' => $q])
 
-                    <div class="space-y-2">
+                    @php $hasOptImgs = $optionImages->isNotEmpty(); @endphp
+                    <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                         @foreach ($q->options as $opt)
                             @php
                                 $isCorrect = $correct && $opt->label === $correct;
@@ -67,14 +68,24 @@
                                        : ($isWrongPick ? 'border-color:#fca5a5; background:#fef2f2;' : 'border-color:var(--border);');
                                 $oi = $optionImages[$opt->label] ?? null;
                             @endphp
-                            <div class="flex items-center gap-3" style="padding: 9px 13px; border: 1px solid; border-radius: 8px; {{ $style }}">
-                                <span style="font-weight: 700; font-size: 12.5px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
-                                @if (trim((string) $opt->text) !== '')<span style="font-size: 13.5px;">{{ $opt->text }}</span>@endif
-                                @if ($oi)<img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" onerror="this.style.display='none'" style="width: 190px; height: 120px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; background:#fff; flex: none;">@endif
-                                <span style="flex: 1;"></span>
-                                @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct answer</span>@endif
-                                @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Your answer</span>@endif
-                            </div>
+                            @if ($oi)
+                                <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid; border-radius: 10px; {{ $style }}">
+                                    <span class="flex items-center gap-2">
+                                        <span style="font-weight: 700; font-size: 12.5px; color: var(--text-soft);">{{ $opt->label }}</span>
+                                        @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct</span>@endif
+                                        @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Your answer</span>@endif
+                                    </span>
+                                    <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" onerror="this.style.display='none'" class="v2-opt-img">
+                                </div>
+                            @else
+                                <div class="flex items-center gap-3" style="padding: 9px 13px; border: 1px solid; border-radius: 8px; {{ $style }}">
+                                    <span style="font-weight: 700; font-size: 12.5px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
+                                    @if (trim((string) $opt->text) !== '')<span style="font-size: 13.5px;">{{ $opt->text }}</span>@endif
+                                    <span style="flex: 1;"></span>
+                                    @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct answer</span>@endif
+                                    @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Your answer</span>@endif
+                                </div>
+                            @endif
                         @endforeach
                     </div>
 

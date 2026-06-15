@@ -9,8 +9,8 @@
 
 @php $optTable = $q->optionTableImage(); @endphp
 @if ($optTable)
-    <div style="overflow-x:auto; margin-bottom:14px;">
-        <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
-             style="max-width:100%; height:auto; display:block; border:1px solid var(--border); border-radius:8px; background:#fff;">
+    {{-- answer table: same borderless, consistent container as question diagrams --}}
+    <div class="v2-figure-wrap">
+        <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'">
     </div>
 @endif
