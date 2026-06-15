@@ -1,0 +1,104 @@
+@extends('v2.layouts.student')
+@section('page_title', $exam->title)
+
+@php
+    // Elapsed/remaining derived from the attempt's started_at so the clock is
+    // correct across page reloads (it does not restart).
+    $elapsed = (int) abs($attempt->started_at?->diffInSeconds(now()) ?? 0);
+    $hasLimit = (bool) $exam->duration_minutes;
+    $remaining = $hasLimit ? max(0, $exam->duration_minutes * 60 - $elapsed) : null;
+@endphp
+
+@section('content')
+<div x-data="examTaker({{ $exam->question_count }}, {{ $hasLimit ? 'true' : 'false' }}, {{ $remaining ?? 'null' }}, {{ $elapsed }})" style="max-width: 760px; margin: 0 auto;">
+
+    {{-- Sticky status bar --}}
+    <div class="flex items-center justify-between" style="position: sticky; top: 64px; z-index: 5; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; margin-bottom: 20px;">
+        <div>
+            <div style="font-size: 15px; font-weight: 600;">{{ $exam->title }}</div>
+            <div style="font-size: 12px; color: var(--text-faint);">{{ $exam->topic?->title ?? 'Mixed' }} · {{ $exam->subject?->name }}</div>
+        </div>
+        <div class="flex items-center gap-4">
+            <div style="font-size: 12.5px; color: var(--text-soft);"><span x-text="Object.keys(answers).length"></span> / {{ $exam->question_count }} answered</div>
+            <div class="badge {{ $hasLimit ? 'badge-review' : 'badge-soft' }}" style="font-size: 13px;" title="{{ $hasLimit ? 'Time left' : 'Time on test' }}">
+                <x-icon name="clock" size="13"/> <span x-text="clock"></span>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ route('v2.student.exams.submit', $exam) }}" x-ref="form"
+          @submit="if(!confirming){ $event.preventDefault(); if(confirm('Submit your test? You cannot change answers afterwards.')){ confirming=true; $refs.form.submit(); } }">
+        @csrf
+
+        @foreach ($exam->examQuestions as $eq)
+            @php
+                $q = $eq->question;
+                $optionImages = $q->images->where('role', 'option_image')->keyBy('option_label');
+            @endphp
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; margin-bottom: 16px;">
+                <div class="flex items-start gap-3">
+                    <span class="badge badge-emerald" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
+                    <div style="flex: 1; min-width: 0;">
+                        @include('v2.partials.question_stem', ['q' => $q])
+
+                        @include('v2.partials.options_divider', ['q' => $q])
+
+                        <div class="space-y-2">
+                            @foreach ($q->options as $opt)
+                                @php $oi = $optionImages[$opt->label] ?? null; @endphp
+                                <label class="flex items-center gap-3" style="cursor: pointer; padding: 11px 14px; border: 1px solid var(--border); border-radius: 9px; transition: all .12s;"
+                                       :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
+                                    <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
+                                    <span style="font-weight: 700; font-size: 13px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
+                                    @if (trim((string) $opt->text) !== '')
+                                        <span style="font-size: 14px;">{{ $opt->text }}</span>
+                                    @endif
+                                    @if ($oi)
+                                        {{-- uniform tile: every choice the same size, aspect preserved (contain) --}}
+                                        <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy"
+                                             onerror="this.style.display='none'"
+                                             style="width: 190px; height: 120px; object-fit: contain; border: 1px solid var(--border); border-radius: 6px; background:#fff; flex: none;">
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        <div class="flex items-center justify-between" style="margin: 22px 0 40px;">
+            <a href="{{ route('v2.student.exams.index') }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none;">Save & exit</a>
+            <button type="submit" class="btn btn-primary btn-lg"><x-icon name="check" size="15"/> Submit Test</button>
+        </div>
+    </form>
+</div>
+
+<script>
+function examTaker(total, hasLimit, remaining, elapsed) {
+    return {
+        total, answers: {}, confirming: false, hasLimit, remaining, elapsed, clock: '',
+        init() {
+            if (this.hasLimit && this.remaining <= 0) { this.autoSubmit(); return; }
+            this.render();
+            setInterval(() => this.tick(), 1000);
+        },
+        render() {
+            const v = this.hasLimit ? this.remaining : this.elapsed;
+            const m = Math.floor(v / 60), s = v % 60;
+            this.clock = m + ':' + String(s).padStart(2, '0');
+        },
+        tick() {
+            if (this.hasLimit) {
+                if (this.remaining <= 0) { this.autoSubmit(); return; }
+                this.remaining--;
+            } else {
+                this.elapsed++;
+            }
+            this.render();
+        },
+        autoSubmit() { this.confirming = true; this.$refs.form.submit(); },
+    };
+}
+</script>
+@endsection

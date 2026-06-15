@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Http\Controllers\V2\Student;
+
+use App\Http\Controllers\Controller;
+use App\Models\V2\Exam;
+use App\Models\V2\ExamAttempt;
+use App\Services\V2\AuditLogger;
+use App\Services\V2\ExamService;
+use Illuminate\Http\Request;
+
+class ExamController extends Controller
+{
+    private function student()
+    {
+        return auth('v2_student')->user();
+    }
+
+    public function index()
+    {
+        $student  = $this->student();
+        $classIds = $student->classes()->wherePivot('status', 'active')->pluck('v2_classes.id');
+
+        $exams = Exam::published()
+            ->whereIn('class_id', $classIds)
+            ->with(['subject', 'topic', 'schoolClass.grade'])
+            ->latest()
+            ->get();
+
+        $attempts = ExamAttempt::where('student_id', $student->id)
+            ->whereIn('exam_id', $exams->pluck('id'))
+            ->get()
+            ->keyBy('exam_id');
+
+        return view('v2.student.exams.index', compact('exams', 'attempts'));
+    }
+
+    public function take(Exam $exam, ExamService $service)
+    {
+        $student = $this->student();
+        $this->ensureCanAccess($exam, $student);
+
+        $attempt = $service->startAttempt($exam, $student);
+        if ($attempt->isSubmitted()) {
+            return redirect()->route('v2.student.exams.result', $exam);
+        }
+
+        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'subject']);
+
+        return view('v2.student.exams.take', compact('exam', 'attempt'));
+    }
+
+    public function submit(Exam $exam, Request $request, ExamService $service)
+    {
+        $student = $this->student();
+        $this->ensureCanAccess($exam, $student);
+
+        $attempt = $service->startAttempt($exam, $student);
+        if (! $attempt->isSubmitted()) {
+            $attempt = $service->submit($attempt, (array) $request->input('answers', []));
+            AuditLogger::record('exam.submitted', $exam, ['student_id' => $student->id, 'score' => $attempt->score]);
+        }
+
+        return redirect()->route('v2.student.exams.result', $exam)->with('success', 'Your test has been submitted.');
+    }
+
+    public function result(Exam $exam, ExamService $service)
+    {
+        $student = $this->student();
+        $this->ensureCanAccess($exam, $student);
+
+        $attempt = ExamAttempt::where('exam_id', $exam->id)
+            ->where('student_id', $student->id)
+            ->where('status', 'submitted')
+            ->first();
+
+        if (! $attempt) {
+            return redirect()->route('v2.student.exams.take', $exam);
+        }
+
+        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic']);
+        $answers = $attempt->answers()->get()->keyBy('question_id');
+
+        return view('v2.student.exams.result', [
+            'exam'       => $exam,
+            'attempt'    => $attempt,
+            'answers'    => $answers,
+            'topicStats' => $service->topicStatsForAttempt($attempt),
+        ]);
+    }
+
+    /** Same-school is enforced by the model's global scope; here we enforce enrollment + visibility. */
+    private function ensureCanAccess(Exam $exam, $student): void
+    {
+        abort_unless($student->classes()->where('v2_classes.id', $exam->class_id)->exists(), 403);
+        abort_unless(
+            $exam->status === 'published'
+                || ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->exists(),
+            404
+        );
+    }
+}
