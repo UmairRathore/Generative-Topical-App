@@ -5,6 +5,7 @@
     $nav = [
         ['section' => 'Learn'],
         ['id' => 'v2.student.dashboard', 'icon' => 'home', 'label' => 'Dashboard', 'href' => route('v2.student.dashboard')],
+        ['id' => 'v2.student.exams', 'icon' => 'clipboard', 'label' => 'My Exams', 'href' => route('v2.student.exams.index')],
     ];
 @endphp
 <!DOCTYPE html>

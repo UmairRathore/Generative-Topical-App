@@ -5,6 +5,7 @@
     $nav = [
         ['section' => 'Overview'],
         ['id' => 'v2.school.dashboard', 'icon' => 'home',        'label' => 'Dashboard',  'href' => route('v2.school.dashboard')],
+        ['id' => 'v2.school.analytics', 'icon' => 'chart',       'label' => 'Analytics',  'href' => route('v2.school.analytics.index')],
 
         ['section' => 'Academics'],
         ['id' => 'v2.school.grades',    'icon' => 'layers',       'label' => 'Grades',     'href' => route('v2.school.grades.index')],

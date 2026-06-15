@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\V2\SchoolAdmin\AnalyticsController as SchoolAdminAnalytics;
 use App\Http\Controllers\V2\SchoolAdmin\AuthController as SchoolAdminAuth;
 use App\Http\Controllers\V2\SchoolAdmin\DashboardController as SchoolAdminDashboard;
 use App\Http\Controllers\V2\SchoolAdmin\GradeController as SchoolAdminGrade;
@@ -8,8 +9,13 @@ use App\Http\Controllers\V2\SchoolAdmin\ClassController as SchoolAdminClass;
 use App\Http\Controllers\V2\SchoolAdmin\TeacherController as SchoolAdminTeacher;
 use App\Http\Controllers\V2\SchoolAdmin\StudentController as SchoolAdminStudent;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
+use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
+use App\Http\Controllers\V2\Student\ExamController as StudentExam;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
+use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
 use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
+use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
+use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v2')->name('v2.')->group(function () {
@@ -37,6 +43,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create');
                 Route::view('schools/{school}', 'v2.super_admin.schools.show')->name('schools.show');
                 Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit');
+                Route::get('question-bank', [SuperAdminQuestionBank::class, 'index'])->name('question_bank.index');
                 Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index');
             });
         });
@@ -64,6 +71,12 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 'v2.session_version:v2_school_admin,v2.school.login',
             ])->group(function () {
                 Route::get('dashboard', [SchoolAdminDashboard::class, 'index'])->name('dashboard');
+
+                // Analytics (school → teacher → class → student drill-down)
+                Route::get('analytics', [SchoolAdminAnalytics::class, 'index'])->name('analytics.index');
+                Route::get('analytics/teachers/{teacher}', [SchoolAdminAnalytics::class, 'teacher'])->name('analytics.teacher');
+                Route::get('analytics/classes/{class}', [SchoolAdminAnalytics::class, 'classDetail'])->name('analytics.class');
+                Route::get('analytics/students/{student}', [SchoolAdminAnalytics::class, 'student'])->name('analytics.student');
 
                 // Grades
                 Route::get('grades', [SchoolAdminGrade::class, 'index'])->name('grades.index');
@@ -136,6 +149,16 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
             Route::middleware('v2.must_change_password:v2_teacher,v2.teacher.change_password')->group(function () {
                 Route::view('dashboard', 'v2.teacher.dashboard.index')->name('dashboard');
+
+                // Exams
+                Route::get('exams', [TeacherExam::class, 'index'])->name('exams.index');
+                Route::get('exams/create', [TeacherExam::class, 'create'])->name('exams.create');
+                Route::post('exams', [TeacherExam::class, 'store'])->name('exams.store');
+                Route::get('exams/{exam}', [TeacherExam::class, 'show'])->name('exams.show');
+
+                // Classes (analytics: per-topic + per-student-per-topic)
+                Route::get('classes', [TeacherClass::class, 'index'])->name('classes.index');
+                Route::get('classes/{class}', [TeacherClass::class, 'show'])->name('classes.show');
             });
         });
     });
@@ -155,7 +178,13 @@ Route::prefix('v2')->name('v2.')->group(function () {
         Route::middleware('auth:v2_student')->group(function () {
             Route::post('logout', [StudentAuth::class, 'logout'])->name('logout');
 
-            Route::view('dashboard', 'v2.student.dashboard.index')->name('dashboard');
+            Route::get('dashboard', [StudentDashboard::class, 'index'])->name('dashboard');
+
+            // Exams
+            Route::get('exams', [StudentExam::class, 'index'])->name('exams.index');
+            Route::get('exams/{exam}/take', [StudentExam::class, 'take'])->name('exams.take');
+            Route::post('exams/{exam}/submit', [StudentExam::class, 'submit'])->name('exams.submit');
+            Route::get('exams/{exam}/result', [StudentExam::class, 'result'])->name('exams.result');
         });
     });
 });

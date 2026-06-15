@@ -6,6 +6,9 @@
         ['section' => 'Platform'],
         ['id' => 'v2.super_admin.dashboard',    'icon' => 'home',   'label' => 'Dashboard',   'href' => route('v2.super_admin.dashboard')],
         ['id' => 'v2.super_admin.schools.index','icon' => 'school', 'label' => 'Schools',      'href' => route('v2.super_admin.schools.index')],
+        ['section' => 'Content'],
+        ['id' => 'v2.super_admin.question_bank', 'icon' => 'book', 'label' => 'Question Bank', 'href' => route('v2.super_admin.question_bank.index')],
+        ['section' => 'System'],
         ['id' => 'v2.super_admin.audit.index',  'icon' => 'eye',    'label' => 'Audit Log',    'href' => route('v2.super_admin.audit.index')],
     ];
 @endphp
