@@ -164,6 +164,14 @@ class ImportQuestions extends Command
         $answer = $q['correct_answer'] ?? null;
         $answer = ($answer !== null && $answer !== '') ? strtoupper(substr($answer, 0, 1)) : null;
 
+        // Strip Cambridge end-of-paper footer text the extractor may have swept in
+        // (keeps the original if a strip would empty the field).
+        $stripper = app(\App\Services\V2\QuestionBoilerplateStripper::class);
+        $clean = function (?string $text) use ($stripper): ?string {
+            $stripped = $stripper->strip($text);
+            return ($text !== null && $text !== '' && trim((string) $stripped) === '') ? $text : $stripped;
+        };
+
         $question = Question::create([
             'paper_id'        => $paper->id,
             'subject_id'      => $subjectId,
@@ -171,9 +179,9 @@ class ImportQuestions extends Command
             'subtopic_id'     => null,
             'year'            => $paper->year,
             'question_number' => $q['question_number'],
-            'question_text'   => $q['question_text'] ?? null,
-            'text_before'     => $q['image_between_question_before_text'] ?? null,
-            'text_after'      => $q['image_between_question_after_text'] ?? null,
+            'question_text'   => $clean($q['question_text'] ?? null),
+            'text_before'     => $clean($q['image_between_question_before_text'] ?? null),
+            'text_after'      => $clean($q['image_between_question_after_text'] ?? null),
             'layout_type'     => $q['layout_type'] ?? 'text_only',
             'correct_answer'  => $answer,
             'option_table'    => $optionTable,
