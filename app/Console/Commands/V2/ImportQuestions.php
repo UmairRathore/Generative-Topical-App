@@ -221,6 +221,14 @@ class ImportQuestions extends Command
             DB::table('v2_question_images')->insert($imageRows);
         }
 
+        // Repair "option_images" questions whose option crops are really duplicates
+        // of the one question figure (e.g. "at which point on the graph…"). Needs
+        // the image files on disk, so only when we've copied them.
+        if ($this->option('copy-images')) {
+            app(\App\Services\V2\DuplicateOptionImageFixer::class)
+                ->fixQuestion($question->load('images', 'options'));
+        }
+
         return [
             'options'  => count($optionRows),
             'images'   => count($imageRows),

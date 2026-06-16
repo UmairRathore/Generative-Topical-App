@@ -159,4 +159,20 @@ class Question extends Model
     {
         return $this->images->firstWhere('role', 'table');
     }
+
+    /**
+     * Render-time safety net: if this question's option images are actually
+     * duplicates of the question figure (a single-figure question mis-tagged as
+     * `option_images` that slipped past the importer's dedup), return the
+     * distinct figure(s) so the view can show them once and render A/B/C/D as
+     * plain labels. Null for genuine per-option pictures. The canonical repair is
+     * the v2:fix-duplicate-option-images command — this just keeps the page sane
+     * if an unfixed question is ever served.
+     *
+     * @return \Illuminate\Support\Collection<int,QuestionImage>|null
+     */
+    public function collapsedOptionFigures(): ?\Illuminate\Support\Collection
+    {
+        return app(\App\Services\V2\DuplicateOptionImageFixer::class)->optionFiguresToShow($this);
+    }
 }

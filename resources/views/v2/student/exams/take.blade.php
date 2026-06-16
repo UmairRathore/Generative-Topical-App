@@ -43,6 +43,23 @@
 
                         @include('v2.partials.options_divider', ['q' => $q])
 
+                        @php
+                            // Safety net for any unfixed mis-tagged question (see
+                            // Question::collapsedOptionFigures): show the figure(s)
+                            // once and fall back to plain lettered options.
+                            $collapsed = $q->collapsedOptionFigures();
+                            if ($collapsed) { $optionImages = collect(); }
+                        @endphp
+                        @if ($collapsed)
+                            @foreach ($collapsed as $fig)
+                                @php $cw = $fig->displayWidth(); @endphp
+                                <div class="v2-figure-wrap">
+                                    <img src="{{ asset('storage/'.$fig->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
+                                         @if ($cw) style="width:{{ $cw }}px;" @endif>
+                                </div>
+                            @endforeach
+                        @endif
+
                         @php $hasOptImgs = $optionImages->isNotEmpty(); @endphp
                         <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                             @foreach ($q->options as $opt)
