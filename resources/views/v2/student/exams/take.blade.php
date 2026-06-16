@@ -48,20 +48,18 @@
                             @foreach ($q->options as $opt)
                                 @php $oi = $optionImages[$opt->label] ?? null; @endphp
                                 @if ($oi)
-                                    {{-- image option: card in the 2x2 grid, borderless image --}}
+                                    {{-- image option: card in the 2-up grid, lettered circle, borderless image --}}
                                     <label style="cursor: pointer; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; transition: all .12s;"
                                            :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
-                                        <span class="flex items-center gap-2">
-                                            <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
-                                            <span style="font-weight: 700; font-size: 13px; color: var(--text-soft);">{{ $opt->label }}</span>
-                                        </span>
+                                        <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="position:absolute; left:-9999px;">
+                                        <span :class="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'v2-opt-circle is-on' : 'v2-opt-circle'">{{ $opt->label }}</span>
                                         <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
                                     </label>
                                 @else
                                     <label class="flex items-center gap-3" style="cursor: pointer; padding: 11px 14px; border: 1px solid var(--border); border-radius: 9px; transition: all .12s;"
                                            :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
-                                        <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="accent-color: var(--emerald-700);">
-                                        <span style="font-weight: 700; font-size: 13px; color: var(--text-soft); width: 16px;">{{ $opt->label }}</span>
+                                        <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="position:absolute; left:-9999px;">
+                                        <span :class="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'v2-opt-circle is-on' : 'v2-opt-circle'">{{ $opt->label }}</span>
                                         @if (trim((string) $opt->text) !== '')
                                             <span style="font-size: 14px;">{{ $opt->text }}</span>
                                         @endif

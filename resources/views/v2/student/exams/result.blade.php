@@ -67,11 +67,12 @@
                                 $style = $isCorrect ? 'border-color:#6ee7b7; background:var(--emerald-50);'
                                        : ($isWrongPick ? 'border-color:#fca5a5; background:#fef2f2;' : 'border-color:var(--border);');
                                 $oi = $optionImages[$opt->label] ?? null;
+                                $circle = 'v2-opt-circle'.($isCorrect ? ' is-correct' : ($isWrongPick ? ' is-wrong' : ''));
                             @endphp
                             @if ($oi)
                                 <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid; border-radius: 10px; {{ $style }}">
                                     <span class="flex items-center gap-2">
-                                        <span style="font-weight: 700; font-size: 12.5px; color: var(--text-soft);">{{ $opt->label }}</span>
+                                        <span class="{{ $circle }}">{{ $opt->label }}</span>
                                         @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct</span>@endif
                                         @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Your answer</span>@endif
                                     </span>

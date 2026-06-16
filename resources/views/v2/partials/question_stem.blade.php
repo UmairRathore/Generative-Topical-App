@@ -11,9 +11,13 @@
     @if ($block['type'] === 'text')
         <div style="{{ $txtStyle }}">{{ $block['text'] }}</div>
     @elseif ($block['type'] === 'figure')
-        {{-- centered, borderless figure — see .v2-figure-wrap --}}
+        {{-- centered, borderless figure. Width is uniform-scaled from the crop's
+             own point size (see QuestionImage::displayWidth) so label text stays
+             one consistent size across diagrams; max-width:100% keeps it in-column. --}}
+        @php $fw = $block['image']->displayWidth(); @endphp
         <div class="v2-figure-wrap">
-            <img src="{{ asset('storage/'.$block['image']->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'">
+            <img src="{{ asset('storage/'.$block['image']->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
+                 @if ($fw) style="width:{{ $fw }}px;" @endif>
         </div>
     @endif
 @endforeach

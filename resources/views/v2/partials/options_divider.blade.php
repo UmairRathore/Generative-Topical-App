@@ -9,8 +9,11 @@
 
 @php $optTable = $q->optionTableImage(); @endphp
 @if ($optTable)
-    {{-- answer table: same borderless, consistent container as question diagrams --}}
-    <div class="v2-figure-wrap">
-        <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'">
+    {{-- answer table: borderless, centered, uniform-scaled (a touch bigger than
+         question diagrams as it holds denser content); max-width:100% keeps it in-column. --}}
+    @php $tw = $optTable->displayWidth(); @endphp
+    <div class="v2-table-wrap">
+        <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
+             @if ($tw) style="width:{{ $tw }}px;" @endif>
     </div>
 @endif
