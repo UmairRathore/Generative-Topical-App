@@ -250,6 +250,8 @@ class ImportQuestions extends Command
         $original = $img['image_path'] ?? '';
         $filename = basename($original);
         $webPath  = "v2/questions/{$stem}/{$filename}";
+        $width = null;
+        $height = null;
 
         if ($this->option('copy-images') && $original !== '') {
             $src = $outputRoot.'/'.ltrim($original, '/');
@@ -257,6 +259,9 @@ class ImportQuestions extends Command
             if (is_file($src)) {
                 File::ensureDirectoryExists($destDir);
                 File::copy($src, $destDir.'/'.$filename);
+                if ($size = @getimagesize($destDir.'/'.$filename)) {
+                    [$width, $height] = $size;
+                }
             }
         }
 
@@ -274,6 +279,8 @@ class ImportQuestions extends Command
             'option_label'   => $optionLabel,
             'page'           => $img['page'] ?? null,
             'bbox'           => isset($img['bbox']) ? json_encode($img['bbox']) : null,
+            'width'          => $width,
+            'height'         => $height,
             'caption'        => $img['caption'] ?? ($img['caption_short'] ?? null),
             'ocr_text'       => $img['ocr_text'] ?? null,
             'confidence'     => $img['confidence'] ?? null,
