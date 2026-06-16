@@ -118,4 +118,37 @@ class ExamController extends Controller
             'submittedCount' => $submitted->count(),
         ]);
     }
+
+    /** One student's full submitted paper — the same per-question review the student sees. */
+    public function studentPaper(Exam $exam, Student $student, ExamService $service)
+    {
+        $teacher = $this->teacher();
+        abort_unless(
+            $exam->created_by === $teacher->id
+                || $teacher->classes()->where('v2_classes.id', $exam->class_id)->exists(),
+            403
+        );
+
+        // The student must be enrolled in this exam's class (keeps it scoped to the teacher's class).
+        abort_unless(
+            StudentEnrollment::where('class_id', $exam->class_id)->where('student_id', $student->id)->exists(),
+            403
+        );
+
+        $attempt = $exam->attempts()
+            ->where('student_id', $student->id)
+            ->where('status', 'submitted')
+            ->firstOrFail();
+
+        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+        $answers = $attempt->answers()->get()->keyBy('question_id');
+
+        return view('v2.teacher.exams.student_paper', [
+            'exam'       => $exam,
+            'student'    => $student,
+            'attempt'    => $attempt,
+            'answers'    => $answers,
+            'topicStats' => $service->topicStatsForAttempt($attempt),
+        ]);
+    }
 }

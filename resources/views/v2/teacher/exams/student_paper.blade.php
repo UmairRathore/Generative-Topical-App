@@ -1,12 +1,12 @@
-@extends('v2.layouts.student')
-@section('page_title', 'Result')
+@extends('v2.layouts.teacher')
+@section('page_title', $student->name.' — paper')
 
 @php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--emerald-700)' : ($pct >= 40 ? 'var(--accent)' : '#ef4444'); @endphp
 
 @section('content')
 <div style="max-width: 760px; margin: 0 auto;">
-    <a href="{{ route('v2.student.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
-        <x-icon name="chev-l" size="14"/> Back to My Exams
+    <a href="{{ route('v2.teacher.exams.show', $exam) }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
+        <x-icon name="chev-l" size="14"/> Back to {{ $exam->title }}
     </a>
 
     {{-- Score hero --}}
@@ -15,10 +15,11 @@
             <div class="serif" style="font-size: 26px; font-weight: 700; color: {{ $tone }};">{{ $pct }}%</div>
         </div>
         <div>
-            <h2 class="serif" style="font-size: 24px; font-weight: 600;">{{ $exam->title }}</h2>
+            <h2 class="serif" style="font-size: 24px; font-weight: 600;">{{ $student->name }}</h2>
             <div style="font-size: 14px; color: var(--text-soft); margin-top: 4px;">
-                You scored <strong style="color: var(--text);">{{ $attempt->score }} out of {{ $attempt->total_questions }}</strong>
+                Scored <strong style="color: var(--text);">{{ $attempt->score }} out of {{ $attempt->total_questions }}</strong>
                 · {{ $exam->topic?->title ?? 'Mixed topics' }}
+                @if ($student->roll_number)<span style="color: var(--text-faint);">· Roll {{ $student->roll_number }}</span>@endif
             </div>
             <div style="font-size: 12px; color: var(--text-faint); margin-top: 4px;">Submitted {{ $attempt->submitted_at?->diffForHumans() }}@if ($attempt->time_taken) · time taken {{ $attempt->time_taken }}@endif</div>
         </div>
@@ -26,7 +27,7 @@
 
     {{-- Per-topic --}}
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 20px;">
-        <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">Your performance by topic</div>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">{{ $student->name }}'s performance by topic</div>
         @foreach ($topicStats as $t)
             <div style="margin-bottom: 13px;">
                 <div class="flex items-center justify-between" style="font-size: 12.5px; margin-bottom: 5px;">
@@ -40,8 +41,8 @@
         @endforeach
     </div>
 
-    {{-- Review --}}
-    <div style="font-size: 14px; font-weight: 600; margin: 0 2px 12px;">Review answers</div>
+    {{-- Question-by-question review --}}
+    <div style="font-size: 14px; font-weight: 600; margin: 0 2px 12px;">Question-by-question</div>
     @include('v2.partials.answer_review', ['exam' => $exam, 'answers' => $answers])
 </div>
 @endsection

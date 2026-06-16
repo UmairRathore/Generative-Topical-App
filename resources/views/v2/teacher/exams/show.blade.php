@@ -49,9 +49,18 @@
             </thead>
             <tbody>
                 @forelse ($students as $student)
-                    @php $a = $attempts[$student->id] ?? null; @endphp
+                    @php $a = $attempts[$student->id] ?? null; $done = $a && $a->status === 'submitted'; @endphp
                     <tr style="border-bottom: 1px solid var(--border);">
-                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $student->name }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">
+                            @if ($done)
+                                <a href="{{ route('v2.teacher.exams.student_paper', [$exam, $student]) }}"
+                                   class="flex items-center gap-1" style="color: var(--emerald-700); text-decoration: none;">
+                                    {{ $student->name }} <x-icon name="chev-r" size="13"/>
+                                </a>
+                            @else
+                                {{ $student->name }}
+                            @endif
+                        </td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $student->roll_number }}</td>
                         <td style="padding: var(--pad-cell);">
                             @if ($a && $a->status === 'submitted')
