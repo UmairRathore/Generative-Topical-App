@@ -44,6 +44,23 @@
 .v2-opt-circle.is-correct { background: var(--emerald-700); border-color: var(--emerald-700); color: #fff; }
 .v2-opt-circle.is-wrong   { background: #ef4444;            border-color: #ef4444;            color: #fff; }
 
+/* --- Option-table questions: selectable A/B/C/D circles sitting beside the
+       answer table, one per row. The picks column is a 5-row grid (an empty
+       header spacer + 4 letters) stretched to the table's height, so each
+       circle lines up with its row. The table image stays the source of truth. */
+.v2-table-pick { display: flex; align-items: stretch; justify-content: center; gap: 12px; margin-top: 14px; }
+.v2-table-pick .picks { flex: none; display: grid; grid-template-rows: repeat(5, 1fr); }
+.v2-table-pick .picks label { display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0 4px; }
+.v2-table-pick .picks .v2-opt-circle { width: 28px; height: 28px; font-size: 13px; }
+.v2-table-pick .v2-table-wrap { margin: 0; min-width: 0; }
+/* Keep the answer table from getting so narrow on phones that its rows (and the
+   aligned letters) become too short to read; let the group scroll if needed. */
+@media (max-width: 640px) {
+    .v2-table-pick { gap: 8px; overflow-x: auto; justify-content: flex-start; }
+    .v2-table-pick .v2-table-wrap img { min-width: 300px; }
+    .v2-table-pick .picks .v2-opt-circle { width: 24px; height: 24px; font-size: 12px; }
+}
+
 /* --- Below desktop: sidebar out of flow so content gets full width ----- */
 @media (max-width: 1023px) {
     aside { position: fixed !important; top: 0; left: 0; height: 100vh; z-index: 40; }

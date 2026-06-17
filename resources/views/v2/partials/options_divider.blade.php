@@ -7,13 +7,6 @@
     <span style="flex:1; height:1px; background:var(--border);"></span>
 </div>
 
-@php $optTable = $q->optionTableImage(); @endphp
-@if ($optTable)
-    {{-- answer table: borderless, centered, uniform-scaled (a touch bigger than
-         question diagrams as it holds denser content); max-width:100% keeps it in-column. --}}
-    @php $tw = $optTable->displayWidth(); @endphp
-    <div class="v2-table-wrap">
-        <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
-             @if ($tw) style="width:{{ $tw }}px;" @endif>
-    </div>
-@endif
+{{-- For option_table questions the answer table is rendered alongside the
+     selectable A/B/C/D letters by the take / review views (see .v2-table-pick),
+     so it is intentionally not drawn here. --}}

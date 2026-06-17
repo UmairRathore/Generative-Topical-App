@@ -60,7 +60,31 @@
                             @endforeach
                         @endif
 
-                        @php $hasOptImgs = $optionImages->isNotEmpty(); @endphp
+                        @php
+                            $hasOptImgs = $optionImages->isNotEmpty();
+                            // option_table: the table above shows each row's content, so the
+                            // choices are just selectable letters (the option text is a garbled
+                            // duplicate of the table and is hidden).
+                            $isTable = $q->optionTableImage() !== null;
+                        @endphp
+                        @if ($isTable)
+                            @php $optTable = $q->optionTableImage(); $tw = $optTable?->displayWidth(); @endphp
+                            <div class="v2-table-pick">
+                                <div class="picks">
+                                    <span class="hdr"></span>
+                                    @foreach ($q->options as $opt)
+                                        <label>
+                                            <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="position:absolute; left:-9999px;">
+                                            <span :class="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'v2-opt-circle is-on' : 'v2-opt-circle'">{{ $opt->label }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <div class="v2-table-wrap">
+                                    <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
+                                         @if ($tw) style="width:{{ $tw }}px;" @endif>
+                                </div>
+                            </div>
+                        @else
                         <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                             @foreach ($q->options as $opt)
                                 @php $oi = $optionImages[$opt->label] ?? null; @endphp
@@ -84,6 +108,7 @@
                                 @endif
                             @endforeach
                         </div>
+                        @endif
                     </div>
                 </div>
             </div>

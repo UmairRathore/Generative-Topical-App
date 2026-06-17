@@ -35,7 +35,33 @@
                     @endforeach
                 @endif
 
-                @php $hasOptImgs = $optionImages->isNotEmpty(); @endphp
+                @php
+                    $hasOptImgs = $optionImages->isNotEmpty();
+                    $isTable = $q->optionTableImage() !== null;  // table shows each choice
+                @endphp
+                @if ($isTable)
+                    {{-- selectable-style letters beside the answer table, one per row --}}
+                    @php $optTable = $q->optionTableImage(); $tw = $optTable?->displayWidth(); @endphp
+                    <div class="v2-table-pick">
+                        <div class="picks">
+                            <span class="hdr"></span>
+                            @foreach ($q->options as $opt)
+                                @php $c = 'v2-opt-circle'.($correct && $opt->label === $correct ? ' is-correct'
+                                       : ($selected && $opt->label === $selected && $opt->label !== $correct ? ' is-wrong' : '')); @endphp
+                                <label><span class="{{ $c }}">{{ $opt->label }}</span></label>
+                            @endforeach
+                        </div>
+                        <div class="v2-table-wrap">
+                            <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" onerror="this.style.display='none'"
+                                 @if ($tw) style="width:{{ $tw }}px;" @endif>
+                        </div>
+                    </div>
+                    @if ($correct)
+                        <div style="text-align: center; font-size: 12px; color: var(--text-soft); margin-top: 9px;">
+                            Correct answer: <strong style="color: var(--emerald-700);">{{ $correct }}</strong>@if ($selected && $selected !== $correct) · You chose: <strong style="color: #ef4444;">{{ $selected }}</strong>@endif
+                        </div>
+                    @endif
+                @else
                 <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                     @foreach ($q->options as $opt)
                         @php
@@ -66,6 +92,7 @@
                         @endif
                     @endforeach
                 </div>
+                @endif
 
                 @unless ($correct)
                     <p style="font-size: 12px; color: var(--text-faint); margin-top: 8px;">Answer key for this question is pending import.</p>
