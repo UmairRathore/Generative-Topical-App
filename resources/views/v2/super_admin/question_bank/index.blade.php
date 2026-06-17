@@ -190,36 +190,36 @@
         <tbody>
             @forelse ($questions as $q)
                 <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
+                    <td data-label="Paper" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
                         <div style="font-size: 13px; font-weight: 600;">{{ $q->source_paper }}</div>
                         <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">
                             Q{{ $q->question_number }} · {{ $q->year }} · {{ $sessionLabels[$q->paper?->session_code] ?? $q->paper?->session_code }}
                         </div>
                     </td>
-                    <td style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
+                    <td data-label="Topic" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
                         @if ($q->topic)
                             <span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ \Illuminate\Support\Str::limit($q->topic->title, 22) }}</span>
                         @else
                             <span class="badge badge-soft">Untagged</span>
                         @endif
                     </td>
-                    <td style="padding: var(--pad-cell); vertical-align: top; max-width: 460px;">
+                    <td data-label="Question" class="qb-q" style="padding: var(--pad-cell); vertical-align: top; max-width: 460px;">
                         <span style="font-size: 13px; color: var(--text); line-height: 1.45;"
                               title="{{ $q->question_text }}">
                             {{ \Illuminate\Support\Str::limit(preg_replace('/\s+/', ' ', (string) $q->question_text), 150) }}
                         </span>
                     </td>
-                    <td style="padding: var(--pad-cell); vertical-align: top; text-align: center; white-space: nowrap;">
+                    <td data-label="Type" style="padding: var(--pad-cell); vertical-align: top; text-align: center; white-space: nowrap;">
                         <span class="badge badge-soft" style="font-size: 10px;">{{ str_replace('_', ' ', $q->layout_type) }}</span>
                     </td>
-                    <td style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
+                    <td data-label="Answer" style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
                         @if ($q->correct_answer)
                             <span class="badge badge-pass" style="font-weight: 700;">{{ $q->correct_answer }}</span>
                         @else
                             <span style="color: var(--text-faint);">—</span>
                         @endif
                     </td>
-                    <td style="padding: var(--pad-cell); vertical-align: top; text-align: center; font-size: 12.5px; color: var(--text-soft);">
+                    <td data-label="Diagrams" style="padding: var(--pad-cell); vertical-align: top; text-align: center; font-size: 12.5px; color: var(--text-soft);">
                         {{ $q->images_count ?: '—' }}
                     </td>
                 </tr>

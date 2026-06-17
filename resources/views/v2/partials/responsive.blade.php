@@ -73,6 +73,16 @@
     .v2-opt-grid { grid-template-columns: 1fr; }   /* A / B / C / D stacked */
     .fade-in { padding: 14px !important; }
     table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+
+    /* Data tables (.tbl, e.g. the question bank) read as a horizontally-scrolling
+       mess on phones — stack each row into a labelled card instead. (The rule
+       above stays for content tables inside questions.) */
+    .tbl { display: block; overflow-x: visible; white-space: normal; }
+    .tbl thead { display: none; }
+    .tbl tbody, .tbl tr, .tbl td { display: block; width: auto; }
+    .tbl tr { padding: 12px 15px; }
+    .tbl td { padding: 5px 0 !important; max-width: none !important; white-space: normal !important; text-align: left !important; }
+    .tbl td::before { content: attr(data-label); display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); margin-bottom: 2px; }
     .fade-in [style*="padding: 22px"],
     .fade-in [style*="padding: 26px"],
     .fade-in [style*="padding: 28px"] { padding: 16px !important; }
