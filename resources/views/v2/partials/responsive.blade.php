@@ -76,5 +76,14 @@
     .fade-in [style*="padding: 22px"],
     .fade-in [style*="padding: 26px"],
     .fade-in [style*="padding: 28px"] { padding: 16px !important; }
+
+    /* Question-bank action row: search on its own line, then type+answer, then
+       the apply/reset buttons — instead of squeezing all five across. */
+    .qb-actions { flex-wrap: wrap; align-items: stretch; }
+    .qb-actions .qb-search { flex: 1 1 100% !important; }
+    .qb-actions .qb-type,
+    .qb-actions .qb-answer { flex: 1 1 calc(50% - 6px) !important; width: auto !important; }
+    .qb-actions .qb-apply,
+    .qb-actions .qb-reset { flex: 1 1 calc(50% - 6px) !important; justify-content: center; }
 }
 </style>

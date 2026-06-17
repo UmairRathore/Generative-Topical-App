@@ -101,13 +101,13 @@
         </div>
     </div>
 
-    <div class="flex items-end gap-3" style="margin-top: 14px;">
-        <div style="flex: 1;">
+    <div class="flex items-end gap-3 qb-actions" style="margin-top: 14px;">
+        <div class="qb-search" style="flex: 1;">
             <label style="{{ $labelStyle }}">Search</label>
             <input type="text" name="q" value="{{ $filters['q'] }}" placeholder="Question text or paper code…"
                    style="{{ $selStyle }} width: 100%;">
         </div>
-        <div style="width: 180px;">
+        <div class="qb-type" style="width: 180px;">
             <label style="{{ $labelStyle }}">Type</label>
             <select name="layout" style="{{ $selStyle }} width: 100%;">
                 <option value="">All types</option>
@@ -116,7 +116,7 @@
                 @endforeach
             </select>
         </div>
-        <div style="width: 150px;">
+        <div class="qb-answer" style="width: 150px;">
             <label style="{{ $labelStyle }}">Answer</label>
             <select name="answer" style="{{ $selStyle }} width: 100%;">
                 <option value="">Any</option>
@@ -124,8 +124,8 @@
                 <option value="unanswered" @selected($filters['answer'] === 'unanswered')>No answer</option>
             </select>
         </div>
-        <button type="submit" class="btn btn-primary"><x-icon name="filter" size="14"/> Apply</button>
-        <a href="{{ route('v2.super_admin.question_bank.index') }}" class="btn btn-ghost">Reset</a>
+        <button type="submit" class="btn btn-primary qb-apply"><x-icon name="filter" size="14"/> Apply</button>
+        <a href="{{ route('v2.super_admin.question_bank.index') }}" class="btn btn-ghost qb-reset">Reset</a>
     </div>
 </form>
 
