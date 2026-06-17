@@ -12,7 +12,15 @@ use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
+use App\Http\Controllers\V2\SuperAdmin\ClassController as SuperAdminClass;
+use App\Http\Controllers\V2\SuperAdmin\DashboardController as SuperAdminDashboard;
+use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
+use App\Http\Controllers\V2\SuperAdmin\SchoolController as SuperAdminSchool;
+use App\Http\Controllers\V2\SuperAdmin\StudentController as SuperAdminStudent;
+use App\Http\Controllers\V2\SuperAdmin\SubjectController as SuperAdminSubject;
+use App\Http\Controllers\V2\SuperAdmin\TeacherController as SuperAdminTeacher;
+use App\Http\Controllers\V2\SuperAdmin\TopicController as SuperAdminTopic;
 use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
 use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
 use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
@@ -38,13 +46,31 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::post('change-password', [SuperAdminAuth::class, 'changePassword'])->name('change_password.post');
 
             Route::middleware('v2.must_change_password:v2_super_admin,v2.super_admin.change_password')->group(function () {
-                Route::view('dashboard', 'v2.super_admin.dashboard.index')->name('dashboard');
-                Route::view('schools', 'v2.super_admin.schools.index')->name('schools.index');
-                Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create');
-                Route::view('schools/{school}', 'v2.super_admin.schools.show')->name('schools.show');
-                Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit');
+                Route::get('dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
+
+                // Platform-wide rollups (cross-school)
+                Route::get('grades', [SuperAdminGrade::class, 'platform'])->name('grades.index');
+                Route::get('subjects', [SuperAdminSubject::class, 'platform'])->name('subjects.index');
+                Route::get('subjects/{subject}', [SuperAdminSubject::class, 'showPlatform'])->name('subjects.show');
+                Route::get('topics', [SuperAdminTopic::class, 'platform'])->name('topics.index');
+
+                // Schools + per-school drill-down (school → grade/teacher/subject/topic → class → student → paper)
+                Route::get('schools', [SuperAdminSchool::class, 'index'])->name('schools.index');
+                Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create'); // stub — create not built yet
+                Route::get('schools/{school}', [SuperAdminSchool::class, 'show'])->name('schools.show');
+                Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit'); // stub — edit not built yet
+                Route::get('schools/{school}/grades', [SuperAdminGrade::class, 'index'])->name('schools.grades.index');
+                Route::get('schools/{school}/grades/{grade}', [SuperAdminGrade::class, 'show'])->name('schools.grades.show');
+                Route::get('schools/{school}/teachers/{teacher}', [SuperAdminTeacher::class, 'show'])->name('schools.teachers.show');
+                Route::get('schools/{school}/subjects', [SuperAdminSubject::class, 'index'])->name('schools.subjects.index');
+                Route::get('schools/{school}/subjects/{subject}', [SuperAdminSubject::class, 'show'])->name('schools.subjects.show');
+                Route::get('schools/{school}/topics', [SuperAdminTopic::class, 'show'])->name('schools.topics.index');
+                Route::get('schools/{school}/classes/{class}', [SuperAdminClass::class, 'show'])->name('schools.classes.show');
+                Route::get('schools/{school}/students/{student}', [SuperAdminStudent::class, 'show'])->name('schools.students.show');
+                Route::get('schools/{school}/exams/{exam}/students/{student}/paper', [SuperAdminStudent::class, 'paper'])->name('schools.student_paper');
+
                 Route::get('question-bank', [SuperAdminQuestionBank::class, 'index'])->name('question_bank.index');
-                Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index');
+                Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
             });
         });
     });

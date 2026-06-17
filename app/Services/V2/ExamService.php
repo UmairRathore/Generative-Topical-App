@@ -386,6 +386,230 @@ class ExamService
         return ['topics' => $topicCols, 'rows' => $matrix];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Super Admin drill-down aggregates (grade / subject / topic / single-mixed)
+    |--------------------------------------------------------------------------
+    | All raw DB::table (so no global scope fires) and keyed on explicit ids, so
+    | the unscoped Super Admin can call them for any school. New helpers use
+    | nullif(total_questions,0) to avoid the divide-by-zero the older school*
+    | rollups can hit on a 0-question exam.
+    */
+
+    /** Per-grade summary rows for one school. */
+    public function gradeWideRows(int $schoolId): array
+    {
+        $classCounts = DB::table('v2_classes')->where('school_id', $schoolId)
+            ->selectRaw('grade_id, count(*) c')->groupBy('grade_id')->pluck('c', 'grade_id');
+
+        $studentCounts = DB::table('v2_student_enrollments as se')
+            ->join('v2_classes as c', 'c.id', '=', 'se.class_id')
+            ->where('c.school_id', $schoolId)->where('se.status', 'active')
+            ->selectRaw('c.grade_id, count(distinct se.student_id) c')
+            ->groupBy('c.grade_id')->pluck('c', 'grade_id');
+
+        $examCounts = DB::table('v2_exams as e')
+            ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
+            ->where('e.school_id', $schoolId)
+            ->selectRaw('c.grade_id, count(*) c')->groupBy('c.grade_id')->pluck('c', 'grade_id');
+
+        $perf = DB::table('v2_exam_attempts as at')
+            ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
+            ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
+            ->selectRaw('c.grade_id, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('c.grade_id')->get()->keyBy('grade_id');
+
+        return DB::table('v2_grades')->where('school_id', $schoolId)->orderBy('name')->get(['id', 'name'])
+            ->map(fn ($g) => [
+                'id'          => $g->id,
+                'grade'       => $g->name,
+                'classes'     => (int) ($classCounts[$g->id] ?? 0),
+                'students'    => (int) ($studentCounts[$g->id] ?? 0),
+                'exams'       => (int) ($examCounts[$g->id] ?? 0),
+                'submissions' => (int) ($perf[$g->id]->submissions ?? 0),
+                'avg'         => isset($perf[$g->id]) && $perf[$g->id]->avg_pct !== null ? (int) round($perf[$g->id]->avg_pct) : null,
+            ])->all();
+    }
+
+    /** Per-topic stats restricted to one grade's classes within a school. */
+    public function gradeTopicStats(int $schoolId, int $gradeId): array
+    {
+        return $this->topicStats(
+            DB::table('v2_exam_answers as a')
+                ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+                ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+                ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
+                ->where('e.school_id', $schoolId)
+                ->where('c.grade_id', $gradeId)
+                ->where('at.status', 'submitted')
+        );
+    }
+
+    /** Per-subject summary rows for one school. */
+    public function subjectWideRows(int $schoolId): array
+    {
+        $classCounts = DB::table('v2_classes')->where('school_id', $schoolId)
+            ->selectRaw('subject_id, count(*) c')->groupBy('subject_id')->pluck('c', 'subject_id');
+
+        $studentCounts = DB::table('v2_student_enrollments as se')
+            ->join('v2_classes as c', 'c.id', '=', 'se.class_id')
+            ->where('c.school_id', $schoolId)->where('se.status', 'active')
+            ->selectRaw('c.subject_id, count(distinct se.student_id) c')
+            ->groupBy('c.subject_id')->pluck('c', 'subject_id');
+
+        $examCounts = DB::table('v2_exams')->where('school_id', $schoolId)
+            ->selectRaw('subject_id, count(*) c')->groupBy('subject_id')->pluck('c', 'subject_id');
+
+        $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
+            ->selectRaw('e.subject_id, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('e.subject_id')->get()->keyBy('subject_id');
+
+        $subjectIds = $classCounts->keys()->merge($examCounts->keys())->unique()->filter()->values();
+        $names = DB::table('v2_subjects')->whereIn('id', $subjectIds)->pluck('name', 'id');
+
+        return $subjectIds
+            ->map(fn ($sid) => [
+                'id'          => (int) $sid,
+                'subject'     => $names[$sid] ?? 'Subject',
+                'classes'     => (int) ($classCounts[$sid] ?? 0),
+                'students'    => (int) ($studentCounts[$sid] ?? 0),
+                'exams'       => (int) ($examCounts[$sid] ?? 0),
+                'submissions' => (int) ($perf[$sid]->submissions ?? 0),
+                'avg'         => isset($perf[$sid]) && $perf[$sid]->avg_pct !== null ? (int) round($perf[$sid]->avg_pct) : null,
+            ])
+            ->sortBy('subject')->values()->all();
+    }
+
+    /**
+     * Per-topic stats within one subject. $schoolId null => platform-wide
+     * (across all schools); an int restricts to that school.
+     */
+    public function subjectTopicStats(?int $schoolId, int $subjectId): array
+    {
+        return $this->topicStats(
+            DB::table('v2_exam_answers as a')
+                ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+                ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+                ->where('e.subject_id', $subjectId)
+                ->where('at.status', 'submitted')
+                ->when($schoolId, fn ($q) => $q->where('e.school_id', $schoolId))
+        );
+    }
+
+    /**
+     * Answer-weighted per-topic rollup across all subjects. $schoolId null =>
+     * platform-wide; an int restricts to that school.
+     */
+    public function topicWideStats(?int $schoolId = null): array
+    {
+        $base = DB::table('v2_exam_answers as a')
+            ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+            ->where('at.status', 'submitted');
+
+        if ($schoolId !== null) {
+            $base->join('v2_exams as e', 'e.id', '=', 'at.exam_id')->where('e.school_id', $schoolId);
+        }
+
+        return $this->topicStats($base);
+    }
+
+    /**
+     * Cross-school grade rollup. Grouped by grade NAME (grade_id is per-school
+     * and not comparable across schools), so differently-named grades won't merge.
+     */
+    public function gradePlatformRows(): array
+    {
+        $classAgg = DB::table('v2_classes as c')
+            ->join('v2_grades as g', 'g.id', '=', 'c.grade_id')
+            ->selectRaw('g.name, count(distinct c.school_id) schools, count(*) classes')
+            ->groupBy('g.name')->get()->keyBy('name');
+
+        $studentAgg = DB::table('v2_student_enrollments as se')
+            ->join('v2_classes as c', 'c.id', '=', 'se.class_id')
+            ->join('v2_grades as g', 'g.id', '=', 'c.grade_id')
+            ->where('se.status', 'active')
+            ->selectRaw('g.name, count(distinct se.student_id) students')
+            ->groupBy('g.name')->get()->keyBy('name');
+
+        $examAgg = DB::table('v2_exams as e')
+            ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
+            ->join('v2_grades as g', 'g.id', '=', 'c.grade_id')
+            ->selectRaw('g.name, count(*) exams')
+            ->groupBy('g.name')->get()->keyBy('name');
+
+        $perf = DB::table('v2_exam_attempts as at')
+            ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
+            ->join('v2_grades as g', 'g.id', '=', 'c.grade_id')
+            ->where('at.status', 'submitted')
+            ->selectRaw('g.name, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('g.name')->get()->keyBy('name');
+
+        return $classAgg->keys()->map(fn ($name) => [
+            'grade'       => $name,
+            'schools'     => (int) ($classAgg[$name]->schools ?? 0),
+            'classes'     => (int) ($classAgg[$name]->classes ?? 0),
+            'students'    => (int) ($studentAgg[$name]->students ?? 0),
+            'exams'       => (int) ($examAgg[$name]->exams ?? 0),
+            'submissions' => (int) ($perf[$name]->submissions ?? 0),
+            'avg'         => isset($perf[$name]) && $perf[$name]->avg_pct !== null ? (int) round($perf[$name]->avg_pct) : null,
+        ])->sortByDesc('submissions')->values()->all();
+    }
+
+    /** Cross-school subject rollup, grouped by the global subject id. */
+    public function subjectPlatformRows(): array
+    {
+        $examAgg = DB::table('v2_exams')
+            ->selectRaw('subject_id, count(distinct school_id) schools, count(*) exams')
+            ->groupBy('subject_id')->get()->keyBy('subject_id');
+
+        $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('at.status', 'submitted')
+            ->selectRaw('e.subject_id, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('e.subject_id')->get()->keyBy('subject_id');
+
+        $names = DB::table('v2_subjects')->pluck('name', 'id');
+
+        return $examAgg->keys()->filter()->map(fn ($sid) => [
+            'id'          => (int) $sid,
+            'subject'     => $names[$sid] ?? 'Subject',
+            'schools'     => (int) ($examAgg[$sid]->schools ?? 0),
+            'exams'       => (int) ($examAgg[$sid]->exams ?? 0),
+            'submissions' => (int) ($perf[$sid]->submissions ?? 0),
+            'avg'         => isset($perf[$sid]) && $perf[$sid]->avg_pct !== null ? (int) round($perf[$sid]->avg_pct) : null,
+        ])->sortByDesc('submissions')->values()->all();
+    }
+
+    /**
+     * Single-topic vs mixed-topic exam split (mixed = topic_id IS NULL).
+     * Optional $schoolId / $classId narrow the scope; null = platform-wide.
+     */
+    public function examKindSplit(?int $schoolId = null, ?int $classId = null): array
+    {
+        $examRows = DB::table('v2_exams')
+            ->when($schoolId, fn ($q) => $q->where('school_id', $schoolId))
+            ->when($classId, fn ($q) => $q->where('class_id', $classId))
+            ->selectRaw('(topic_id IS NULL) as is_mixed, count(*) exams')
+            ->groupBy('is_mixed')->get()->keyBy('is_mixed');
+
+        $perfRows = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('at.status', 'submitted')
+            ->when($schoolId, fn ($q) => $q->where('e.school_id', $schoolId))
+            ->when($classId, fn ($q) => $q->where('e.class_id', $classId))
+            ->selectRaw('(e.topic_id IS NULL) as is_mixed, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('is_mixed')->get()->keyBy('is_mixed');
+
+        $pick = fn ($mixed) => [
+            'exams'       => (int) ($examRows[$mixed]->exams ?? 0),
+            'submissions' => (int) ($perfRows[$mixed]->submissions ?? 0),
+            'avg'         => isset($perfRows[$mixed]) && $perfRows[$mixed]->avg_pct !== null ? (int) round($perfRows[$mixed]->avg_pct) : null,
+        ];
+
+        return ['single' => $pick(0), 'mixed' => $pick(1)];
+    }
+
     private function topicStats($query): array
     {
         return $query
