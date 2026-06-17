@@ -58,14 +58,17 @@ class QuestionImage extends Model
     */
     /** On-screen size as a fraction of the crop's true pixel width. All crops
      *  share one render DPI, so a single fraction keeps internal label text a
-     *  consistent size across diagrams. Tables get a touch more room. */
+     *  consistent size across diagrams. Tables get a hair more room (denser
+     *  content) but not enough to dominate the column. */
     private const FRACTION_FIGURE = 0.72;  // "a bit smaller, all one size"
-    private const FRACTION_TABLE  = 0.87;  // tables a touch bigger (denser content)
+    private const FRACTION_TABLE  = 0.76;
 
-    /** Floor for small figures so a tiny stimulus stays readable next to the
-     *  option tiles — but never enlarged past MAX_UPSCALE x its real size, so
-     *  genuinely tiny/degenerate crops don't blow up into a blur. */
+    /** Display width is clamped to [MIN_FIGURE_PX, MAX_PX] so nothing is tiny and
+     *  nothing fills the whole reading column. Small figures are floored for
+     *  readability, but never enlarged past MAX_UPSCALE x their real size (so
+     *  tiny/degenerate crops don't blow up into a blur). */
     private const MIN_FIGURE_PX = 290;
+    private const MAX_PX        = 540;
     private const MAX_UPSCALE   = 1.85;
 
     /** The crop's true pixel width: the cached file dimension when known,
@@ -85,8 +88,8 @@ class QuestionImage extends Model
         return $widthPt > 0 ? $widthPt * 200 / 72 : null;
     }
 
-    /** Target on-screen width in CSS px (uniform fraction of real size, with a
-     *  readable floor for small figures), or null. Pair with max-width:100%. */
+    /** Target on-screen width in CSS px (uniform fraction of real size, clamped
+     *  to a consistent band), or null. Pair with max-width:100% in the view. */
     public function displayWidth(): ?int
     {
         $pixelWidth = $this->pixelWidth();
@@ -94,13 +97,10 @@ class QuestionImage extends Model
             return null;
         }
 
-        if ($this->role === 'table') {
-            return (int) round($pixelWidth * self::FRACTION_TABLE);
-        }
+        $fraction = $this->role === 'table' ? self::FRACTION_TABLE : self::FRACTION_FIGURE;
+        $scaled   = $pixelWidth * $fraction;
+        $floor    = min(self::MIN_FIGURE_PX, $pixelWidth * self::MAX_UPSCALE);
 
-        $scaled = $pixelWidth * self::FRACTION_FIGURE;
-        $floor  = min(self::MIN_FIGURE_PX, $pixelWidth * self::MAX_UPSCALE);
-
-        return (int) round(max($scaled, $floor));
+        return (int) round(min(max($scaled, $floor), self::MAX_PX));
     }
 }
