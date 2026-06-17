@@ -29,16 +29,23 @@ class QuestionBankController extends Controller
             'session' => $request->string('session')->toString(),
             'variant' => $request->string('variant')->toString(),
             'topic'   => $request->integer('topic') ?: null,
-            'answer'  => $request->string('answer')->toString(), // '', answered, unanswered
+            'layout'  => $request->string('layout')->toString(),  // question type
+            'answer'  => $request->string('answer')->toString(),  // '', answered, unanswered
             'q'       => trim($request->string('q')->toString()),
         ];
+
+        // 'gallery' renders each question's full visual (for visual QA); 'table' is the compact list.
+        $view = $request->string('view')->toString() === 'gallery' ? 'gallery' : 'table';
 
         $query = Question::query()
             ->with(['paper:id,source_paper,year,session_code,variant', 'subject:id,name,code', 'topic:id,external_id,title'])
             ->withCount(['options', 'images'])
+            // Gallery needs the actual options + images to render the question.
+            ->when($view === 'gallery', fn ($q) => $q->with(['options', 'images']))
             ->when($filters['subject'], fn ($q, $v) => $q->where('subject_id', $v))
             ->when($filters['year'], fn ($q, $v) => $q->where('year', $v))
             ->when($filters['topic'], fn ($q, $v) => $q->where('topic_id', $v))
+            ->when($filters['layout'], fn ($q, $v) => $q->where('layout_type', $v))
             ->when($filters['level'], fn ($q, $v) => $q->whereHas('subject', fn ($s) => $s->where('level', $v)))
             ->when($filters['session'], fn ($q, $v) => $q->whereHas('paper', fn ($p) => $p->where('session_code', $v)))
             ->when($filters['variant'], fn ($q, $v) => $q->whereHas('paper', fn ($p) => $p->where('variant', $v)))
@@ -54,7 +61,8 @@ class QuestionBankController extends Controller
             ->orderBy('source_paper')
             ->orderBy('question_number');
 
-        $questions = $query->paginate(25)->withQueryString();
+        // Gallery cards are heavier (images), so page in smaller chunks.
+        $questions = $query->paginate($view === 'gallery' ? 12 : 25)->withQueryString();
 
         // Filter option lists (only values that actually exist in the bank).
         $subjectIds = Question::query()->distinct()->pluck('subject_id');
@@ -62,12 +70,14 @@ class QuestionBankController extends Controller
         return view('v2.super_admin.question_bank.index', [
             'questions' => $questions,
             'filters'   => $filters,
+            'view'      => $view,
             'subjects'  => Subject::whereIn('id', $subjectIds)->orderBy('name')->get(['id', 'name', 'code', 'level']),
             'levels'    => Subject::whereIn('id', $subjectIds)->whereNotNull('level')->distinct()->orderBy('level')->pluck('level'),
             'years'     => Question::query()->whereNotNull('year')->distinct()->orderByDesc('year')->pluck('year'),
             'topics'    => Topic::query()
                 ->when($filters['subject'], fn ($q, $v) => $q->where('subject_id', $v))
                 ->orderBy('sort_order')->get(['id', 'external_id', 'title']),
+            'layouts'   => Question::query()->distinct()->orderBy('layout_type')->pluck('layout_type')->filter()->values(),
             'sessions'  => self::SESSION_LABELS,
             'variants'  => ['11', '12', '13', '14'],
             'stats'     => [

@@ -37,6 +37,7 @@
 {{-- Filters --}}
 <form method="GET" action="{{ route('v2.super_admin.question_bank.index') }}"
       style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; margin-bottom: 18px;">
+    <input type="hidden" name="view" value="{{ $view }}">
     <div class="grid" style="grid-template-columns: repeat(6, 1fr); gap: 14px;">
 
         <div>
@@ -106,7 +107,16 @@
             <input type="text" name="q" value="{{ $filters['q'] }}" placeholder="Question text or paper code…"
                    style="{{ $selStyle }} width: 100%;">
         </div>
-        <div style="width: 160px;">
+        <div style="width: 180px;">
+            <label style="{{ $labelStyle }}">Type</label>
+            <select name="layout" style="{{ $selStyle }} width: 100%;">
+                <option value="">All types</option>
+                @foreach ($layouts as $lt)
+                    <option value="{{ $lt }}" @selected($filters['layout'] === $lt)>{{ ucfirst(str_replace('_', ' ', $lt)) }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div style="width: 150px;">
             <label style="{{ $labelStyle }}">Answer</label>
             <select name="answer" style="{{ $selStyle }} width: 100%;">
                 <option value="">Any</option>
@@ -119,6 +129,51 @@
     </div>
 </form>
 
+{{-- View toggle --}}
+<div class="flex items-center justify-between" style="margin-bottom: 14px;">
+    <div style="font-size: 12.5px; color: var(--text-faint);">
+        {{ number_format($stats['matched']) }} {{ Str::plural('question', $stats['matched']) }} match
+    </div>
+    <div class="flex items-center" style="gap: 6px;">
+        <a href="{{ request()->fullUrlWithQuery(['view' => 'table', 'page' => 1]) }}"
+           class="btn btn-sm {{ $view === 'table' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="list" size="14"/> Table</a>
+        <a href="{{ request()->fullUrlWithQuery(['view' => 'gallery', 'page' => 1]) }}"
+           class="btn btn-sm {{ $view === 'gallery' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="grid" size="14"/> Gallery</a>
+    </div>
+</div>
+
+@if ($view === 'gallery')
+    {{-- Gallery: each question rendered exactly as students see it (for visual QA) --}}
+    @forelse ($questions as $q)
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden;">
+            <div class="flex items-center" style="flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border); background: var(--soft-surface);">
+                <span style="font-size: 13px; font-weight: 700;">{{ $q->source_paper }}</span>
+                <span style="font-size: 12px; color: var(--text-faint);">Q{{ $q->question_number }} · {{ $q->year }} · {{ $sessionLabels[$q->paper?->session_code] ?? $q->paper?->session_code }}</span>
+                <span style="flex: 1;"></span>
+                @if ($q->topic)
+                    <span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ \Illuminate\Support\Str::limit($q->topic->title, 26) }}</span>
+                @else
+                    <span class="badge badge-soft">Untagged</span>
+                @endif
+                <span class="badge badge-soft" style="font-size: 10px;">{{ str_replace('_', ' ', $q->layout_type) }}</span>
+                <span class="badge badge-soft" style="font-size: 10px;">ID {{ $q->id }}</span>
+                @if ($q->correct_answer)
+                    <span class="badge badge-pass" style="font-weight: 700;">Ans {{ $q->correct_answer }}</span>
+                @else
+                    <span class="badge badge-blocker" style="font-size: 10px;">No answer</span>
+                @endif
+            </div>
+            <div style="padding: 20px 22px; max-width: 760px;">
+                @include('v2.partials.question_card', ['q' => $q])
+            </div>
+        </div>
+    @empty
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">
+            No questions match these filters.
+            <a href="{{ route('v2.super_admin.question_bank.index') }}" style="color: var(--gold-700); font-weight: 600; text-decoration: none;">Reset filters →</a>
+        </div>
+    @endforelse
+@else
 {{-- Results --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
     <table class="tbl" style="width: 100%; border-collapse: collapse;">
@@ -179,6 +234,7 @@
         </tbody>
     </table>
 </div>
+@endif
 
 {{-- Pager --}}
 @if ($questions->hasPages())
