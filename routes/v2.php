@@ -73,7 +73,15 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::get('schools/{school}/students/{student}', [SuperAdminStudent::class, 'show'])->name('schools.students.show');
                 Route::get('schools/{school}/exams/{exam}/students/{student}/paper', [SuperAdminStudent::class, 'paper'])->name('schools.student_paper');
 
+                // Question bank — browse + full CRUD (Super Admin only). 'create' before '{question}'.
                 Route::get('question-bank', [SuperAdminQuestionBank::class, 'index'])->name('question_bank.index');
+                Route::get('question-bank/create', [SuperAdminQuestionBank::class, 'create'])->name('question_bank.create');
+                Route::post('question-bank', [SuperAdminQuestionBank::class, 'store'])->name('question_bank.store');
+                Route::get('question-bank/{question}/edit', [SuperAdminQuestionBank::class, 'edit'])->name('question_bank.edit');
+                Route::put('question-bank/{question}', [SuperAdminQuestionBank::class, 'update'])->name('question_bank.update');
+                Route::delete('question-bank/{question}', [SuperAdminQuestionBank::class, 'destroy'])->name('question_bank.destroy');
+                Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
+
                 Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
             });
         });

@@ -5,16 +5,30 @@
     $selStyle = 'padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text); min-width: 0;';
     $labelStyle = 'display:block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 5px;';
     $sessionLabels = $sessions;
+    $statusBadge = fn ($s) => match ($s) {
+        'active'   => 'badge-pass',
+        'archived' => 'badge-blocker',
+        default    => 'badge-soft',
+    };
 @endphp
 
 @section('content')
 
+@if (session('ok'))
+    <div style="background: rgba(var(--ok-rgb, 95,160,82), .12); border: 1px solid var(--ok); color: var(--ok); border-radius: var(--r-lg); padding: 11px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600;">
+        {{ session('ok') }}
+    </div>
+@endif
+
 {{-- Heading --}}
-<div style="margin-bottom: 20px;">
-    <h2 class="serif" style="font-size: 26px; font-weight: 600;">Question Bank</h2>
-    <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">
-        The complete pool every generated test draws from. Browse and filter across all subjects, papers and topics.
-    </p>
+<div class="flex items-start justify-between" style="margin-bottom: 20px; gap: 16px; flex-wrap: wrap;">
+    <div>
+        <h2 class="serif" style="font-size: 26px; font-weight: 600;">Question Bank</h2>
+        <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">
+            The complete pool every generated test draws from. Browse, filter and manage across all subjects, papers and topics.
+        </p>
+    </div>
+    <a href="{{ route('v2.super_admin.question_bank.create') }}" class="btn btn-primary" style="flex: none;"><x-icon name="plus" size="14"/> New question</a>
 </div>
 
 {{-- Stats --}}
@@ -124,6 +138,15 @@
                 <option value="unanswered" @selected($filters['answer'] === 'unanswered')>No answer</option>
             </select>
         </div>
+        <div class="qb-status" style="width: 150px;">
+            <label style="{{ $labelStyle }}">Status</label>
+            <select name="status" style="{{ $selStyle }} width: 100%;">
+                <option value="">All statuses</option>
+                @foreach ($statuses as $st)
+                    <option value="{{ $st }}" @selected($filters['status'] === $st)>{{ ucfirst($st) }}</option>
+                @endforeach
+            </select>
+        </div>
         <button type="submit" class="btn btn-primary qb-apply"><x-icon name="filter" size="14"/> Apply</button>
         <a href="{{ route('v2.super_admin.question_bank.index') }}" class="btn btn-ghost qb-reset">Reset</a>
     </div>
@@ -162,6 +185,13 @@
                 @else
                     <span class="badge badge-blocker" style="font-size: 10px;">No answer</span>
                 @endif
+                <span class="badge {{ $statusBadge($q->status) }}">{{ ucfirst($q->status) }}</span>
+                <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
+                <form method="POST" action="{{ route('v2.super_admin.question_bank.destroy', $q) }}" style="display: inline;"
+                      onsubmit="return confirm('Delete this question permanently? This cannot be undone.');">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"><x-icon name="trash" size="12"/></button>
+                </form>
             </div>
             <div style="padding: 20px 22px; max-width: 760px;">
                 @include('v2.partials.question_card', ['q' => $q])
@@ -185,6 +215,8 @@
                 <th style="padding: var(--pad-cell); text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Type</th>
                 <th style="padding: var(--pad-cell); text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Ans</th>
                 <th style="padding: var(--pad-cell); text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Diag</th>
+                <th style="padding: var(--pad-cell); text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Status</th>
+                <th style="padding: var(--pad-cell); text-align: right; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -222,10 +254,32 @@
                     <td data-label="Diagrams" style="padding: var(--pad-cell); vertical-align: top; text-align: center; font-size: 12.5px; color: var(--text-soft);">
                         {{ $q->images_count ?: '—' }}
                     </td>
+                    <td data-label="Status" style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
+                        <span class="badge {{ $statusBadge($q->status) }}">{{ ucfirst($q->status) }}</span>
+                    </td>
+                    <td data-label="Actions" style="padding: var(--pad-cell); vertical-align: top; text-align: right; white-space: nowrap;">
+                        <div class="flex items-center" style="gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
+                            <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
+                            <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
+                                @csrf @method('PATCH')
+                                <select name="status" onchange="this.form.submit()" title="Change status"
+                                        style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
+                                    @foreach ($statuses as $st)
+                                        <option value="{{ $st }}" @selected($q->status === $st)>{{ ucfirst($st) }}</option>
+                                    @endforeach
+                                </select>
+                            </form>
+                            <form method="POST" action="{{ route('v2.super_admin.question_bank.destroy', $q) }}" style="display: inline;"
+                                  onsubmit="return confirm('Delete this question permanently? This cannot be undone.');">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"><x-icon name="trash" size="12"/></button>
+                            </form>
+                        </div>
+                    </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" style="padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">
+                    <td colspan="8" style="padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">
                         No questions match these filters.
                         <a href="{{ route('v2.super_admin.question_bank.index') }}" style="color: var(--gold-700); font-weight: 600; text-decoration: none;">Reset filters →</a>
                     </td>

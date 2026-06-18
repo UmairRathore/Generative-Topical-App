@@ -2,6 +2,7 @@
 
 namespace App\Models\V2;
 
+use App\Models\Concerns\HasHashid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Question extends Model
 {
+    use HasHashid;
+
     protected $table = 'v2_questions';
 
     protected $fillable = [
@@ -31,6 +34,7 @@ class Question extends Model
         'needs_review',
         'warnings',
         'source_paper',
+        'status',
     ];
 
     protected function casts(): array
@@ -81,6 +85,12 @@ class Question extends Model
     public function scopeAnswerable(Builder $query): Builder
     {
         return $query->whereNotNull('correct_answer');
+    }
+
+    /** Live questions — the only ones a generated test may draw from. */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active');
     }
 
     /**

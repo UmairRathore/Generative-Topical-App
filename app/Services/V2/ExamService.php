@@ -30,6 +30,7 @@ class ExamService
         $count = max(1, min(40, (int) $data['question_count']));
 
         $base = Question::query()
+            ->active() // draft / archived questions are never drawn into a test
             ->where('subject_id', $class->subject_id)
             ->when($data['topic_id'] ?? null, fn ($q, $t) => $q->where('topic_id', $t))
             ->when($data['year_from'] ?? null, fn ($q, $y) => $q->where('year', '>=', $y))
