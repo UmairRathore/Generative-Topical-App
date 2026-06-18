@@ -2,6 +2,7 @@
 
 namespace App\Models\V2;
 
+use App\Models\Concerns\HasHashid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,6 +12,8 @@ use Illuminate\Notifications\Notifiable;
 
 class Student extends Authenticatable
 {
+    use HasHashid;
+
     use Notifiable;
 
     protected $table = 'v2_students';
@@ -18,6 +21,7 @@ class Student extends Authenticatable
 
     protected $fillable = [
         'school_id',
+        'branch_id',
         'name',
         'email',
         'password',
@@ -48,12 +52,15 @@ class Student extends Authenticatable
             $adminGuard   = auth()->guard('v2_school_admin');
             $teacherGuard = auth()->guard('v2_teacher');
             $studentGuard = auth()->guard('v2_student');
+            $branchGuard  = auth()->guard('v2_branch_admin');
             if ($adminGuard->hasUser()) {
                 $builder->where('school_id', $adminGuard->user()->school_id);
             } elseif ($teacherGuard->hasUser()) {
                 $builder->where('school_id', $teacherGuard->user()->school_id);
             } elseif ($studentGuard->hasUser()) {
                 $builder->where('school_id', $studentGuard->user()->school_id);
+            } elseif ($branchGuard->hasUser()) {
+                $builder->where('branch_id', $branchGuard->user()->branch_id);
             }
         });
     }
@@ -61,6 +68,11 @@ class Student extends Authenticatable
     public function school(): BelongsTo
     {
         return $this->belongsTo(School::class, 'school_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     public function enrollments(): HasMany

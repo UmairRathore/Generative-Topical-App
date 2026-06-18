@@ -1,11 +1,11 @@
-@extends('v2.layouts.school_admin')
-@section('page_title', 'Student Analytics')
+@extends('v2.layouts.teacher')
+@section('page_title', $student->name)
 
 @php $tone = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 
 @section('content')
-<a href="{{ route('v2.school.analytics.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="14"/> Back to Analytics
+<a href="{{ url()->previous() }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="14"/> Back
 </a>
 
 <div style="margin-bottom: 20px;">
@@ -48,7 +48,8 @@
                     <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 12px;">Tests</div>
                     <div class="space-y-2">
                         @foreach ($subject['tests'] as $test)
-                            <a href="{{ route('v2.school.analytics.student_paper', [hid($test['exam_id']), $student]) }}" class="flex items-center justify-between" style="padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: inherit;">
+                            <a href="{{ route('v2.teacher.exams.student_paper', [hid($test['exam_id']), $student]) }}"
+                               class="flex items-center justify-between" style="padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; text-decoration: none; color: inherit;">
                                 <div style="min-width: 0;">
                                     <div style="font-size: 13px; font-weight: 500;">{{ $test['title'] }}</div>
                                     <div style="font-size: 11.5px; color: var(--text-faint);">{{ $test['topic'] }} · {{ $test['date']?->diffForHumans() }}</div>

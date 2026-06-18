@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V2\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\V2\Exam;
 use App\Models\V2\SchoolClass;
+use App\Models\V2\Student;
 use App\Models\V2\StudentEnrollment;
 use App\Services\V2\ExamService;
 
@@ -48,6 +49,21 @@ class ClassController extends Controller
             'exams'        => $exams,
             'topicStats'   => $service->classTopicStats($class),
             'matrix'       => $service->classStudentMatrix($class),
+        ]);
+    }
+
+    /** One student's performance — only for students in this teacher's classes. */
+    public function student(Student $student, ExamService $service)
+    {
+        $classIds = $this->teacher()->classes()->pluck('v2_classes.id');
+        abort_unless(
+            StudentEnrollment::where('student_id', $student->id)->whereIn('class_id', $classIds)->exists(),
+            403
+        );
+
+        return view('v2.teacher.students.show', [
+            'student' => $student,
+            'stats'   => $service->studentStats($student),
         ]);
     }
 }

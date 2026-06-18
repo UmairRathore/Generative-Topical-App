@@ -50,6 +50,10 @@ return [
             'driver'   => 'session',
             'provider' => 'v2_school_admins',
         ],
+        'v2_branch_admin' => [
+            'driver'   => 'session',
+            'provider' => 'v2_branch_admins',
+        ],
         'v2_teacher' => [
             'driver'   => 'session',
             'provider' => 'v2_teachers',
@@ -96,6 +100,10 @@ return [
         'v2_school_admins' => [
             'driver' => 'eloquent',
             'model'  => App\Models\V2\SchoolAdmin::class,
+        ],
+        'v2_branch_admins' => [
+            'driver' => 'eloquent',
+            'model'  => App\Models\V2\BranchAdmin::class,
         ],
         'v2_teachers' => [
             'driver' => 'eloquent',

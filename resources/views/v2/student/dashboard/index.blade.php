@@ -3,7 +3,7 @@
 
 @php
     $user = auth('v2_student')->user();
-    $barColor = fn ($p) => $p >= 60 ? 'var(--emerald-700)' : ($p >= 40 ? 'var(--accent)' : '#ef4444');
+    $barColor = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)');
 @endphp
 
 @section('content')
@@ -73,7 +73,7 @@
                     <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 12px;">Tests</div>
                     <div class="space-y-2">
                         @foreach ($subject['tests'] as $test)
-                            <a href="{{ route('v2.student.exams.result', $test['exam_id']) }}"
+                            <a href="{{ route('v2.student.exams.result', hid($test['exam_id'])) }}"
                                class="flex items-center justify-between" style="text-decoration: none; color: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
                                 <div style="min-width: 0;">
                                     <div style="font-size: 13px; font-weight: 500;">{{ $test['title'] }}</div>

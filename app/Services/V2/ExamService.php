@@ -162,10 +162,11 @@ class ExamService
      * Aggregate a student's performance: overall, then per subject, and within
      * each subject a per-topic breakdown and the list of tests taken.
      */
-    public function studentStats(Student $student): array
+    public function studentStats(Student $student, ?\Illuminate\Support\Carbon $since = null): array
     {
         $attempts = ExamAttempt::where('student_id', $student->id)
             ->where('status', 'submitted')
+            ->when($since, fn ($q) => $q->where('submitted_at', '>=', $since))
             ->with(['exam.subject', 'exam.topic'])
             ->orderByDesc('submitted_at')
             ->get();
@@ -176,6 +177,7 @@ class ExamService
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
             ->where('at.student_id', $student->id)
             ->where('at.status', 'submitted')
+            ->when($since, fn ($q) => $q->where('at.submitted_at', '>=', $since))
             ->selectRaw('q.subject_id, t.external_id, t.title as topic, count(*) as total, sum(a.is_correct) as correct')
             ->groupBy('q.subject_id', 't.external_id', 't.title')
             ->orderByRaw('CAST(t.external_id AS UNSIGNED)')
@@ -216,9 +218,9 @@ class ExamService
     }
 
     /** Per-topic stats aggregated across every submitted attempt in a whole school. */
-    public function schoolTopicStats(int $schoolId): array
+    public function schoolTopicStats(int $schoolId, ?int $branchId = null): array
     {
-        return $this->topicStats($this->schoolAnswersBase($schoolId));
+        return $this->topicStats($this->schoolAnswersBase($schoolId, $branchId));
     }
 
     /** Per-topic stats across one teacher's exams (their students' results by topic). */
@@ -233,26 +235,50 @@ class ExamService
         );
     }
 
-    /** School-wide totals. */
-    public function schoolOverview(int $schoolId): array
+    /** Overview totals for one teacher (their classes/students/exams + avg). */
+    public function teacherOverview(int $teacherId): array
     {
+        $classIds = DB::table('v2_class_teachers')->where('teacher_id', $teacherId)->pluck('class_id');
+
+        $students = $classIds->isEmpty() ? 0 : (int) DB::table('v2_student_enrollments')
+            ->whereIn('class_id', $classIds)->where('status', 'active')->distinct()->count('student_id');
+
+        $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('e.created_by', $teacherId)->where('at.status', 'submitted')
+            ->selectRaw('count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')->first();
+
+        return [
+            'classes'     => $classIds->count(),
+            'students'    => $students,
+            'exams'       => DB::table('v2_exams')->where('created_by', $teacherId)->count(),
+            'submissions' => (int) ($perf->submissions ?? 0),
+            'avg'         => ($perf && $perf->avg_pct !== null) ? (int) round($perf->avg_pct) : null,
+        ];
+    }
+
+    /** School-wide totals (optionally narrowed to one branch). */
+    public function schoolOverview(int $schoolId, ?int $branchId = null): array
+    {
+        $ids = $branchId ? $this->branchClassIds($branchId) : null;
+
         $avg = DB::table('v2_exam_attempts as at')
             ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
-            ->selectRaw('count(*) submissions, avg(at.score / at.total_questions) * 100 as avg_pct')->first();
+            ->when($ids !== null, fn ($q) => $q->whereIn('e.class_id', $ids))
+            ->selectRaw('count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 as avg_pct')->first();
 
         return [
-            'students'    => DB::table('v2_students')->where('school_id', $schoolId)->count(),
-            'teachers'    => DB::table('v2_teachers')->where('school_id', $schoolId)->count(),
-            'classes'     => DB::table('v2_classes')->where('school_id', $schoolId)->count(),
-            'exams'       => DB::table('v2_exams')->where('school_id', $schoolId)->count(),
+            'students'    => DB::table('v2_students')->where('school_id', $schoolId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId))->count(),
+            'teachers'    => DB::table('v2_teachers')->where('school_id', $schoolId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId))->count(),
+            'classes'     => DB::table('v2_classes')->where('school_id', $schoolId)->when($branchId, fn ($q) => $q->where('branch_id', $branchId))->count(),
+            'exams'       => DB::table('v2_exams')->where('school_id', $schoolId)->when($ids !== null, fn ($q) => $q->whereIn('class_id', $ids))->count(),
             'submissions' => (int) ($avg->submissions ?? 0),
             'avg'         => ($avg && $avg->avg_pct !== null) ? (int) round($avg->avg_pct) : null,
         ];
     }
 
-    /** Per-teacher summary rows for the school. */
-    public function schoolTeacherRows(int $schoolId): array
+    /** Per-teacher summary rows for the school (optionally narrowed to a branch). */
+    public function schoolTeacherRows(int $schoolId, ?int $branchId = null): array
     {
         $exams = DB::table('v2_exams')->where('school_id', $schoolId)
             ->selectRaw('created_by, count(*) as exams, count(distinct class_id) as classes')
@@ -263,7 +289,9 @@ class ExamService
             ->selectRaw('e.created_by, count(*) submissions, avg(at.score / at.total_questions) * 100 as avg_pct')
             ->groupBy('e.created_by')->get()->keyBy('created_by');
 
-        return DB::table('v2_teachers')->where('school_id', $schoolId)->orderBy('name')->get(['id', 'name'])
+        return DB::table('v2_teachers')->where('school_id', $schoolId)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->orderBy('name')->get(['id', 'name'])
             ->map(fn ($t) => [
                 'id'          => $t->id,
                 'name'        => $t->name,
@@ -274,8 +302,8 @@ class ExamService
             ])->all();
     }
 
-    /** Per-class summary rows for the school. */
-    public function schoolClassRows(int $schoolId): array
+    /** Per-class summary rows for the school (optionally narrowed to a branch). */
+    public function schoolClassRows(int $schoolId, ?int $branchId = null): array
     {
         $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
@@ -289,7 +317,9 @@ class ExamService
         $classTeachers = DB::table('v2_class_teachers as ct')->join('v2_teachers as tt', 'tt.id', '=', 'ct.teacher_id')
             ->where('ct.school_id', $schoolId)->select('ct.class_id', 'tt.name')->get()->groupBy('class_id');
 
-        return SchoolClass::where('school_id', $schoolId)->with(['grade', 'subject'])
+        return SchoolClass::where('school_id', $schoolId)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->with(['grade', 'subject'])
             ->withCount(['enrollments as student_count' => fn ($e) => $e->where('status', 'active')])
             ->orderBy('name')->get()
             ->map(fn ($c) => [
@@ -304,13 +334,20 @@ class ExamService
             ])->all();
     }
 
-    private function schoolAnswersBase(int $schoolId)
+    /** Class ids belonging to one branch (for branch-scoped roll-ups). */
+    private function branchClassIds(int $branchId): array
+    {
+        return DB::table('v2_classes')->where('branch_id', $branchId)->pluck('id')->all();
+    }
+
+    private function schoolAnswersBase(int $schoolId, ?int $branchId = null)
     {
         return DB::table('v2_exam_answers as a')
             ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
             ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->where('e.school_id', $schoolId)
-            ->where('at.status', 'submitted');
+            ->where('at.status', 'submitted')
+            ->when($branchId, fn ($q) => $q->whereIn('e.class_id', $this->branchClassIds($branchId)));
     }
 
     /** Per-topic stats aggregated across every submitted attempt in a class. */
@@ -396,27 +433,31 @@ class ExamService
     | rollups can hit on a 0-question exam.
     */
 
-    /** Per-grade summary rows for one school. */
-    public function gradeWideRows(int $schoolId): array
+    /** Per-grade summary rows for one school (optionally narrowed to a branch). */
+    public function gradeWideRows(int $schoolId, ?int $branchId = null): array
     {
         $classCounts = DB::table('v2_classes')->where('school_id', $schoolId)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->selectRaw('grade_id, count(*) c')->groupBy('grade_id')->pluck('c', 'grade_id');
 
         $studentCounts = DB::table('v2_student_enrollments as se')
             ->join('v2_classes as c', 'c.id', '=', 'se.class_id')
             ->where('c.school_id', $schoolId)->where('se.status', 'active')
+            ->when($branchId, fn ($q) => $q->where('c.branch_id', $branchId))
             ->selectRaw('c.grade_id, count(distinct se.student_id) c')
             ->groupBy('c.grade_id')->pluck('c', 'grade_id');
 
         $examCounts = DB::table('v2_exams as e')
             ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
             ->where('e.school_id', $schoolId)
+            ->when($branchId, fn ($q) => $q->where('c.branch_id', $branchId))
             ->selectRaw('c.grade_id, count(*) c')->groupBy('c.grade_id')->pluck('c', 'grade_id');
 
         $perf = DB::table('v2_exam_attempts as at')
             ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->join('v2_classes as c', 'c.id', '=', 'e.class_id')
             ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
+            ->when($branchId, fn ($q) => $q->where('c.branch_id', $branchId))
             ->selectRaw('c.grade_id, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
             ->groupBy('c.grade_id')->get()->keyBy('grade_id');
 
@@ -433,7 +474,7 @@ class ExamService
     }
 
     /** Per-topic stats restricted to one grade's classes within a school. */
-    public function gradeTopicStats(int $schoolId, int $gradeId): array
+    public function gradeTopicStats(int $schoolId, int $gradeId, ?int $branchId = null): array
     {
         return $this->topicStats(
             DB::table('v2_exam_answers as a')
@@ -443,26 +484,33 @@ class ExamService
                 ->where('e.school_id', $schoolId)
                 ->where('c.grade_id', $gradeId)
                 ->where('at.status', 'submitted')
+                ->when($branchId, fn ($q) => $q->where('c.branch_id', $branchId))
         );
     }
 
-    /** Per-subject summary rows for one school. */
-    public function subjectWideRows(int $schoolId): array
+    /** Per-subject summary rows for one school (optionally narrowed to a branch). */
+    public function subjectWideRows(int $schoolId, ?int $branchId = null): array
     {
+        $ids = $branchId ? $this->branchClassIds($branchId) : null;
+
         $classCounts = DB::table('v2_classes')->where('school_id', $schoolId)
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
             ->selectRaw('subject_id, count(*) c')->groupBy('subject_id')->pluck('c', 'subject_id');
 
         $studentCounts = DB::table('v2_student_enrollments as se')
             ->join('v2_classes as c', 'c.id', '=', 'se.class_id')
             ->where('c.school_id', $schoolId)->where('se.status', 'active')
+            ->when($branchId, fn ($q) => $q->where('c.branch_id', $branchId))
             ->selectRaw('c.subject_id, count(distinct se.student_id) c')
             ->groupBy('c.subject_id')->pluck('c', 'subject_id');
 
         $examCounts = DB::table('v2_exams')->where('school_id', $schoolId)
+            ->when($ids !== null, fn ($q) => $q->whereIn('class_id', $ids))
             ->selectRaw('subject_id, count(*) c')->groupBy('subject_id')->pluck('c', 'subject_id');
 
         $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->where('e.school_id', $schoolId)->where('at.status', 'submitted')
+            ->when($ids !== null, fn ($q) => $q->whereIn('e.class_id', $ids))
             ->selectRaw('e.subject_id, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
             ->groupBy('e.subject_id')->get()->keyBy('subject_id');
 
@@ -486,7 +534,7 @@ class ExamService
      * Per-topic stats within one subject. $schoolId null => platform-wide
      * (across all schools); an int restricts to that school.
      */
-    public function subjectTopicStats(?int $schoolId, int $subjectId): array
+    public function subjectTopicStats(?int $schoolId, int $subjectId, ?int $branchId = null): array
     {
         return $this->topicStats(
             DB::table('v2_exam_answers as a')
@@ -495,6 +543,7 @@ class ExamService
                 ->where('e.subject_id', $subjectId)
                 ->where('at.status', 'submitted')
                 ->when($schoolId, fn ($q) => $q->where('e.school_id', $schoolId))
+                ->when($branchId, fn ($q) => $q->whereIn('e.class_id', $this->branchClassIds($branchId)))
         );
     }
 
@@ -586,11 +635,15 @@ class ExamService
      * Single-topic vs mixed-topic exam split (mixed = topic_id IS NULL).
      * Optional $schoolId / $classId narrow the scope; null = platform-wide.
      */
-    public function examKindSplit(?int $schoolId = null, ?int $classId = null): array
+    public function examKindSplit(?int $schoolId = null, ?int $classId = null, ?int $createdBy = null, ?int $branchId = null): array
     {
+        $ids = $branchId ? $this->branchClassIds($branchId) : null;
+
         $examRows = DB::table('v2_exams')
             ->when($schoolId, fn ($q) => $q->where('school_id', $schoolId))
             ->when($classId, fn ($q) => $q->where('class_id', $classId))
+            ->when($createdBy, fn ($q) => $q->where('created_by', $createdBy))
+            ->when($ids !== null, fn ($q) => $q->whereIn('class_id', $ids))
             ->selectRaw('(topic_id IS NULL) as is_mixed, count(*) exams')
             ->groupBy('is_mixed')->get()->keyBy('is_mixed');
 
@@ -598,6 +651,8 @@ class ExamService
             ->where('at.status', 'submitted')
             ->when($schoolId, fn ($q) => $q->where('e.school_id', $schoolId))
             ->when($classId, fn ($q) => $q->where('e.class_id', $classId))
+            ->when($createdBy, fn ($q) => $q->where('e.created_by', $createdBy))
+            ->when($ids !== null, fn ($q) => $q->whereIn('e.class_id', $ids))
             ->selectRaw('(e.topic_id IS NULL) as is_mixed, count(*) submissions, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
             ->groupBy('is_mixed')->get()->keyBy('is_mixed');
 

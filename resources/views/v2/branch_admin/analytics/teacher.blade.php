@@ -1,10 +1,10 @@
-@extends('v2.layouts.school_admin')
+@extends('v2.layouts.branch_admin')
 @section('page_title', 'Teacher Analytics')
 
 @php $tone = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 
 @section('content')
-<a href="{{ route('v2.school.analytics.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
+<a href="{{ route('v2.branch.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
     <x-icon name="chev-l" size="14"/> Back to Analytics
 </a>
 
@@ -37,7 +37,7 @@
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $c->grade?->name }}</td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $c->student_count }}</td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $examCounts[$c->id] ?? 0 }}</td>
-                        <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.school.analytics.class', hid($c->id)) }}" class="btn btn-ghost btn-sm">View class</a></td>
+                        <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.branch.class', hid($c->id)) }}" class="btn btn-ghost btn-sm">View class</a></td>
                     </tr>
                 @empty
                     <tr><td colspan="5" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No classes assigned.</td></tr>

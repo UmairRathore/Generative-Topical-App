@@ -2,8 +2,8 @@
 @section('page_title', 'Class Analytics')
 
 @php
-    $barColor = fn ($p) => $p >= 60 ? 'var(--emerald-700)' : ($p >= 40 ? 'var(--accent)' : '#ef4444');
-    $cellBg = fn ($p) => $p >= 60 ? 'var(--emerald-50)' : ($p >= 40 ? 'var(--gold-50)' : '#fef2f2');
+    $barColor = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)');
+    $cellBg = fn ($p) => $p >= 60 ? 'var(--ok-soft)' : ($p >= 40 ? 'var(--warn-soft)' : 'var(--bad-soft)');
     $totC = array_sum(array_column($topicStats, 'correct'));
     $totT = array_sum(array_column($topicStats, 'total'));
     $classAvg = $totT ? (int) round($totC / $totT * 100) : null;
@@ -78,7 +78,7 @@
                     @foreach ($matrix['rows'] as $row)
                         <tr style="border-bottom: 1px solid var(--border);">
                             <td style="padding: var(--pad-cell); position: sticky; left: 0; background: var(--surface);">
-                                <div style="font-size: 13px; font-weight: 500;">{{ $row['student'] }}</div>
+                                <a href="{{ route('v2.teacher.students.show', hid($row['id'])) }}" style="font-size: 13px; font-weight: 500; color: var(--gold-700); text-decoration: none;">{{ $row['student'] }}</a>
                                 <div style="font-size: 11px; color: var(--text-faint);">{{ $row['roll'] }}</div>
                             </td>
                             @foreach ($matrix['topics'] as $topic)

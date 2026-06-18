@@ -2,6 +2,7 @@
 
 namespace App\Models\V2;
 
+use App\Models\Concerns\HasHashid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,10 +12,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SchoolClass extends Model
 {
+    use HasHashid;
+
     protected $table = 'v2_classes';
 
     protected $fillable = [
         'school_id',
+        'branch_id',
         'grade_id',
         'subject_id',
         'section',
@@ -32,10 +36,13 @@ class SchoolClass extends Model
         static::addGlobalScope('school', function (Builder $builder) {
             $adminGuard   = auth()->guard('v2_school_admin');
             $teacherGuard = auth()->guard('v2_teacher');
+            $branchGuard  = auth()->guard('v2_branch_admin');
             if ($adminGuard->hasUser()) {
                 $builder->where('v2_classes.school_id', $adminGuard->user()->school_id);
             } elseif ($teacherGuard->hasUser()) {
                 $builder->where('v2_classes.school_id', $teacherGuard->user()->school_id);
+            } elseif ($branchGuard->hasUser()) {
+                $builder->where('v2_classes.branch_id', $branchGuard->user()->branch_id);
             }
         });
     }
@@ -43,6 +50,11 @@ class SchoolClass extends Model
     public function school(): BelongsTo
     {
         return $this->belongsTo(School::class, 'school_id');
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     public function grade(): BelongsTo

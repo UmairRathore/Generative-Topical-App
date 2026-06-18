@@ -8,6 +8,9 @@ use App\Http\Controllers\V2\SchoolAdmin\SubjectController as SchoolAdminSubject;
 use App\Http\Controllers\V2\SchoolAdmin\ClassController as SchoolAdminClass;
 use App\Http\Controllers\V2\SchoolAdmin\TeacherController as SchoolAdminTeacher;
 use App\Http\Controllers\V2\SchoolAdmin\StudentController as SchoolAdminStudent;
+use App\Http\Controllers\V2\BranchAdmin\AnalyticsController as BranchAnalytics;
+use App\Http\Controllers\V2\BranchAdmin\AuthController as BranchAuth;
+use App\Http\Controllers\V2\BranchAdmin\ReportController as BranchReport;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
@@ -23,6 +26,7 @@ use App\Http\Controllers\V2\SuperAdmin\TeacherController as SuperAdminTeacher;
 use App\Http\Controllers\V2\SuperAdmin\TopicController as SuperAdminTopic;
 use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
 use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
+use App\Http\Controllers\V2\Teacher\DashboardController as TeacherDashboard;
 use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
 use Illuminate\Support\Facades\Route;
 
@@ -98,11 +102,17 @@ Route::prefix('v2')->name('v2.')->group(function () {
             ])->group(function () {
                 Route::get('dashboard', [SchoolAdminDashboard::class, 'index'])->name('dashboard');
 
-                // Analytics (school → teacher → class → student drill-down)
+                // Analytics (school → grade/teacher/subject/topic → class → student → paper)
                 Route::get('analytics', [SchoolAdminAnalytics::class, 'index'])->name('analytics.index');
+                Route::get('analytics/grades', [SchoolAdminAnalytics::class, 'grades'])->name('analytics.grades');
+                Route::get('analytics/grades/{grade}', [SchoolAdminAnalytics::class, 'grade'])->name('analytics.grade');
+                Route::get('analytics/subjects', [SchoolAdminAnalytics::class, 'subjects'])->name('analytics.subjects');
+                Route::get('analytics/subjects/{subject}', [SchoolAdminAnalytics::class, 'subject'])->name('analytics.subject');
+                Route::get('analytics/topics', [SchoolAdminAnalytics::class, 'topics'])->name('analytics.topics');
                 Route::get('analytics/teachers/{teacher}', [SchoolAdminAnalytics::class, 'teacher'])->name('analytics.teacher');
                 Route::get('analytics/classes/{class}', [SchoolAdminAnalytics::class, 'classDetail'])->name('analytics.class');
                 Route::get('analytics/students/{student}', [SchoolAdminAnalytics::class, 'student'])->name('analytics.student');
+                Route::get('analytics/exams/{exam}/students/{student}/paper', [SchoolAdminAnalytics::class, 'studentPaper'])->name('analytics.student_paper');
 
                 // Grades
                 Route::get('grades', [SchoolAdminGrade::class, 'index'])->name('grades.index');
@@ -158,6 +168,40 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
     /*
     |----------------------------------------------------------------------
+    | Branch Admin (campus) — same drill-down as school admin, scoped to one branch
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('branch')->name('branch.')->group(function () {
+
+        Route::middleware('guest:v2_branch_admin')->group(function () {
+            Route::get('login', [BranchAuth::class, 'showLogin'])->name('login');
+            Route::post('login', [BranchAuth::class, 'login'])->name('login.post');
+        });
+
+        Route::middleware('auth:v2_branch_admin')->group(function () {
+            Route::post('logout', [BranchAuth::class, 'logout'])->name('logout');
+            Route::get('change-password', [BranchAuth::class, 'showChangePassword'])->name('change_password');
+            Route::post('change-password', [BranchAuth::class, 'changePassword'])->name('change_password.post');
+
+            Route::middleware('v2.must_change_password:v2_branch_admin,v2.branch.change_password')->group(function () {
+                Route::get('dashboard', [BranchAnalytics::class, 'index'])->name('index');
+                Route::get('grades', [BranchAnalytics::class, 'grades'])->name('grades');
+                Route::get('grades/{grade}', [BranchAnalytics::class, 'grade'])->name('grade');
+                Route::get('subjects', [BranchAnalytics::class, 'subjects'])->name('subjects');
+                Route::get('subjects/{subject}', [BranchAnalytics::class, 'subject'])->name('subject');
+                Route::get('topics', [BranchAnalytics::class, 'topics'])->name('topics');
+                Route::get('teachers/{teacher}', [BranchAnalytics::class, 'teacher'])->name('teacher');
+                Route::get('classes/{class}', [BranchAnalytics::class, 'classDetail'])->name('class');
+                Route::get('students/{student}', [BranchAnalytics::class, 'student'])->name('student');
+                Route::post('students/{student}/reports', [BranchReport::class, 'generate'])->name('report.generate');
+                Route::get('reports/{report}/pdf', [BranchReport::class, 'pdf'])->name('report.pdf');
+                Route::get('exams/{exam}/students/{student}/paper', [BranchAnalytics::class, 'studentPaper'])->name('student_paper');
+            });
+        });
+    });
+
+    /*
+    |----------------------------------------------------------------------
     | Teacher
     |----------------------------------------------------------------------
     */
@@ -174,7 +218,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::post('change-password', [TeacherAuth::class, 'changePassword'])->name('change_password.post');
 
             Route::middleware('v2.must_change_password:v2_teacher,v2.teacher.change_password')->group(function () {
-                Route::view('dashboard', 'v2.teacher.dashboard.index')->name('dashboard');
+                Route::get('dashboard', [TeacherDashboard::class, 'index'])->name('dashboard');
 
                 // Exams
                 Route::get('exams', [TeacherExam::class, 'index'])->name('exams.index');
@@ -186,6 +230,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 // Classes (analytics: per-topic + per-student-per-topic)
                 Route::get('classes', [TeacherClass::class, 'index'])->name('classes.index');
                 Route::get('classes/{class}', [TeacherClass::class, 'show'])->name('classes.show');
+                Route::get('students/{student}', [TeacherClass::class, 'student'])->name('students.show');
             });
         });
     });

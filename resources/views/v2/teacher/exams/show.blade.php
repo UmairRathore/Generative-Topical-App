@@ -99,7 +99,7 @@
                     <span style="color: var(--text-soft);">{{ $t['correct'] }}/{{ $t['total'] }} · {{ $t['percent'] }}%</span>
                 </div>
                 <div style="height: 7px; border-radius: 99px; background: var(--soft-surface); overflow: hidden;">
-                    <div style="height: 100%; width: {{ $t['percent'] }}%; border-radius: 99px; background: {{ $t['percent'] >= 60 ? 'var(--emerald-700)' : ($t['percent'] >= 40 ? 'var(--accent)' : '#ef4444') }};"></div>
+                    <div style="height: 100%; width: {{ $t['percent'] }}%; border-radius: 99px; background: {{ $t['percent'] >= 60 ? 'var(--ok)' : ($t['percent'] >= 40 ? 'var(--warn)' : 'var(--bad)') }};"></div>
                 </div>
             </div>
         @empty

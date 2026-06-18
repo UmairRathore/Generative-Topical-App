@@ -1,7 +1,7 @@
 @extends('v2.layouts.teacher')
 @section('page_title', $student->name.' — paper')
 
-@php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--emerald-700)' : ($pct >= 40 ? 'var(--accent)' : '#ef4444'); @endphp
+@php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--ok)' : ($pct >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 
 @section('content')
 <div style="max-width: 760px; margin: 0 auto;">
@@ -35,7 +35,7 @@
                     <span style="color: var(--text-soft);">{{ $t['correct'] }}/{{ $t['total'] }} · {{ $t['percent'] }}%</span>
                 </div>
                 <div style="height: 7px; border-radius: 99px; background: var(--soft-surface); overflow: hidden;">
-                    <div style="height: 100%; width: {{ $t['percent'] }}%; border-radius: 99px; background: {{ $t['percent'] >= 60 ? 'var(--emerald-700)' : ($t['percent'] >= 40 ? 'var(--accent)' : '#ef4444') }};"></div>
+                    <div style="height: 100%; width: {{ $t['percent'] }}%; border-radius: 99px; background: {{ $t['percent'] >= 60 ? 'var(--ok)' : ($t['percent'] >= 40 ? 'var(--warn)' : 'var(--bad)') }};"></div>
                 </div>
             </div>
         @endforeach

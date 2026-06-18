@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\V2\SchoolAdmin;
 
 use App\Models\V2\Exam;
+use App\Models\V2\Grade;
 use App\Models\V2\SchoolClass;
 use App\Models\V2\Student;
+use App\Models\V2\Subject;
 use App\Models\V2\StudentEnrollment;
 use App\Models\V2\Teacher;
 use App\Services\V2\ExamService;
@@ -72,6 +74,87 @@ class AnalyticsController extends BaseController
         return view('v2.school_admin.analytics.student', [
             'student' => $student,
             'stats'   => $service->studentStats($student),
+        ]);
+    }
+
+    /* ---- Grade drill-down ------------------------------------------------ */
+
+    public function grades(ExamService $service)
+    {
+        return view('v2.school_admin.analytics.grades', [
+            'rows' => $service->gradeWideRows($this->schoolId()),
+        ]);
+    }
+
+    public function grade(Grade $grade, ExamService $service)
+    {
+        abort_unless($grade->school_id === $this->schoolId(), 403);
+        $sid = $this->schoolId();
+
+        return view('v2.school_admin.analytics.grade', [
+            'grade'      => $grade,
+            'summary'    => collect($service->gradeWideRows($sid))->firstWhere('id', $grade->id),
+            'topicStats' => $service->gradeTopicStats($sid, $grade->id),
+            'classes'    => collect($service->schoolClassRows($sid))->where('grade', $grade->name)->values()->all(),
+        ]);
+    }
+
+    /* ---- Subject drill-down ---------------------------------------------- */
+
+    public function subjects(ExamService $service)
+    {
+        return view('v2.school_admin.analytics.subjects', [
+            'rows' => $service->subjectWideRows($this->schoolId()),
+        ]);
+    }
+
+    public function subject(Subject $subject, ExamService $service)
+    {
+        $sid = $this->schoolId();
+
+        return view('v2.school_admin.analytics.subject', [
+            'subject'    => $subject,
+            'summary'    => collect($service->subjectWideRows($sid))->firstWhere('id', $subject->id),
+            'topicStats' => $service->subjectTopicStats($sid, $subject->id),
+            'classes'    => collect($service->schoolClassRows($sid))->where('subject', $subject->name)->values()->all(),
+        ]);
+    }
+
+    /* ---- Topic view (single / mixed split) ------------------------------- */
+
+    public function topics(ExamService $service)
+    {
+        $sid = $this->schoolId();
+
+        return view('v2.school_admin.analytics.topics', [
+            'topicStats' => $service->schoolTopicStats($sid),
+            'split'      => $service->examKindSplit($sid),
+        ]);
+    }
+
+    /* ---- Individual graded paper ----------------------------------------- */
+
+    public function studentPaper(Exam $exam, Student $student, ExamService $service)
+    {
+        $sid = $this->schoolId();
+        abort_unless($exam->school_id === $sid, 403);
+        abort_unless($student->school_id === $sid, 403);
+        abort_unless(
+            StudentEnrollment::where('class_id', $exam->class_id)->where('student_id', $student->id)->exists(),
+            403
+        );
+
+        $attempt = $exam->attempts()->where('student_id', $student->id)
+            ->where('status', 'submitted')->firstOrFail();
+
+        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+
+        return view('v2.school_admin.analytics.paper', [
+            'exam'       => $exam,
+            'student'    => $student,
+            'attempt'    => $attempt,
+            'answers'    => $attempt->answers()->get()->keyBy('question_id'),
+            'topicStats' => $service->topicStatsForAttempt($attempt),
         ]);
     }
 }

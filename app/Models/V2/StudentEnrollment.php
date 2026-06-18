@@ -14,6 +14,7 @@ class StudentEnrollment extends Model
         'student_id',
         'class_id',
         'school_id',
+        'branch_id',
         'status',
     ];
 
@@ -22,12 +23,20 @@ class StudentEnrollment extends Model
         static::addGlobalScope('school', function (Builder $builder) {
             $adminGuard   = auth()->guard('v2_school_admin');
             $teacherGuard = auth()->guard('v2_teacher');
+            $branchGuard  = auth()->guard('v2_branch_admin');
             if ($adminGuard->hasUser()) {
                 $builder->where('school_id', $adminGuard->user()->school_id);
             } elseif ($teacherGuard->hasUser()) {
                 $builder->where('school_id', $teacherGuard->user()->school_id);
+            } elseif ($branchGuard->hasUser()) {
+                $builder->where('branch_id', $branchGuard->user()->branch_id);
             }
         });
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class, 'branch_id');
     }
 
     public function student(): BelongsTo

@@ -16,7 +16,7 @@
             <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: box-shadow .15s;">
                 <div class="flex items-center justify-between">
                     <div style="font-size: 28px; font-weight: 700; color: var(--text);">{{ number_format($card['value']) }}</div>
-                    <div style="width: 40px; height: 40px; border-radius: 10px; background: {{ $card['color'] === 'emerald' ? 'rgba(6,95,70,.1)' : 'rgba(212,164,55,.1)' }}; display: flex; align-items: center; justify-content: center; color: {{ $card['color'] === 'emerald' ? 'var(--emerald-700)' : 'var(--accent)' }};">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: {{ $card['color'] === 'emerald' ? 'rgba(49,61,75,.1)' : 'rgba(205,85,84,.1)' }}; display: flex; align-items: center; justify-content: center; color: {{ $card['color'] === 'emerald' ? 'var(--emerald-700)' : 'var(--accent)' }};">
                         <x-icon :name="$card['icon']" size="20" />
                     </div>
                 </div>
@@ -44,7 +44,7 @@
                     <span style="color: var(--muted);">{{ $bar['used'] }} / {{ $bar['max'] }}</span>
                 </div>
                 <div style="height: 8px; border-radius: 4px; background: var(--border);">
-                    <div style="height: 8px; border-radius: 4px; width: {{ min($bar['pct'], 100) }}%; background: {{ $bar['pct'] >= 90 ? '#ef4444' : ($bar['pct'] >= 70 ? '#f59e0b' : 'var(--emerald-600)') }}; transition: width .3s;"></div>
+                    <div style="height: 8px; border-radius: 4px; width: {{ min($bar['pct'], 100) }}%; background: {{ $bar['pct'] >= 90 ? 'var(--bad)' : ($bar['pct'] >= 70 ? 'var(--warn)' : 'var(--ok)') }}; transition: width .3s;"></div>
                 </div>
             </div>
             @endforeach
