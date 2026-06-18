@@ -6,10 +6,12 @@
     $labelStyle = 'display:block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 5px;';
     $sessionLabels = $sessions;
     $statusBadge = fn ($s) => match ($s) {
-        'active'   => 'badge-pass',
-        'archived' => 'badge-blocker',
-        default    => 'badge-soft',
+        'active'       => 'badge-pass',
+        'under_review' => 'badge-review',
+        'archived'     => 'badge-blocker',
+        default        => 'badge-soft',
     };
+    $statusLabel = fn ($s) => ucfirst(str_replace('_', ' ', $s));
 @endphp
 
 @section('content')
@@ -17,6 +19,11 @@
 @if (session('ok'))
     <div style="background: rgba(var(--ok-rgb, 95,160,82), .12); border: 1px solid var(--ok); color: var(--ok); border-radius: var(--r-lg); padding: 11px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600;">
         {{ session('ok') }}
+    </div>
+@endif
+@if (session('err'))
+    <div style="background: rgba(var(--bad-rgb, 255,0,0), .1); border: 1px solid var(--bad); color: var(--bad); border-radius: var(--r-lg); padding: 11px 16px; margin-bottom: 16px; font-size: 13px; font-weight: 600;">
+        {{ session('err') }}
     </div>
 @endif
 
@@ -138,19 +145,21 @@
                 <option value="unanswered" @selected($filters['answer'] === 'unanswered')>No answer</option>
             </select>
         </div>
-        <div class="qb-status" style="width: 150px;">
-            <label style="{{ $labelStyle }}">Status</label>
-            <select name="status" style="{{ $selStyle }} width: 100%;">
-                <option value="">All statuses</option>
-                @foreach ($statuses as $st)
-                    <option value="{{ $st }}" @selected($filters['status'] === $st)>{{ ucfirst($st) }}</option>
-                @endforeach
-            </select>
-        </div>
+        {{-- Status is driven by the quick-filter pills below; carried through on Apply. --}}
+        <input type="hidden" name="status" value="{{ $filters['status'] }}">
         <button type="submit" class="btn btn-primary qb-apply"><x-icon name="filter" size="14"/> Apply</button>
         <a href="{{ route('v2.super_admin.question_bank.index') }}" class="btn btn-ghost qb-reset">Reset</a>
     </div>
 </form>
+
+{{-- Quick status filter — visible in both table + gallery views --}}
+<div class="flex items-center" style="gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
+    <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-right: 2px;">Status</span>
+    @foreach (['' => 'All', 'active' => 'Active', 'draft' => 'Draft', 'under_review' => 'Under review', 'archived' => 'Archived'] as $val => $lbl)
+        <a href="{{ request()->fullUrlWithQuery(['status' => $val, 'page' => 1]) }}"
+           class="btn btn-sm {{ $filters['status'] === $val ? 'btn-primary' : 'btn-ghost' }}">{{ $lbl }}</a>
+    @endforeach
+</div>
 
 {{-- View toggle --}}
 <div class="flex items-center justify-between" style="margin-bottom: 14px;">
@@ -164,6 +173,9 @@
            class="btn btn-sm {{ $view === 'gallery' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="grid" size="14"/> Gallery</a>
     </div>
 </div>
+
+{{-- Delete-confirmation modal scope wraps the results, pager and the modal itself --}}
+<div x-data="{ delOpen: false, delAction: '', delLabel: '' }">
 
 @if ($view === 'gallery')
     {{-- Gallery: each question rendered exactly as students see it (for visual QA) --}}
@@ -185,13 +197,16 @@
                 @else
                     <span class="badge badge-blocker" style="font-size: 10px;">No answer</span>
                 @endif
-                <span class="badge {{ $statusBadge($q->status) }}">{{ ucfirst($q->status) }}</span>
+                <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
                 <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
-                <form method="POST" action="{{ route('v2.super_admin.question_bank.destroy', $q) }}" style="display: inline;"
-                      onsubmit="return confirm('Delete this question permanently? This cannot be undone.');">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"><x-icon name="trash" size="12"/></button>
-                </form>
+                @if (in_array($q->status, $deletable, true))
+                    <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"
+                            data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                            data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                            @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                        <x-icon name="trash" size="12"/>
+                    </button>
+                @endif
             </div>
             <div style="padding: 20px 22px; max-width: 760px;">
                 @include('v2.partials.question_card', ['q' => $q])
@@ -255,7 +270,7 @@
                         {{ $q->images_count ?: '—' }}
                     </td>
                     <td data-label="Status" style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
-                        <span class="badge {{ $statusBadge($q->status) }}">{{ ucfirst($q->status) }}</span>
+                        <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
                     </td>
                     <td data-label="Actions" style="padding: var(--pad-cell); vertical-align: top; text-align: right; white-space: nowrap;">
                         <div class="flex items-center" style="gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
@@ -265,15 +280,18 @@
                                 <select name="status" onchange="this.form.submit()" title="Change status"
                                         style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
                                     @foreach ($statuses as $st)
-                                        <option value="{{ $st }}" @selected($q->status === $st)>{{ ucfirst($st) }}</option>
+                                        <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
                                     @endforeach
                                 </select>
                             </form>
-                            <form method="POST" action="{{ route('v2.super_admin.question_bank.destroy', $q) }}" style="display: inline;"
-                                  onsubmit="return confirm('Delete this question permanently? This cannot be undone.');">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"><x-icon name="trash" size="12"/></button>
-                            </form>
+                            @if (in_array($q->status, $deletable, true))
+                                <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"
+                                        data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                                        data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                                        @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                                    <x-icon name="trash" size="12"/>
+                                </button>
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -311,5 +329,30 @@
         </div>
     </div>
 @endif
+
+{{-- Delete confirmation modal (shared by table + gallery) --}}
+<style>[x-cloak]{display:none!important} .qb-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}</style>
+<div x-show="delOpen" x-cloak @keydown.escape.window="delOpen = false" class="qb-modal">
+    <div @click="delOpen = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.55);"></div>
+    <div x-show="delOpen" x-transition
+         style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 430px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
+        <div class="flex items-center gap-2" style="margin-bottom: 10px;">
+            <span style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:99px; background: rgba(var(--bad-rgb,255,0,0),.12); color: var(--bad);"><x-icon name="trash" size="16"/></span>
+            <h3 class="serif" style="font-size: 18px; font-weight: 600;">Delete question?</h3>
+        </div>
+        <p style="font-size: 13.5px; color: var(--text-soft); line-height: 1.55; margin-bottom: 22px;">
+            You're about to permanently delete <strong x-text="delLabel" style="color: var(--text);"></strong> and its options. This cannot be undone.
+        </p>
+        <div class="flex items-center justify-end gap-2">
+            <button type="button" class="btn btn-ghost" @click="delOpen = false">Cancel</button>
+            <form method="POST" :action="delAction" style="display: inline;">
+                @csrf @method('DELETE')
+                <button type="submit" class="btn" style="background: var(--bad); color: #fff; border-color: var(--bad);"><x-icon name="trash" size="13"/> Delete</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+</div>{{-- /delete-confirmation modal scope --}}
 
 @endsection

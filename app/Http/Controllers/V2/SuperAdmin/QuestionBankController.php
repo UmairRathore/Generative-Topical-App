@@ -5,33 +5,53 @@ namespace App\Http\Controllers\V2\SuperAdmin;
 use App\Http\Controllers\Controller;
 use App\Models\V2\Paper;
 use App\Models\V2\Question;
+use App\Models\V2\QuestionImage;
 use App\Models\V2\Subject;
 use App\Models\V2\Topic;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /*
 |--------------------------------------------------------------------------
 | Super Admin — Question Bank
 |--------------------------------------------------------------------------
-| Browse + full CRUD over the entire global question pool. Super Admin sees
-| ALL questions — there is no school scoping on the bank. Manually authored
-| questions are attached to a per-subject "Custom" paper so the paper_id FK
-| and the [paper_id, question_number] unique constraint stay satisfied.
+| Browse + full CRUD over the global question pool. Manually authored
+| questions attach to a per-subject "Custom" paper so the paper_id FK and the
+| [paper_id, question_number] unique constraint hold.
 |
-| Each question carries a status (active | draft | archived); only `active`
-| questions are ever drawn into a generated test (see ExamService::generate).
+| The editor mirrors the imported corpus's structure (see v2:import-questions):
+|   STEM   : question_text, with optional text_before / between-diagram(s) /
+|            text_after / after-diagram(s) for a figure that sits inside the text.
+|   ANSWERS: either A–D options (each text and/or a graph image), OR a single
+|            answer image (a table or graph) shown with selectable A/B/C/D
+|            circles beside it (the option_table layout).
+|
+| status (active | draft | under_review | archived) gates exam generation —
+| only `active` is drawn into a test. Active questions cannot be deleted.
 */
 class QuestionBankController extends Controller
 {
     private const SESSION_LABELS = ['m' => 'Feb/Mar', 's' => 'May/Jun', 'w' => 'Oct/Nov'];
 
-    private const STATUSES = ['active', 'draft', 'archived'];
+    private const STATUSES = ['active', 'draft', 'under_review', 'archived'];
+
+    /** Statuses a question may be deleted from (anything but live/active). */
+    private const DELETABLE = ['draft', 'under_review', 'archived'];
 
     private const DIFFICULTIES = ['easy', 'medium', 'hard'];
 
     private const OPTION_LABELS = ['A', 'B', 'C', 'D'];
+
+    private const STEM_ROLES = ['question_image_between_text', 'question_image_after_text'];
+
+    private const ANSWER_TYPES = ['table', 'graph'];
+
+    /** Manually uploaded images live here; only these are ever unlinked on delete. */
+    private const UPLOAD_DIR = 'v2/questions/custom';
 
     public function index(Request $request)
     {
@@ -42,19 +62,17 @@ class QuestionBankController extends Controller
             'session' => $request->string('session')->toString(),
             'variant' => $request->string('variant')->toString(),
             'topic'   => $request->integer('topic') ?: null,
-            'layout'  => $request->string('layout')->toString(),  // question type
-            'answer'  => $request->string('answer')->toString(),  // '', answered, unanswered
-            'status'  => $request->string('status')->toString(),  // '', active, draft, archived
+            'layout'  => $request->string('layout')->toString(),
+            'answer'  => $request->string('answer')->toString(),
+            'status'  => $request->string('status')->toString(),
             'q'       => trim($request->string('q')->toString()),
         ];
 
-        // 'gallery' renders each question's full visual (for visual QA); 'table' is the compact list.
         $view = $request->string('view')->toString() === 'gallery' ? 'gallery' : 'table';
 
         $query = Question::query()
             ->with(['paper:id,source_paper,year,session_code,variant', 'subject:id,name,code', 'topic:id,external_id,title'])
             ->withCount(['options', 'images'])
-            // Gallery needs the actual options + images to render the question.
             ->when($view === 'gallery', fn ($q) => $q->with(['options', 'images']))
             ->when($filters['subject'], fn ($q, $v) => $q->where('subject_id', $v))
             ->when($filters['year'], fn ($q, $v) => $q->where('year', $v))
@@ -76,10 +94,8 @@ class QuestionBankController extends Controller
             ->orderBy('source_paper')
             ->orderBy('question_number');
 
-        // Gallery cards are heavier (images), so page in smaller chunks.
         $questions = $query->paginate($view === 'gallery' ? 12 : 25)->withQueryString();
 
-        // Filter option lists (only values that actually exist in the bank).
         $subjectIds = Question::query()->distinct()->pluck('subject_id');
 
         return view('v2.super_admin.question_bank.index', [
@@ -96,6 +112,7 @@ class QuestionBankController extends Controller
             'sessions'  => self::SESSION_LABELS,
             'variants'  => ['11', '12', '13', '14'],
             'statuses'  => self::STATUSES,
+            'deletable' => self::DELETABLE,
             'stats'     => [
                 'total'   => Question::count(),
                 'tagged'  => Question::whereNotNull('topic_id')->count(),
@@ -115,12 +132,12 @@ class QuestionBankController extends Controller
 
     public function store(Request $request)
     {
-        $data = $this->validateQuestion($request);
+        $data = $this->validateQuestion($request, null);
 
         $subject = Subject::findOrFail($data['subject_id']);
         $paper = $this->customPaperFor($subject);
 
-        DB::transaction(function () use ($data, $subject, $paper) {
+        DB::transaction(function () use ($request, $data, $subject, $paper) {
             $question = Question::create([
                 'paper_id'        => $paper->id,
                 'subject_id'      => $subject->id,
@@ -128,6 +145,8 @@ class QuestionBankController extends Controller
                 'year'            => $data['year'] ?? null,
                 'question_number' => (int) Question::where('paper_id', $paper->id)->max('question_number') + 1,
                 'question_text'   => $data['question_text'],
+                'text_before'     => $data['text_before'] ?? null,
+                'text_after'      => $data['text_after'] ?? null,
                 'layout_type'     => 'text_only',
                 'correct_answer'  => $data['correct_answer'],
                 'marks'           => $data['marks'],
@@ -137,6 +156,7 @@ class QuestionBankController extends Controller
             ]);
 
             $this->syncOptions($question, $data['options']);
+            $this->syncImages($question, $request, $data['answer_mode']);
         });
 
         return redirect()
@@ -146,21 +166,23 @@ class QuestionBankController extends Controller
 
     public function edit(Question $question)
     {
-        $question->load('options');
+        $question->load('options', 'images');
 
         return view('v2.super_admin.question_bank.form', $this->formData($question));
     }
 
     public function update(Request $request, Question $question)
     {
-        $data = $this->validateQuestion($request);
+        $data = $this->validateQuestion($request, $question);
 
-        DB::transaction(function () use ($data, $question) {
+        DB::transaction(function () use ($request, $data, $question) {
             $question->update([
                 'subject_id'     => $data['subject_id'],
                 'topic_id'       => $data['topic_id'] ?? null,
                 'year'           => $data['year'] ?? null,
                 'question_text'  => $data['question_text'],
+                'text_before'    => $data['text_before'] ?? null,
+                'text_after'     => $data['text_after'] ?? null,
                 'correct_answer' => $data['correct_answer'],
                 'marks'          => $data['marks'],
                 'difficulty'     => $data['difficulty'] ?? null,
@@ -168,6 +190,7 @@ class QuestionBankController extends Controller
             ]);
 
             $this->syncOptions($question, $data['options']);
+            $this->syncImages($question, $request, $data['answer_mode']);
         });
 
         return redirect()
@@ -177,9 +200,13 @@ class QuestionBankController extends Controller
 
     public function destroy(Question $question)
     {
+        if (! in_array($question->status, self::DELETABLE, true)) {
+            return back()->with('err', 'Active questions can’t be deleted — move them to draft, under review, or archived first.');
+        }
+
         DB::transaction(function () use ($question) {
+            $this->deleteImages($question->images);
             $question->options()->delete();
-            $question->images()->delete();
             $question->delete();
         });
 
@@ -188,21 +215,16 @@ class QuestionBankController extends Controller
             ->with('ok', 'Question deleted.');
     }
 
-    /** One-click status change from the listing (active / draft / archived). */
     public function setStatus(Request $request, Question $question)
     {
-        $validated = $request->validate([
-            'status' => ['required', Rule::in(self::STATUSES)],
-        ]);
-
+        $validated = $request->validate(['status' => ['required', Rule::in(self::STATUSES)]]);
         $question->update(['status' => $validated['status']]);
 
-        return back()->with('ok', "Question marked {$validated['status']}.");
+        return back()->with('ok', 'Question marked '.str_replace('_', ' ', $validated['status']).'.');
     }
 
     /* ---------------------------------------------------------------------- */
 
-    /** Shared view data for the create/edit form. */
     private function formData(Question $question): array
     {
         return [
@@ -213,30 +235,75 @@ class QuestionBankController extends Controller
             'statuses'     => self::STATUSES,
             'difficulties' => self::DIFFICULTIES,
             'labels'       => self::OPTION_LABELS,
+            'answerTypes'  => self::ANSWER_TYPES,
         ];
     }
 
-    private function validateQuestion(Request $request): array
+    private function validateQuestion(Request $request, ?Question $question): array
     {
+        $imageRules = ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:4096'];
+
         $rules = [
-            'subject_id'     => ['required', Rule::exists('v2_subjects', 'id')],
-            'topic_id'       => ['nullable', Rule::exists('v2_topics', 'id')],
-            'question_text'  => ['required', 'string', 'max:5000'],
-            'correct_answer' => ['required', Rule::in(self::OPTION_LABELS)],
-            'marks'          => ['required', 'integer', 'min:1', 'max:20'],
-            'difficulty'     => ['nullable', Rule::in(self::DIFFICULTIES)],
-            'year'           => ['nullable', 'integer', 'min:1990', 'max:'.(date('Y') + 1)],
-            'status'         => ['required', Rule::in(self::STATUSES)],
-            'options'        => ['required', 'array'],
+            'subject_id'               => ['required', Rule::exists('v2_subjects', 'id')],
+            'topic_id'                 => ['nullable', Rule::exists('v2_topics', 'id')],
+            'question_text'            => ['required', 'string', 'max:5000'],
+            'text_before'              => ['nullable', 'string', 'max:5000'],
+            'text_after'               => ['nullable', 'string', 'max:5000'],
+            'correct_answer'           => ['required', Rule::in(self::OPTION_LABELS)],
+            'marks'                    => ['required', 'integer', 'min:1', 'max:20'],
+            'difficulty'               => ['nullable', Rule::in(self::DIFFICULTIES)],
+            'year'                     => ['nullable', 'integer', 'min:1990', 'max:'.(date('Y') + 1)],
+            'status'                   => ['required', Rule::in(self::STATUSES)],
+            'answer_mode'              => ['required', Rule::in(['options', 'image'])],
+            'options'                  => ['required', 'array'],
+            // Stem diagrams, two positions, plus a removal list of existing ids.
+            'question_images_between'   => ['nullable', 'array', 'max:6'],
+            'question_images_between.*' => $imageRules,
+            'question_images_after'     => ['nullable', 'array', 'max:6'],
+            'question_images_after.*'   => $imageRules,
+            'remove_question_images'    => ['nullable', 'array'],
+            'remove_question_images.*'  => ['integer'],
+            // Single answer image (table/graph) + its type.
+            'answer_image'             => $imageRules,
+            'answer_image_type'        => ['nullable', Rule::in(self::ANSWER_TYPES)],
+            'remove_answer_image'      => ['nullable', 'boolean'],
         ];
         foreach (self::OPTION_LABELS as $label) {
-            $rules["options.$label"] = ['required', 'string', 'max:1000'];
+            $rules["options.$label"]       = ['nullable', 'string', 'max:1000'];
+            $rules["option_images.$label"] = $imageRules;
         }
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+
+        if ($validated['answer_mode'] === 'image') {
+            // Need an answer image: a new upload, or an existing one kept on edit.
+            $hasNew  = $request->hasFile('answer_image');
+            $hasKept = $question
+                && ! $request->boolean('remove_answer_image')
+                && $question->images()->where('role', 'table')->exists();
+            if (! $hasNew && ! $hasKept) {
+                throw ValidationException::withMessages(['answer_image' => 'Upload the answer image (the table or graph).']);
+            }
+            if ($hasNew && empty($validated['answer_image_type'])) {
+                throw ValidationException::withMessages(['answer_image_type' => 'Choose whether the answer image is a table or a graph.']);
+            }
+        } else {
+            // A–D mode: each option needs text or an image.
+            foreach (self::OPTION_LABELS as $label) {
+                $hasText = trim((string) ($validated['options'][$label] ?? '')) !== '';
+                $newImg  = $request->hasFile("option_images.$label");
+                $keptImg = $question
+                    && ! $request->boolean("remove_option_images.$label")
+                    && $question->images()->where('role', 'option_image')->where('option_label', $label)->exists();
+                if (! $hasText && ! $newImg && ! $keptImg) {
+                    throw ValidationException::withMessages(["options.$label" => "Option {$label} needs either text or an image."]);
+                }
+            }
+        }
+
+        return $validated;
     }
 
-    /** Replace a question's options with the submitted A-D set. */
     private function syncOptions(Question $question, array $options): void
     {
         $question->options()->delete();
@@ -257,9 +324,104 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * The synthetic paper that hosts manually-authored questions for a subject.
-     * Keyed on the unique source_file so each subject gets exactly one.
+     * Apply all image changes, then recompute layout_type the way the importer
+     * classifies the corpus:
+     *   option_table   — a single answer image (table/graph) with A–D circles
+     *   question_diagram_and_option_images / option_images / question_diagram /
+     *   text_only      — derived from stem + per-option images.
      */
+    private function syncImages(Question $question, Request $request, string $answerMode): void
+    {
+        // ---- Stem diagrams (between / after) ----
+        $removeIds = array_map('intval', (array) $request->input('remove_question_images', []));
+        if ($removeIds) {
+            $this->deleteImages($question->images->whereIn('role', self::STEM_ROLES)->whereIn('id', $removeIds));
+        }
+        $nextSort = (int) ($question->images->whereIn('role', self::STEM_ROLES)->whereNotIn('id', $removeIds)->max('sort_order')) + 1;
+        foreach ((array) $request->file('question_images_between', []) as $file) {
+            $this->storeImage($question, $file, 'question_image_between_text', null, $nextSort++);
+        }
+        foreach ((array) $request->file('question_images_after', []) as $file) {
+            $this->storeImage($question, $file, 'question_image_after_text', null, $nextSort++);
+        }
+
+        // ---- Answer area ----
+        if ($answerMode === 'image') {
+            // Single table/graph answer image (role 'table'); drop any per-option images.
+            $this->deleteImages($question->images->where('role', 'option_image'));
+            if ($request->boolean('remove_answer_image') || $request->hasFile('answer_image')) {
+                $this->deleteImages($question->images->where('role', 'table'));
+            }
+            if ($request->hasFile('answer_image')) {
+                $type = $request->input('answer_image_type', 'table');
+                $this->storeImage($question, $request->file('answer_image'), 'table', null, 0, "answer:{$type}");
+            }
+        } else {
+            // A–D options; drop any answer-image (switching away from the table layout).
+            $this->deleteImages($question->images->where('role', 'table'));
+            foreach (self::OPTION_LABELS as $label) {
+                $existing = $question->images->where('role', 'option_image')->where('option_label', $label);
+                if ($request->boolean("remove_option_images.$label") || $request->hasFile("option_images.$label")) {
+                    $this->deleteImages($existing);
+                }
+                if ($request->hasFile("option_images.$label")) {
+                    $this->storeImage($question, $request->file("option_images.$label"), 'option_image', $label, 0);
+                }
+            }
+        }
+
+        // ---- Recompute derived fields ----
+        $question->load('images', 'options');
+        $hasTable  = $question->images->where('role', 'table')->isNotEmpty();
+        $hasStem   = $question->images->whereIn('role', self::STEM_ROLES)->isNotEmpty();
+        $hasOption = $question->images->where('role', 'option_image')->isNotEmpty();
+
+        $question->update([
+            'layout_type' => match (true) {
+                $hasTable              => 'option_table',
+                $hasStem && $hasOption => 'question_diagram_and_option_images',
+                $hasOption             => 'option_images',
+                $hasStem               => 'question_diagram',
+                default                => 'text_only',
+            },
+        ]);
+
+        foreach ($question->options as $opt) {
+            $opt->update([
+                'has_image' => $question->images->where('role', 'option_image')->where('option_label', $opt->label)->isNotEmpty(),
+            ]);
+        }
+    }
+
+    private function storeImage(Question $question, UploadedFile $file, string $role, ?string $label, int $sort, ?string $caption = null): void
+    {
+        $dims = @getimagesize($file->getRealPath()) ?: [null, null];
+        $path = $file->store(self::UPLOAD_DIR.'/'.$question->id, 'public');
+
+        QuestionImage::create([
+            'question_id'  => $question->id,
+            'external_id'  => 'custom_q'.$question->id.'_'.$role.($label ? '_'.$label : '').'_'.$sort,
+            'image_path'   => $path,
+            'role'         => $role,
+            'option_label' => $label,
+            'caption'      => $caption,
+            'width'        => $dims[0] ?: null,
+            'height'       => $dims[1] ?: null,
+            'sort_order'   => $sort,
+        ]);
+    }
+
+    /** Delete image rows and, for manually uploaded files only, the file too. */
+    private function deleteImages(\Illuminate\Support\Collection $images): void
+    {
+        foreach ($images as $image) {
+            if (str_starts_with((string) $image->image_path, self::UPLOAD_DIR.'/')) {
+                Storage::disk('public')->delete($image->image_path);
+            }
+            $image->delete();
+        }
+    }
+
     private function customPaperFor(Subject $subject): Paper
     {
         $code = $subject->code ?: 'SUBJ'.$subject->id;
