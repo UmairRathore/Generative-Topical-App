@@ -62,6 +62,15 @@ class ImportQuestions extends Command
             $this->warn("--fresh: removed {$deleted} existing papers (and their questions) for subject {$subject->code}.");
         }
 
+        // Re-importing on top of existing data would collide on the
+        // UNIQUE(paper_id, question_number) index and abort each paper. Fail fast
+        // with a clear instruction instead of surfacing a raw SQL exception.
+        $existingPapers = DB::table('v2_papers')->where('subject_id', $subject->id)->count();
+        if ($existingPapers > 0 && ! $this->option('fresh')) {
+            $this->error("Subject {$subject->code} already has {$existingPapers} imported papers. Re-run with --fresh to replace them (a plain re-run would fail on the UNIQUE(paper_id, question_number) constraint).");
+            return self::FAILURE;
+        }
+
         $dirs = collect(File::directories($papersRoot))
             ->filter(fn ($d) => is_file($d.'/questions.json'))
             ->sort()
@@ -86,7 +95,7 @@ class ImportQuestions extends Command
             }
 
             DB::transaction(function () use ($json, $stem, $subject, $outputRoot, &$totals) {
-                $paper = $this->importPaper($json['paper'] ?? [], $stem, $subject->id);
+                $paper = $this->importPaper($json['paper'] ?? [], $stem, $subject);
                 $totals['papers']++;
 
                 foreach ($json['questions'] as $qData) {
@@ -118,14 +127,15 @@ class ImportQuestions extends Command
     }
 
     /** Upsert one paper row, deriving year/session/variant from the folder stem. */
-    private function importPaper(array $meta, string $stem, int $subjectId): Paper
+    private function importPaper(array $meta, string $stem, Subject $subject): Paper
     {
         $year = null;
         $sessionCode = null;
         $variant = null;
         $paperNumber = null;
 
-        // e.g. 9702_m16_qp_12  ->  code 9702, session m, year 16, variant 12
+        // Subject-agnostic CAIE stem: <code>_<session><yy>_qp_<variant>
+        // e.g. 9702_m16_qp_12 (A Level) or 5054_w19_qp_11 (O Level).
         if (preg_match('/^(\d+)_([a-z])(\d{2})_qp_(\d+)$/i', $stem, $m)) {
             $sessionCode = strtolower($m[2]);
             $year        = 2000 + (int) $m[3];
@@ -136,10 +146,13 @@ class ImportQuestions extends Command
         return Paper::updateOrCreate(
             ['source_file' => ($meta['source_file'] ?? $stem.'.pdf')],
             [
-                'subject_id'      => $subjectId,
+                'subject_id'      => $subject->id,
                 'source_paper'    => $stem,
-                'subject_code'    => $meta['paper_code'] ? explode('/', $meta['paper_code'])[0] : '9702',
-                'paper_code'      => $meta['paper_code'] ?? null,
+                // Always the syllabus code of the subject being imported (5054 / 9702 / …),
+                // so the shared tables stay cleanly partitioned by subject + level.
+                'subject_code'    => $subject->code,
+                // paper_code is NOT NULL — derive a subject-generic fallback if the JSON omits it.
+                'paper_code'      => $meta['paper_code'] ?? trim($subject->code.'/'.(string) $variant, '/'),
                 'paper_number'    => $paperNumber,
                 'variant'         => $variant,
                 'session_code'    => $sessionCode,
@@ -163,6 +176,11 @@ class ImportQuestions extends Command
 
         $answer = $q['correct_answer'] ?? null;
         $answer = ($answer !== null && $answer !== '') ? strtoupper(substr($answer, 0, 1)) : null;
+
+        // A question with neither options nor an option-table is unanswerable
+        // (incomplete source extraction) — flag it so it surfaces for review and
+        // is never drawn into a generated test (ExamService requires has('options')).
+        $incomplete = empty($q['options']) && empty($q['option_table']);
 
         // Strip Cambridge end-of-paper footer text the extractor may have swept in
         // (keeps the original if a strip would empty the field).
@@ -188,7 +206,7 @@ class ImportQuestions extends Command
             'marks'           => 1,
             'page_start'      => $q['page_start'] ?? null,
             'page_end'        => $q['page_end'] ?? null,
-            'needs_review'    => (bool) ($q['needs_review'] ?? false),
+            'needs_review'    => (bool) ($q['needs_review'] ?? false) || $incomplete,
             'warnings'        => $q['warnings'] ?? null,
             'source_paper'    => $stem,
         ]);

@@ -31,6 +31,7 @@ class ExamService
 
         $base = Question::query()
             ->active() // draft / archived questions are never drawn into a test
+            ->has('options') // never draw a question with no answer choices (incomplete source data)
             ->where('subject_id', $class->subject_id)
             ->when($data['topic_id'] ?? null, fn ($q, $t) => $q->where('topic_id', $t))
             ->when($data['year_from'] ?? null, fn ($q, $y) => $q->where('year', '>=', $y))
