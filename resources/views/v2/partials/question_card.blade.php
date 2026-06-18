@@ -18,7 +18,7 @@
     @foreach ($collapsed as $fig)
         @php $cw = $fig->displayWidth(); @endphp
         <div class="v2-figure-wrap">
-            <img src="{{ asset('storage/'.$fig->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
+            <img src="{{ simg($fig->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
                  @if ($cw) style="width:{{ $cw }}px;" @endif>
         </div>
     @endforeach
@@ -34,7 +34,7 @@
             @endforeach
         </div>
         <div class="v2-table-wrap">
-            <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
+            <img src="{{ simg($optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
                  @if ($tw) style="width:{{ $tw }}px;" @endif>
         </div>
     </div>
@@ -59,7 +59,7 @@
                         <span class="{{ $circle }}">{{ $opt->label }}</span>
                         @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct</span>@endif
                     </span>
-                    <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
+                    <img src="{{ simg($oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
                 </div>
             @else
                 <div class="flex items-center gap-3" style="padding: 9px 13px; border: 1px solid; border-radius: 8px; {{ $style }}">

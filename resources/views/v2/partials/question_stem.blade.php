@@ -16,7 +16,7 @@
              one consistent size across diagrams; max-width:100% keeps it in-column. --}}
         @php $fw = $block['image']->displayWidth(); @endphp
         <div class="v2-figure-wrap">
-            <img src="{{ asset('storage/'.$block['image']->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
+            <img src="{{ simg($block['image']->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
                  @if ($fw) style="width:{{ $fw }}px;" @endif>
         </div>
     @endif

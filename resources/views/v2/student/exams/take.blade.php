@@ -54,7 +54,7 @@
                             @foreach ($collapsed as $fig)
                                 @php $cw = $fig->displayWidth(); @endphp
                                 <div class="v2-figure-wrap">
-                                    <img src="{{ asset('storage/'.$fig->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
+                                    <img src="{{ simg($fig->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
                                          @if ($cw) style="width:{{ $cw }}px;" @endif>
                                 </div>
                             @endforeach
@@ -80,7 +80,7 @@
                                     @endforeach
                                 </div>
                                 <div class="v2-table-wrap">
-                                    <img src="{{ asset('storage/'.$optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
+                                    <img src="{{ simg($optTable->image_path) }}" alt="options table" loading="lazy" onerror="this.style.display='none'"
                                          @if ($tw) style="width:{{ $tw }}px;" @endif>
                                 </div>
                             </div>
@@ -94,7 +94,7 @@
                                            :style="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'border-color: var(--emerald-700); background: var(--emerald-50);' : ''">
                                         <input type="radio" name="answers[{{ $q->id }}]" value="{{ $opt->label }}" x-model="answers['{{ $q->id }}']" style="position:absolute; left:-9999px;">
                                         <span :class="answers['{{ $q->id }}']==='{{ $opt->label }}' ? 'v2-opt-circle is-on' : 'v2-opt-circle'">{{ $opt->label }}</span>
-                                        <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
+                                        <img src="{{ simg($oi->image_path) }}" alt="option {{ $opt->label }}" loading="lazy" onerror="this.style.display='none'" class="v2-opt-img">
                                     </label>
                                 @else
                                     <label class="flex items-center gap-3" style="cursor: pointer; padding: 11px 14px; border: 1px solid var(--border); border-radius: 9px; transition: all .12s;"

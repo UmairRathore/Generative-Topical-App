@@ -28,9 +28,16 @@ use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
 use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
 use App\Http\Controllers\V2\Teacher\DashboardController as TeacherDashboard;
 use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
+use App\Http\Controllers\V2\SecureImageController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v2')->name('v2.')->group(function () {
+
+    // Signed image endpoint — every question / option / diagram crop is fetched
+    // through here. The token is verified + bound to the logged-in viewer by the
+    // controller (open to any V2 guard). Throttled to blunt bulk image pulls.
+    Route::get('img', [SecureImageController::class, 'show'])
+        ->middleware('throttle:secure-image')->name('secure_image');
 
     /*
     |----------------------------------------------------------------------
@@ -41,7 +48,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
         Route::middleware('guest:v2_super_admin')->group(function () {
             Route::get('login', [SuperAdminAuth::class, 'showLogin'])->name('login');
-            Route::post('login', [SuperAdminAuth::class, 'login'])->name('login.post');
+            Route::post('login', [SuperAdminAuth::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
         });
 
         Route::middleware('auth:v2_super_admin')->group(function () {
@@ -96,7 +103,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
         Route::middleware('guest:v2_school_admin')->group(function () {
             Route::get('login', [SchoolAdminAuth::class, 'showLogin'])->name('login');
-            Route::post('login', [SchoolAdminAuth::class, 'login'])->name('login.post');
+            Route::post('login', [SchoolAdminAuth::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
         });
 
         Route::middleware('auth:v2_school_admin')->group(function () {
@@ -183,7 +190,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
         Route::middleware('guest:v2_branch_admin')->group(function () {
             Route::get('login', [BranchAuth::class, 'showLogin'])->name('login');
-            Route::post('login', [BranchAuth::class, 'login'])->name('login.post');
+            Route::post('login', [BranchAuth::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
         });
 
         Route::middleware('auth:v2_branch_admin')->group(function () {
@@ -217,7 +224,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
         Route::middleware('guest:v2_teacher')->group(function () {
             Route::get('login', [TeacherAuth::class, 'showLogin'])->name('login');
-            Route::post('login', [TeacherAuth::class, 'login'])->name('login.post');
+            Route::post('login', [TeacherAuth::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
         });
 
         Route::middleware('auth:v2_teacher')->group(function () {
@@ -252,7 +259,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
         Route::middleware('guest:v2_student')->group(function () {
             Route::get('login', [StudentAuth::class, 'showLogin'])->name('login');
-            Route::post('login', [StudentAuth::class, 'login'])->name('login.post');
+            Route::post('login', [StudentAuth::class, 'login'])->middleware('throttle:v2-login')->name('login.post');
         });
 
         Route::middleware('auth:v2_student')->group(function () {

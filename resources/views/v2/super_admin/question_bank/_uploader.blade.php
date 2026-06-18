@@ -8,7 +8,7 @@
         <div class="qb-thumbs" style="margin-bottom: 10px;">
             @foreach ($existing as $img)
                 <div class="qb-thumb" x-data="{ rm: false }">
-                    <img src="{{ asset('storage/'.$img->image_path) }}" alt="diagram" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
+                    <img src="{{ simg($img->image_path) }}" alt="diagram" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
                     <label class="qb-rm">
                         <input type="checkbox" name="remove_question_images[]" value="{{ $img->id }}" x-model="rm">
                         <span x-text="rm ? 'Will remove' : 'Remove'"></span>

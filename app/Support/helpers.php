@@ -1,6 +1,45 @@
 <?php
 
 use App\Support\Hashid;
+use App\Support\SignedImage;
+
+if (! function_exists('v2_actor')) {
+    /**
+     * The currently authenticated V2 user across all five guards, as
+     * ['id' => int, 'role' => string, 'guard' => string], or null.
+     */
+    function v2_actor(): ?array
+    {
+        $guards = [
+            'v2_super_admin'  => 'super_admin',
+            'v2_school_admin' => 'school_admin',
+            'v2_branch_admin' => 'branch_admin',
+            'v2_teacher'      => 'teacher',
+            'v2_student'      => 'student',
+        ];
+        foreach ($guards as $guard => $role) {
+            // check() lazily resolves from the session — hasUser() only sees a
+            // user already eagerly loaded by an auth: middleware (absent here).
+            if (auth()->guard($guard)->check()) {
+                return ['id' => auth()->guard($guard)->id(), 'role' => $role, 'guard' => $guard];
+            }
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('simg')) {
+    /**
+     * Signed, viewer-bound, expiring URL for a question image path. Use this in
+     * place of asset('storage/'.$path) everywhere a question/option/diagram crop
+     * is shown. $ctx may carry exam_id / question_id / ttl.
+     */
+    function simg(?string $path, array $ctx = []): string
+    {
+        return $path ? SignedImage::url($path, $ctx) : '';
+    }
+}
 
 if (! function_exists('hid')) {
     /** Encode an integer id to its short URL code. */

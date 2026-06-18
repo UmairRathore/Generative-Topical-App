@@ -166,7 +166,7 @@
                         <div class="qb-optimg" x-data="{ url: '' }" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 9px; padding-left: 4px;">
                             @if ($oi)
                                 <div class="qb-thumb" x-show="!url" x-data="{ rm: false }">
-                                    <img src="{{ asset('storage/'.$oi->image_path) }}" alt="option {{ $label }}" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
+                                    <img src="{{ simg($oi->image_path) }}" alt="option {{ $label }}" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
                                     <label class="qb-rm"><input type="checkbox" name="remove_option_images[{{ $label }}]" value="1" x-model="rm"> <span x-text="rm ? 'Will remove' : 'Remove'"></span></label>
                                 </div>
                             @endif
@@ -193,7 +193,7 @@
                 <div x-data="{ url: '' }" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
                     @if ($answerImage)
                         <div class="qb-thumb" x-show="!url" x-data="{ rm: false }">
-                            <img src="{{ asset('storage/'.$answerImage->image_path) }}" alt="answer image" style="height:96px;border:1px solid var(--border);border-radius:8px;" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
+                            <img src="{{ simg($answerImage->image_path) }}" alt="answer image" style="height:96px;border:1px solid var(--border);border-radius:8px;" :style="rm ? 'opacity:.3; filter:grayscale(1);' : ''">
                             <label class="qb-rm"><input type="checkbox" name="remove_answer_image" value="1" x-model="rm"> <span x-text="rm ? 'Will remove' : 'Remove'"></span></label>
                         </div>
                     @endif
