@@ -3,6 +3,7 @@
 <head>
     @include('partials.head')
     @livewireStyles
+    @include('v2.partials.theme')
 </head>
 <body class="paper-grain" style="background: var(--ivory-deep); min-height: 100vh;">
     @yield('content')

@@ -40,7 +40,7 @@
     </div>
     @if ($correct)
         <div style="text-align: center; font-size: 12px; color: var(--text-soft); margin-top: 9px;">
-            Correct answer: <strong style="color: var(--emerald-700);">{{ $correct }}</strong>
+            Correct answer: <strong style="color: var(--ok);">{{ $correct }}</strong>
         </div>
     @endif
 @else
@@ -49,7 +49,7 @@
         @foreach ($q->options as $opt)
             @php
                 $isCorrect = $correct && $opt->label === $correct;
-                $style = $isCorrect ? 'border-color:#6ee7b7; background:var(--emerald-50);' : 'border-color:var(--border);';
+                $style = $isCorrect ? 'border-color:var(--ok); background:var(--ok-soft);' : 'border-color:var(--border);';
                 $oi = $optionImages[$opt->label] ?? null;
                 $circle = 'v2-opt-circle'.($isCorrect ? ' is-correct' : '');
             @endphp

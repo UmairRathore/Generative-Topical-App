@@ -1,6 +1,6 @@
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║                                                                   ║
-   ║   GENERATIVE TOPICAL — THEME COLORS                               ║
+   ║   GENERATIVE TOPICAL — THEME COLORS  ("Heritage" palette)         ║
    ║                                                                   ║
    ║   Edit the hex codes below to re-skin the entire app.             ║
    ║   No other file needs to change.                                  ║
@@ -9,14 +9,17 @@
    ║     npm run build                 (production build)              ║
    ║     npm run dev                   (HMR while developing)          ║
    ║                                                                   ║
-   ║   Sections:                                                       ║
-   ║     1. Brand emerald  (primary)                                   ║
-   ║     2. Brand gold     (accent)                                    ║
-   ║     3. Neutrals       (page background, cards, borders)           ║
-   ║     4. Text & slate   (typography)                                ║
-   ║     5. Semantic       (success / warning / error / info)          ║
-   ║     6. QA badges      (domain-specific)                           ║
-   ║     7. Dark theme     (overrides for opt-in dark mode)            ║
+   ║   NOTE: when assets can't be rebuilt, the V2 app re-skins itself  ║
+   ║   at runtime via resources/views/v2/partials/theme.blade.php,     ║
+   ║   which mirrors the values below. Keep the two in sync.           ║
+   ║                                                                   ║
+   ║   Palette:                                                        ║
+   ║     Heritage Blue  #313D4B  primary                               ║
+   ║     Cambridge Red  #CD5554  accent                                ║
+   ║     Brick Brown    #91684A  warm secondary                        ║
+   ║     Algae Green    #00C07F  success / good performance            ║
+   ║     Warm White     #F7F3EE  background                            ║
+   ║     Dark base      #1C2530  dark background                       ║
    ║                                                                   ║
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
@@ -29,25 +32,25 @@
     --font-serif: 'Cormorant Garamond', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
     --font-mono:  'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 
-    /* 1. Brand emerald (primary) */
-    --color-brand-emerald:    #0B3D2E;   /* primary brand */
-    --color-brand-forest:     #14532D;   /* hover, slightly lighter emerald */
+    /* 1. Brand primary — Heritage Blue (token names kept for compat) */
+    --color-brand-emerald:    #313D4B;   /* primary brand */
+    --color-brand-forest:     #3E4E60;   /* hover, slightly lighter */
 
-    /* 2. Brand gold (accent) */
-    --color-brand-gold:       #D4A437;
-    --color-brand-gold-soft:  #E5BC5C;
+    /* 2. Brand accent — Cambridge Red */
+    --color-brand-gold:       #CD5554;
+    --color-brand-gold-soft:  #D97675;
 
     /* 3. Neutrals */
-    --color-brand-ivory:      #FAF7EF;
-    --color-brand-charcoal:   #111827;
+    --color-brand-ivory:      #F7F3EE;
+    --color-brand-charcoal:   #1E2730;
     --color-brand-slate:      #64748B;
-    --color-brand-border:     #E5E7EB;
-    --color-brand-surface:    #F8FAFC;
+    --color-brand-border:     #E6E0D8;
+    --color-brand-surface:    #F3EFE9;
 
     /* 5. Semantic */
-    --color-status-success: #16A34A;
-    --color-status-warning: #F59E0B;
-    --color-status-error:   #DC2626;
+    --color-status-success: #00C07F;
+    --color-status-warning: #D9952B;
+    --color-status-error:   #D9433F;
     --color-status-info:    #475569;
 
     /* Tailwind zinc scale (kept for compat with starter kit components) */
@@ -76,32 +79,37 @@
    so the Tailwind utility classes stay in sync.
    ────────────────────────────────────────────────────────────────────── */
 :root {
-    /* 1. Brand emerald (primary) — used for sidebar, buttons, links */
-    --emerald-900: #082A20;   /* darkest, hero gradient end */
-    --emerald-800: #0B3D2E;   /* primary brand color (sidebar bg, btn-primary) */
-    --emerald-700: #14532D;   /* hover, gradient mid */
-    --emerald-600: #1B6B3F;
-    --emerald-500: #2C8559;
-    --emerald-50:  #ECF4EE;   /* tinted backgrounds, badges */
+    /* 1. Brand primary — Heritage Blue (used for sidebar, buttons, links) */
+    --emerald-900: #1E2832;   /* darkest, hero gradient end */
+    --emerald-800: #313D4B;   /* primary brand color (sidebar bg, btn-primary) */
+    --emerald-700: #3E4E60;   /* hover, gradient mid */
+    --emerald-600: #4D5E72;
+    --emerald-500: #62748B;
+    --emerald-50:  #ECEEF2;   /* tinted backgrounds, badges */
 
-    /* 2. Brand gold (accent) — used for CTAs, highlights, gold accents */
-    --gold-700: #A8801F;
-    --gold-600: #BC8E26;
-    --gold-500: #D4A437;      /* primary gold accent */
-    --gold-400: #E5BC5C;
-    --gold-100: #F6E7BE;
-    --gold-50:  #FBF5E2;
+    /* 2. Brand accent — Cambridge Red (used for CTAs, highlights) */
+    --gold-700: #A33F3E;
+    --gold-600: #B84A49;
+    --gold-500: #CD5554;      /* primary accent */
+    --gold-400: #D97675;
+    --gold-100: #F3D4D4;
+    --gold-50:  #FBEAEA;
 
-    /* 3. Neutrals (page surface) */
-    --ivory:        #FAF7EF;  /* main page background */
-    --ivory-deep:   #F4EFE2;  /* slightly darker (e.g. login left panel) */
+    /* 2b. Warm secondary — Brick Brown */
+    --brick-700: #71503A;
+    --brick-500: #91684A;
+    --brick-100: #E9DBCF;
+
+    /* 3. Neutrals (page surface) — warm white */
+    --ivory:        #F7F3EE;  /* main page background */
+    --ivory-deep:   #EFE9E1;  /* slightly darker (e.g. login left panel) */
     --paper:        #FFFFFF;  /* cards, inputs */
-    --soft-surface: #F8FAFC;  /* subtle hover/section bg */
-    --border:       #E5E7EB;  /* card / input borders */
-    --border-soft:  #EEF1F4;  /* table row borders */
+    --soft-surface: #F3EFE9;  /* subtle hover/section bg */
+    --border:       #E6E0D8;  /* card / input borders */
+    --border-soft:  #EFEAE3;  /* table row borders */
 
     /* 4. Text & slate scale */
-    --charcoal:     #111827;  /* primary text */
+    --charcoal:     #1E2730;  /* primary text */
     --slate-900:    #0F172A;
     --slate-700:    #334155;
     --slate-600:    #475569;  /* secondary text */
@@ -112,21 +120,26 @@
     --slate-100:    #F1F5F9;
 
     /* 5. Semantic (status messages, alerts) */
-    --success:      #16A34A;
-    --success-soft: #DCFCE7;
-    --warning:      #F59E0B;
-    --warning-soft: #FEF3C7;
-    --error:        #DC2626;
-    --error-soft:   #FEE2E2;
+    --success:      #00C07F;
+    --success-soft: #D6F7EC;
+    --warning:      #D9952B;
+    --warning-soft: #FBEFD8;
+    --error:        #D9433F;
+    --error-soft:   #FAE3E2;
     --info:         #475569;
     --info-soft:    #E2E8F0;
 
+    /* 5b. Performance scale (decoupled from brand: good / medium / poor) */
+    --ok:        #00C07F;  --ok-soft:   #D6F7EC;
+    --warn:      #D9952B;  --warn-soft: #FBEFD8;
+    --bad:       #D9433F;  --bad-soft:  #FAE3E2;
+
     /* 6. QA badges (domain-specific — Cambridge MCQ pipeline) */
-    --qa-pass:     #16A34A;
-    --qa-review:   #F59E0B;
-    --qa-blocker:  #DC2626;
+    --qa-pass:     #00C07F;
+    --qa-review:   #D9952B;
+    --qa-blocker:  #D9433F;
     --qa-render:   #475569;
-    --qa-fallback: #BC8E26;
+    --qa-fallback: #B84A49;
 
     /* App role-derived (don't usually need to edit these) */
     --bg:            var(--ivory);
@@ -140,64 +153,42 @@
     --primary-hover: var(--emerald-700);
 }
 
-/* Accent gold variants (toggle via <html data-accent="brass|champagne">) */
-[data-accent="brass"] {
-    --gold-700: #8C6A1B;
-    --gold-600: #A07D24;
-    --gold-500: #B8902C;
-    --gold-400: #CFA64C;
-    --gold-100: #EFE0B6;
-    --gold-50:  #F6EDD2;
-    --accent:      var(--gold-500);
-    --accent-soft: var(--gold-100);
-}
-[data-accent="champagne"] {
-    --gold-700: #B5904A;
-    --gold-600: #C9A865;
-    --gold-500: #DCBE82;
-    --gold-400: #E8D2A4;
-    --gold-100: #F5E9CF;
-    --gold-50:  #FAF1DE;
-    --accent:      var(--gold-500);
-    --accent-soft: var(--gold-100);
-}
-
 /* ──────────────────────────────────────────────────────────────────────
-   7. DARK THEME — overrides triggered by either:
+   7. DARK THEME — Heritage dark base #1C2530. Triggered by either:
       <html class="dark">             (Flux's appearance toggle)
       <html data-theme="dark">         (custom switcher)
    ────────────────────────────────────────────────────────────────────── */
 .dark,
 [data-theme="dark"] {
-    --ivory:        #0E1A15;
-    --ivory-deep:   #0A1410;
-    --paper:        #131F1A;
-    --soft-surface: #0F1A16;
-    --border:       #1E2B25;
-    --border-soft:  #182520;
+    --ivory:        #1C2530;
+    --ivory-deep:   #161E27;
+    --paper:        #232E3A;
+    --soft-surface: #1A2330;
+    --border:       #2C3947;
+    --border-soft:  #25303C;
 
-    --bg:           #0A1410;
-    --surface:      #131F1A;
-    --text:         #ECF4EE;
-    --text-soft:    #A6B5AC;
-    --text-faint:   #7A8A82;
+    --bg:           #1C2530;
+    --surface:      #232E3A;
+    --text:         #EAEEF2;
+    --text-soft:    #A7B3C0;
+    --text-faint:   #7E8A98;
 
-    --charcoal:     #ECF4EE;
+    --charcoal:     #EAEEF2;
 
-    --slate-900:    #ECF4EE;
-    --slate-700:    #C5D2CB;
-    --slate-600:    #9AAAA1;
-    --slate-500:    #7E8E85;
-    --slate-400:    #6A7A72;
-    --slate-300:    #4A5851;
-    --slate-200:    #2A352F;
-    --slate-100:    #1E2A24;
+    --slate-900:    #EAEEF2;
+    --slate-700:    #C7D0DA;
+    --slate-600:    #9BA8B6;
+    --slate-500:    #7E8A98;
+    --slate-400:    #6A7684;
+    --slate-300:    #46535F;
+    --slate-200:    #2C3947;
+    --slate-100:    #232E3A;
 
-    --primary:       #1B6B3F;
-    --primary-hover: #2C8559;
+    --primary:       #3E4E60;
+    --primary-hover: #4D5E72;
 
-    --emerald-800:  #0F4A37;
-    --emerald-700:  #14532D;
+    --emerald-800:  #3A4A5C;
+    --emerald-700:  #46586B;
 
     /* Shadows softer for dark surfaces */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.40), 0 1px 3px rgba(0, 0, 0, 0.30);

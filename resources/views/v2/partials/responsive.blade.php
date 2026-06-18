@@ -40,9 +40,9 @@
     font-weight: 700; font-size: 12px; color: var(--text-soft);
     background: #fff;
 }
-.v2-opt-circle.is-on,
-.v2-opt-circle.is-correct { background: var(--emerald-700); border-color: var(--emerald-700); color: #fff; }
-.v2-opt-circle.is-wrong   { background: #ef4444;            border-color: #ef4444;            color: #fff; }
+.v2-opt-circle.is-on      { background: var(--emerald-700); border-color: var(--emerald-700); color: #fff; }
+.v2-opt-circle.is-correct { background: var(--ok);          border-color: var(--ok);          color: #fff; }
+.v2-opt-circle.is-wrong   { background: var(--bad);         border-color: var(--bad);         color: #fff; }
 
 /* --- Option-table questions: selectable A/B/C/D circles sitting beside the
        answer table, one per row. The picks column is a 5-row grid (an empty

@@ -58,7 +58,7 @@
                     </div>
                     @if ($correct)
                         <div style="text-align: center; font-size: 12px; color: var(--text-soft); margin-top: 9px;">
-                            Correct answer: <strong style="color: var(--emerald-700);">{{ $correct }}</strong>@if ($selected && $selected !== $correct) · You chose: <strong style="color: #ef4444;">{{ $selected }}</strong>@endif
+                            Correct answer: <strong style="color: var(--ok);">{{ $correct }}</strong>@if ($selected && $selected !== $correct) · You chose: <strong style="color: var(--bad);">{{ $selected }}</strong>@endif
                         </div>
                     @endif
                 @else
@@ -67,8 +67,8 @@
                         @php
                             $isCorrect = $correct && $opt->label === $correct;
                             $isWrongPick = $selected && $opt->label === $selected && ! $isCorrect;
-                            $style = $isCorrect ? 'border-color:#6ee7b7; background:var(--emerald-50);'
-                                   : ($isWrongPick ? 'border-color:#fca5a5; background:#fef2f2;' : 'border-color:var(--border);');
+                            $style = $isCorrect ? 'border-color:var(--ok); background:var(--ok-soft);'
+                                   : ($isWrongPick ? 'border-color:var(--bad); background:var(--bad-soft);' : 'border-color:var(--border);');
                             $oi = $optionImages[$opt->label] ?? null;
                             $circle = 'v2-opt-circle'.($isCorrect ? ' is-correct' : ($isWrongPick ? ' is-wrong' : ''));
                         @endphp

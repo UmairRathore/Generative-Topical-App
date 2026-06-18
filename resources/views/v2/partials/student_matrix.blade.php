@@ -2,8 +2,8 @@
      Props: $matrix = ['topics'=>[...], 'rows'=>[['id','student','roll','overall','attempted','cells'=>[topic=>{percent,correct,total}|null]]]]
      Optional: $studentRoute (route name) to link each student name. --}}
 @php
-    $barColor = fn ($p) => $p >= 60 ? 'var(--emerald-700)' : ($p >= 40 ? 'var(--accent)' : '#ef4444');
-    $cellBg = fn ($p) => $p >= 60 ? 'var(--emerald-50)' : ($p >= 40 ? 'var(--gold-50)' : '#fef2f2');
+    $barColor = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)');
+    $cellBg = fn ($p) => $p >= 60 ? 'var(--ok-soft)' : ($p >= 40 ? 'var(--warn-soft)' : 'var(--bad-soft)');
     $studentRoute = $studentRoute ?? null;
 @endphp
 
@@ -26,7 +26,7 @@
                     <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: var(--pad-cell); position: sticky; left: 0; background: var(--surface);">
                             @if ($studentRoute)
-                                <a href="{{ route($studentRoute, $row['id']) }}" style="font-size: 13px; font-weight: 500; color: var(--gold-700); text-decoration: none;">{{ $row['student'] }}</a>
+                                <a href="{{ route($studentRoute, hid($row['id'])) }}" style="font-size: 13px; font-weight: 500; color: var(--gold-700); text-decoration: none;">{{ $row['student'] }}</a>
                             @else
                                 <div style="font-size: 13px; font-weight: 500;">{{ $row['student'] }}</div>
                             @endif

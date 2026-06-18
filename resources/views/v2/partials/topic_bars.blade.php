@@ -1,5 +1,5 @@
 {{-- Per-topic bars. Props: $stats = [['topic','correct','total','percent'], ...], optional $empty --}}
-@php $barColor = fn ($p) => $p >= 60 ? 'var(--emerald-700)' : ($p >= 40 ? 'var(--accent)' : '#ef4444'); @endphp
+@php $barColor = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 @forelse ($stats as $t)
     <div style="margin-bottom: 13px;">
         <div class="flex items-center justify-between" style="font-size: 12.5px; margin-bottom: 5px;">

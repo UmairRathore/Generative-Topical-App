@@ -24,7 +24,7 @@
         </div>
 
         {{-- Hero artwork: paper preview cards --}}
-        <div class="relative" style="height: 580px;">
+        <div class="relative pub-decor" style="height: 580px;">
             <div style="position: absolute; top: 30px; left: 60px; width: 360px; transform: rotate(-3deg); background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); padding: 28px; border: 1px solid var(--border);">
                 <div class="flex items-center justify-between" style="margin-bottom: 12px;">
                     <x-crest size="24"/>
@@ -99,7 +99,7 @@
 
     {{-- CTA --}}
     <section style="padding: 80px 60px; max-width: 1320px; margin: 0 auto;">
-        <div class="grid items-center relative"
+        <div class="grid items-center relative pub-cta"
              style="background: linear-gradient(135deg, var(--emerald-900), var(--emerald-800)); color: var(--ivory); border-radius: 18px; padding: 60px 70px; overflow: hidden; grid-template-columns: 2fr 1fr; gap: 40px;">
             <div class="grain absolute" style="inset: 0;"></div>
             <div class="relative">
