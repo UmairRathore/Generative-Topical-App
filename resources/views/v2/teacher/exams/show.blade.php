@@ -6,15 +6,72 @@
     <x-icon name="chev-l" size="14"/> Back to Exams
 </a>
 
-<div class="flex items-start justify-between" style="margin-bottom: 22px;">
+@php
+    $stateBadge = [
+        'draft'     => ['badge-soft', 'Draft'],
+        'scheduled' => ['badge-review', 'Scheduled'],
+        'live'      => ['badge-pass', 'Live'],
+        'expired'   => ['badge-blocker', 'Expired'],
+    ];
+    [$sbClass, $sbLabel] = $stateBadge[$exam->effectiveStatus()];
+@endphp
+<div class="flex items-start justify-between" style="margin-bottom: 18px;">
     <div>
         <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $exam->title }}</h2>
-        <div class="flex items-center gap-2" style="margin-top: 6px;">
+        <div class="flex items-center gap-2" style="margin-top: 6px; flex-wrap: wrap;">
+            <span class="badge {{ $sbClass }}">{{ $sbLabel }}</span>
             <span class="badge badge-soft">{{ $exam->schoolClass?->name }}</span>
             <span class="badge badge-emerald">{{ $exam->topic?->title ?? 'Mixed topics' }}</span>
             <span class="badge badge-soft">{{ $exam->question_count }} questions</span>
         </div>
     </div>
+</div>
+
+@if (session('success'))
+    <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--ok-rgb,95,160,82),.12); border: 1px solid var(--ok); border-radius: 8px; font-size: 13px; color: var(--ok); font-weight: 600;">{{ session('success') }}</div>
+@endif
+
+{{-- Release / window --}}
+<div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; margin-bottom: 22px;">
+    @if ($exam->isDraft())
+        <div x-data="{ mode: 'now' }">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">This test is a draft — students can't see it yet.</div>
+            <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px;">Release it now or schedule it, with an optional expiry after which no student can access it.</p>
+            <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" class="flex items-end gap-3" style="flex-wrap: wrap;">
+                @csrf @method('PATCH')
+                <input type="hidden" name="mode" :value="mode">
+                <div style="display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                    <button type="button" style="padding:8px 15px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;" :style="mode==='now' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='now'">Now</button>
+                    <button type="button" style="padding:8px 15px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;" :style="mode==='schedule' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='schedule'">Schedule</button>
+                </div>
+                <div x-show="mode==='schedule'">
+                    <label style="display:block;font-size:11px;color:var(--text-faint);margin-bottom:4px;">Opens at</label>
+                    <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text);">
+                </div>
+                <div>
+                    <label style="display:block;font-size:11px;color:var(--text-faint);margin-bottom:4px;">Expires at (optional)</label>
+                    <input type="datetime-local" name="expires_at" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text);">
+                </div>
+                <button type="submit" class="btn btn-primary"><x-icon name="play" size="13"/> Release</button>
+            </form>
+        </div>
+    @else
+        <div class="flex items-center gap-2" style="flex-wrap: wrap; font-size: 13px; color: var(--text-soft);">
+            <span class="badge {{ $sbClass }}">{{ $sbLabel }}</span>
+            <span>
+                @if ($exam->isScheduled())
+                    Opens {{ $exam->available_from->format('D j M, g:i A') }} ({{ $exam->available_from->diffForHumans() }})
+                @else
+                    Released {{ $exam->released_at?->diffForHumans() }}
+                @endif
+                @if ($exam->available_until)
+                    · {{ $exam->isExpired() ? 'closed' : 'closes' }} {{ $exam->available_until->format('D j M, g:i A') }}
+                @else
+                    · no expiry
+                @endif
+            </span>
+        </div>
+    @endif
 </div>
 
 {{-- Stat cards --}}
@@ -67,8 +124,12 @@
                                 <span class="badge badge-pass">Completed</span>
                             @elseif ($a)
                                 <span class="badge badge-review">In progress</span>
-                            @else
+                            @elseif ($exam->isExpired())
+                                <span class="badge badge-blocker">Missed</span>
+                            @elseif ($exam->isLive())
                                 <span class="badge badge-soft">Not started</span>
+                            @else
+                                <span class="badge badge-soft">—</span>
                             @endif
                         </td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">

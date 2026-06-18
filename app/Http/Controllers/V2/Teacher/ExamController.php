@@ -11,6 +11,7 @@ use App\Models\V2\Topic;
 use App\Services\V2\AuditLogger;
 use App\Services\V2\ExamService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class ExamController extends Controller
@@ -89,6 +90,40 @@ class ExamController extends Controller
         return redirect()
             ->route('v2.teacher.exams.show', $exam)
             ->with('success', "Test generated with {$exam->question_count} questions and assigned to {$class->name}.");
+    }
+
+    /** Release a draft test — immediately or at a scheduled time, with optional expiry. */
+    public function release(Exam $exam, Request $request)
+    {
+        $teacher = $this->teacher();
+        abort_unless($exam->created_by === $teacher->id, 403);
+
+        $data = $request->validate([
+            'mode'       => ['required', Rule::in(['now', 'schedule'])],
+            'release_at' => ['nullable', 'required_if:mode,schedule', 'date'],
+            'expires_at' => ['nullable', 'date'],
+        ]);
+
+        $from  = $data['mode'] === 'schedule' ? Carbon::parse($data['release_at']) : now();
+        $until = ! empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null;
+
+        abort_if($until && $until->lessThanOrEqualTo($from), 422, 'Expiry must be after the release time.');
+
+        $exam->update([
+            'status'          => 'released',
+            'released_at'     => now(),
+            'available_from'  => $from,
+            'available_until' => $until,
+        ]);
+
+        AuditLogger::record('exam.released', $exam, [
+            'from'  => $from->toDateTimeString(),
+            'until' => $until?->toDateTimeString(),
+        ]);
+
+        return back()->with('success', $exam->isScheduled()
+            ? 'Test scheduled to open '.$from->diffForHumans().'.'
+            : 'Test released — students can take it now.');
     }
 
     public function show(Exam $exam, ExamService $service)

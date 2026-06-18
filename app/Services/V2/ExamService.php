@@ -63,7 +63,9 @@ class ExamService
                 'duration_minutes' => $data['duration_minutes'] ?? null,
                 'year_from'        => $data['year_from'] ?? null,
                 'year_to'          => $data['year_to'] ?? null,
-                'status'           => 'published',
+                // Created as a draft — not visible to students until the teacher
+                // releases it (now or scheduled) with an optional expiry.
+                'status'           => 'draft',
                 'published_at'     => now(),
             ]);
 

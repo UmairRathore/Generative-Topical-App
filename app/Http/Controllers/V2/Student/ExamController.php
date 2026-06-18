@@ -38,7 +38,7 @@ class ExamController extends Controller
     public function take(Exam $exam, ExamService $service)
     {
         $student = $this->student();
-        $this->ensureCanAccess($exam, $student);
+        $this->ensureCanTake($exam, $student);
 
         $attempt = $service->startAttempt($exam, $student);
         if ($attempt->isSubmitted()) {
@@ -53,7 +53,7 @@ class ExamController extends Controller
     public function submit(Exam $exam, Request $request, ExamService $service)
     {
         $student = $this->student();
-        $this->ensureCanAccess($exam, $student);
+        $this->ensureCanTake($exam, $student);
 
         $attempt = $service->startAttempt($exam, $student);
         if (! $attempt->isSubmitted()) {
@@ -67,7 +67,8 @@ class ExamController extends Controller
     public function result(Exam $exam, ExamService $service)
     {
         $student = $this->student();
-        $this->ensureCanAccess($exam, $student);
+        // A submitted result is viewable any time — even after expiry.
+        abort_unless($student->classes()->where('v2_classes.id', $exam->class_id)->exists(), 403);
 
         $attempt = ExamAttempt::where('exam_id', $exam->id)
             ->where('student_id', $student->id)
@@ -89,14 +90,21 @@ class ExamController extends Controller
         ]);
     }
 
-    /** Same-school is enforced by the model's global scope; here we enforce enrollment + visibility. */
-    private function ensureCanAccess(Exam $exam, $student): void
+    /**
+     * Same-school is enforced by the model's global scope. A student may TAKE an
+     * exam only while it is live (released + inside [available_from,
+     * available_until]); once expired it is locked. An already-submitted attempt
+     * still resolves (take() redirects it to the result).
+     */
+    private function ensureCanTake(Exam $exam, $student): void
     {
         abort_unless($student->classes()->where('v2_classes.id', $exam->class_id)->exists(), 403);
-        abort_unless(
-            $exam->status === 'published'
-                || ExamAttempt::where('exam_id', $exam->id)->where('student_id', $student->id)->exists(),
-            404
-        );
+
+        $alreadySubmitted = ExamAttempt::where('exam_id', $exam->id)
+            ->where('student_id', $student->id)
+            ->where('status', 'submitted')
+            ->exists();
+
+        abort_unless($exam->isLive() || $alreadySubmitted, 404, 'This test is not currently open.');
     }
 }

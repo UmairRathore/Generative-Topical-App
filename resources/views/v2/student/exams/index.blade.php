@@ -31,11 +31,15 @@
                         <div style="font-size: 11.5px; color: var(--text-faint);">{{ $a->score }}/{{ $a->total_questions }}</div>
                     </div>
                     <a href="{{ route('v2.student.exams.result', $exam) }}" class="btn btn-ghost btn-sm">View result</a>
+                @elseif ($exam->isScheduled())
+                    <span class="badge badge-soft" title="{{ $exam->available_from->format('D j M, g:i A') }}">Opens {{ $exam->available_from->diffForHumans() }}</span>
+                @elseif ($exam->isExpired())
+                    <span class="badge badge-blocker" title="Closed {{ $exam->available_until->format('D j M, g:i A') }}">Missed · closed</span>
                 @elseif ($a)
                     <span class="badge badge-review">In progress</span>
                     <a href="{{ route('v2.student.exams.take', $exam) }}" class="btn btn-primary btn-sm">Continue <x-icon name="chev-r" size="13"/></a>
                 @else
-                    <span class="badge badge-soft">Not started</span>
+                    @if ($exam->available_until)<span class="badge badge-soft" title="{{ $exam->available_until->format('D j M, g:i A') }}">Closes {{ $exam->available_until->diffForHumans() }}</span>@endif
                     <a href="{{ route('v2.student.exams.take', $exam) }}" class="btn btn-primary btn-sm"><x-icon name="play" size="12"/> Start</a>
                 @endif
             </div>

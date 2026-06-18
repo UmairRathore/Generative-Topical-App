@@ -19,6 +19,7 @@ class Exam extends Model
         'school_id', 'class_id', 'subject_id', 'topic_id', 'created_by',
         'title', 'question_count', 'total_marks', 'duration_minutes',
         'year_from', 'year_to', 'shuffle', 'status', 'published_at',
+        'released_at', 'available_from', 'available_until',
     ];
 
     protected function casts(): array
@@ -28,6 +29,9 @@ class Exam extends Model
             'question_count'  => 'integer',
             'total_marks'     => 'integer',
             'published_at'    => 'datetime',
+            'released_at'     => 'datetime',
+            'available_from'  => 'datetime',
+            'available_until' => 'datetime',
         ];
     }
 
@@ -68,6 +72,55 @@ class Exam extends Model
 
     public function scopePublished(Builder $q): Builder
     {
-        return $q->where('status', 'published');
+        return $q->where('status', 'released');
+    }
+
+    /** Released AND inside [available_from, available_until] right now. */
+    public function scopeAvailable(Builder $q): Builder
+    {
+        return $q->where('status', 'released')
+            ->where(fn ($w) => $w->whereNull('available_from')->orWhere('available_from', '<=', now()))
+            ->where(fn ($w) => $w->whereNull('available_until')->orWhere('available_until', '>=', now()));
+    }
+
+    /* ---- Lifecycle ------------------------------------------------------- */
+
+    public function isReleased(): bool
+    {
+        return $this->status === 'released';
+    }
+
+    public function isDraft(): bool
+    {
+        return ! $this->isReleased();
+    }
+
+    /** Released but its window hasn't opened yet. */
+    public function isScheduled(): bool
+    {
+        return $this->isReleased() && $this->available_from !== null && $this->available_from->isFuture();
+    }
+
+    /** Released and past its expiry. */
+    public function isExpired(): bool
+    {
+        return $this->isReleased() && $this->available_until !== null && $this->available_until->isPast();
+    }
+
+    /** Released and takeable right now. */
+    public function isLive(): bool
+    {
+        return $this->isReleased() && ! $this->isScheduled() && ! $this->isExpired();
+    }
+
+    /** One word for the current state: draft | scheduled | live | expired. */
+    public function effectiveStatus(): string
+    {
+        return match (true) {
+            $this->isDraft()     => 'draft',
+            $this->isScheduled() => 'scheduled',
+            $this->isExpired()   => 'expired',
+            default              => 'live',
+        };
     }
 }
