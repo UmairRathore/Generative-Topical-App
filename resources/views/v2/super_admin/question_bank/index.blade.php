@@ -5,6 +5,9 @@
     $selStyle = 'padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text); min-width: 0;';
     $labelStyle = 'display:block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 5px;';
     $sessionLabels = $sessions;
+    // Data for the cascading filters (level -> subject -> year -> session -> variant; topic -> subject).
+    $cascadeSubjects = $subjects->map(fn ($s) => ['id' => (string) $s->id, 'name' => $s->name, 'code' => $s->code, 'level' => $s->level])->values();
+    $cascadeTopics = $topics->map(fn ($t) => ['id' => (string) $t->id, 'subject_id' => (string) $t->subject_id, 'external_id' => $t->external_id, 'title' => $t->title])->values();
     $statusBadge = fn ($s) => match ($s) {
         'active'       => 'badge-pass',
         'under_review' => 'badge-review',
@@ -57,13 +60,36 @@
 
 {{-- Filters --}}
 <form method="GET" action="{{ route('v2.super_admin.question_bank.index') }}"
+      x-data='{
+          level: @json($filters["level"] ?? ""),
+          subject: @json((string) ($filters["subject"] ?? "")),
+          year: @json((string) ($filters["year"] ?? "")),
+          session: @json($filters["session"] ?? ""),
+          variant: @json($filters["variant"] ?? ""),
+          topic: @json((string) ($filters["topic"] ?? "")),
+          subjects: @json($cascadeSubjects),
+          meta: @json($subjectMeta),
+          topics: @json($cascadeTopics),
+          sessionLabels: @json($sessionLabels),
+          get subjectOptions(){ return this.subjects.filter(s => !this.level || s.level === this.level); },
+          get yearOptions(){ return (this.meta[this.subject] || {}).years || []; },
+          get sessionOptions(){ return (this.meta[this.subject] || {}).sessions || []; },
+          get variantOptions(){ return (this.meta[this.subject] || {}).variants || []; },
+          get topicOptions(){ return this.topics.filter(t => t.subject_id === this.subject); },
+          onLevel(){ this.subject = ""; this.year = ""; this.session = ""; this.variant = ""; this.topic = ""; },
+          onSubject(){ this.year = ""; this.session = ""; this.variant = ""; this.topic = ""; },
+          onYear(){ this.session = ""; this.variant = ""; },
+          onSession(){ this.variant = ""; }
+      }'
       style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; margin-bottom: 18px;">
     <input type="hidden" name="view" value="{{ $view }}">
+    @php $dis = 'opacity:.5; cursor:not-allowed; background: var(--soft-surface);'; @endphp
     <div class="grid" style="grid-template-columns: repeat(6, 1fr); gap: 14px;">
 
+        {{-- 1. Level / Grade — always enabled --}}
         <div>
             <label style="{{ $labelStyle }}">Level / Grade</label>
-            <select name="level" style="{{ $selStyle }} width: 100%;">
+            <select name="level" x-model="level" @change="onLevel()" style="{{ $selStyle }} width: 100%;">
                 <option value="">All levels</option>
                 @foreach ($levels as $lvl)
                     <option value="{{ $lvl }}" @selected($filters['level'] === $lvl)>{{ $lvl }}</option>
@@ -71,53 +97,58 @@
             </select>
         </div>
 
+        {{-- 2. Subject — needs a level --}}
         <div>
             <label style="{{ $labelStyle }}">Subject</label>
-            <select name="subject" style="{{ $selStyle }} width: 100%;">
-                <option value="">All subjects</option>
-                @foreach ($subjects as $s)
-                    <option value="{{ $s->id }}" @selected($filters['subject'] === $s->id)>{{ $s->name }} ({{ $s->code }})</option>
-                @endforeach
+            <select name="subject" x-model="subject" @change="onSubject()" :disabled="!level" :style="!level ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+                <option value="" x-text="level ? 'All subjects' : 'Select a level first'"></option>
+                <template x-for="s in subjectOptions" :key="s.id">
+                    <option :value="s.id" x-text="s.name + ' (' + s.code + ')'" :selected="String(s.id) === String(subject)"></option>
+                </template>
             </select>
         </div>
 
+        {{-- 3. Year — needs a subject --}}
         <div>
             <label style="{{ $labelStyle }}">Year</label>
-            <select name="year" style="{{ $selStyle }} width: 100%;">
+            <select name="year" x-model="year" @change="onYear()" :disabled="!subject" :style="!subject ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
                 <option value="">All years</option>
-                @foreach ($years as $y)
-                    <option value="{{ $y }}" @selected($filters['year'] === $y)>{{ $y }}</option>
-                @endforeach
+                <template x-for="y in yearOptions" :key="y">
+                    <option :value="y" x-text="y" :selected="String(y) === String(year)"></option>
+                </template>
             </select>
         </div>
 
+        {{-- 4. Session — needs a year --}}
         <div>
             <label style="{{ $labelStyle }}">Session</label>
-            <select name="session" style="{{ $selStyle }} width: 100%;">
+            <select name="session" x-model="session" @change="onSession()" :disabled="!year" :style="!year ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
                 <option value="">All sessions</option>
-                @foreach ($sessionLabels as $code => $lbl)
-                    <option value="{{ $code }}" @selected($filters['session'] === $code)>{{ $lbl }}</option>
-                @endforeach
+                <template x-for="code in sessionOptions" :key="code">
+                    <option :value="code" x-text="sessionLabels[code] || code" :selected="code === session"></option>
+                </template>
             </select>
         </div>
 
+        {{-- 5. Paper variant — needs a session --}}
         <div>
             <label style="{{ $labelStyle }}">Paper variant</label>
-            <select name="variant" style="{{ $selStyle }} width: 100%;">
+            <select name="variant" x-model="variant" :disabled="!session" :style="!session ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
                 <option value="">All variants</option>
-                @foreach ($variants as $v)
-                    <option value="{{ $v }}" @selected($filters['variant'] === $v)>Paper {{ $v }}</option>
-                @endforeach
+                <template x-for="v in variantOptions" :key="v">
+                    <option :value="v" x-text="'Paper ' + v" :selected="v === variant"></option>
+                </template>
             </select>
         </div>
 
+        {{-- 6. Topic — needs level + subject --}}
         <div>
             <label style="{{ $labelStyle }}">Topic</label>
-            <select name="topic" style="{{ $selStyle }} width: 100%;">
+            <select name="topic" x-model="topic" :disabled="!subject" :style="!subject ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
                 <option value="">All topics</option>
-                @foreach ($topics as $t)
-                    <option value="{{ $t->id }}" @selected($filters['topic'] === $t->id)>{{ $t->external_id }}. {{ $t->title }}</option>
-                @endforeach
+                <template x-for="t in topicOptions" :key="t.id">
+                    <option :value="t.id" x-text="t.external_id + '. ' + t.title" :selected="String(t.id) === String(topic)"></option>
+                </template>
             </select>
         </div>
     </div>
@@ -183,6 +214,7 @@
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden;">
             <div class="flex items-center" style="flex-wrap: wrap; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--border); background: var(--soft-surface);">
                 <span style="font-size: 13px; font-weight: 700;">{{ $q->source_paper }}</span>
+                @if ($q->subject?->level)<span style="font-size: 12.5px; font-weight: 800; color: var(--ink);">{{ $q->subject->level }}</span>@endif
                 <span style="font-size: 12px; color: var(--text-faint);">Q{{ $q->question_number }} · {{ $q->year }} · {{ $sessionLabels[$q->paper?->session_code] ?? $q->paper?->session_code }}</span>
                 <span style="flex: 1;"></span>
                 @if ($q->topic)
@@ -225,6 +257,7 @@
         <thead>
             <tr style="border-bottom: 1px solid var(--border); background: var(--soft-surface);">
                 <th style="padding: var(--pad-cell); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Paper</th>
+                <th style="padding: var(--pad-cell); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Grade</th>
                 <th style="padding: var(--pad-cell); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Topic</th>
                 <th style="padding: var(--pad-cell); text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Question</th>
                 <th style="padding: var(--pad-cell); text-align: center; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-faint);">Type</th>
@@ -242,6 +275,10 @@
                         <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">
                             Q{{ $q->question_number }} · {{ $q->year }} · {{ $sessionLabels[$q->paper?->session_code] ?? $q->paper?->session_code }}
                         </div>
+                    </td>
+                    <td data-label="Grade" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
+                        <div style="font-size: 13px; font-weight: 700;">{{ $q->subject?->level ?? '—' }}</div>
+                        <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">{{ $q->subject?->code }}</div>
                     </td>
                     <td data-label="Topic" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
                         @if ($q->topic)
@@ -297,7 +334,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" style="padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">
+                    <td colspan="9" style="padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">
                         No questions match these filters.
                         <a href="{{ route('v2.super_admin.question_bank.index') }}" style="color: var(--gold-700); font-weight: 600; text-decoration: none;">Reset filters →</a>
                     </td>

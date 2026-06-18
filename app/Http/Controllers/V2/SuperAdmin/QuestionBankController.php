@@ -71,7 +71,7 @@ class QuestionBankController extends Controller
         $view = $request->string('view')->toString() === 'gallery' ? 'gallery' : 'table';
 
         $query = Question::query()
-            ->with(['paper:id,source_paper,year,session_code,variant', 'subject:id,name,code', 'topic:id,external_id,title'])
+            ->with(['paper:id,source_paper,year,session_code,variant', 'subject:id,name,code,level', 'topic:id,external_id,title'])
             ->withCount(['options', 'images'])
             ->when($view === 'gallery', fn ($q) => $q->with(['options', 'images']))
             ->when($filters['subject'], fn ($q, $v) => $q->where('subject_id', $v))
@@ -98,6 +98,17 @@ class QuestionBankController extends Controller
 
         $subjectIds = Question::query()->distinct()->pluck('subject_id');
 
+        // Per-subject year / session / variant lists drive the cascading filters
+        // (level -> subject -> year -> session -> variant; topic -> level+subject).
+        $subjectMeta = Paper::whereIn('subject_id', $subjectIds)
+            ->get(['subject_id', 'year', 'session_code', 'variant'])
+            ->groupBy('subject_id')
+            ->map(fn ($g) => [
+                'years'    => $g->pluck('year')->filter()->unique()->sortDesc()->values(),
+                'sessions' => $g->pluck('session_code')->filter()->unique()->values(),
+                'variants' => $g->pluck('variant')->filter()->unique()->sort()->values(),
+            ]);
+
         return view('v2.super_admin.question_bank.index', [
             'questions' => $questions,
             'filters'   => $filters,
@@ -105,9 +116,10 @@ class QuestionBankController extends Controller
             'subjects'  => Subject::whereIn('id', $subjectIds)->orderBy('name')->get(['id', 'name', 'code', 'level']),
             'levels'    => Subject::whereIn('id', $subjectIds)->whereNotNull('level')->distinct()->orderBy('level')->pluck('level'),
             'years'     => Question::query()->whereNotNull('year')->distinct()->orderByDesc('year')->pluck('year'),
-            'topics'    => Topic::query()
-                ->when($filters['subject'], fn ($q, $v) => $q->where('subject_id', $v))
-                ->orderBy('sort_order')->get(['id', 'external_id', 'title']),
+            'topics'    => Topic::query()->whereIn('subject_id', $subjectIds)
+                ->orderBy('subject_id')->orderBy('sort_order')
+                ->get(['id', 'subject_id', 'external_id', 'title']),
+            'subjectMeta' => $subjectMeta,
             'layouts'   => Question::query()->distinct()->orderBy('layout_type')->pluck('layout_type')->filter()->values(),
             'sessions'  => self::SESSION_LABELS,
             'variants'  => ['11', '12', '13', '14'],
