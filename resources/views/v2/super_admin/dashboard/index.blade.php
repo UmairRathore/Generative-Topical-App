@@ -51,7 +51,7 @@
             </thead>
             <tbody>
                 @forelse ($schools as $s)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.show', $s['id']) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.show', hid($s['id'])) }}'">
                         <td data-label="School" style="padding: var(--pad-cell);">
                             <div style="font-size: 13px; font-weight: 600;">{{ $s['name'] }}</div>
                             <div style="font-size: 11.5px; color: var(--text-faint);">{{ $s['city'] }} · {{ str_replace('_', ' ', $s['tier']) }}</div>
@@ -88,7 +88,7 @@
 </div>
 
 {{-- Cross-school rollups --}}
-@php $tone = fn ($p) => $p >= 60 ? 'var(--emerald-700)' : ($p >= 40 ? 'var(--accent)' : '#ef4444'); @endphp
+@php $tone = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 20px; align-items: start;">
 
     {{-- By grade --}}
@@ -117,7 +117,7 @@
             <a href="{{ route('v2.super_admin.subjects.index') }}" style="font-size: 12px; color: var(--gold-700); text-decoration: none; font-weight: 600;">View all →</a>
         </div>
         @forelse ($subjectRollup as $r)
-            <a href="{{ route('v2.super_admin.subjects.show', $r['id']) }}" class="flex items-center justify-between" style="padding: 8px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit;">
+            <a href="{{ route('v2.super_admin.subjects.show', hid($r['id'])) }}" class="flex items-center justify-between" style="padding: 8px 0; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit;">
                 <div style="min-width: 0;">
                     <div style="font-size: 12.5px; font-weight: 500;">{{ $r['subject'] }}</div>
                     <div style="font-size: 11px; color: var(--text-faint);">{{ $r['schools'] }} {{ \Illuminate\Support\Str::plural('school', $r['schools']) }} · {{ $r['submissions'] }} subs</div>

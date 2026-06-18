@@ -2,6 +2,7 @@
 
 namespace App\Models\V2;
 
+use App\Models\Concerns\HasHashid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class School extends Model
 {
+    use HasHashid;
+
     protected $table = 'v2_schools';
 
     protected $fillable = [

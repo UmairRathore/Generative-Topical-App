@@ -2,6 +2,7 @@
 
 namespace App\Models\V2;
 
+use App\Models\Concerns\HasHashid;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Grade extends Model
 {
+    use HasHashid;
+
     protected $table = 'v2_grades';
 
     protected $fillable = [

@@ -20,7 +20,7 @@
         </thead>
         <tbody>
             @forelse ($rows as $r)
-                <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.subjects.show', $r['id']) }}'">
+                <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.subjects.show', hid($r['id'])) }}'">
                     <td data-label="Subject" style="padding: var(--pad-cell); font-size: 13px; font-weight: 600;">{{ $r['subject'] }}</td>
                     <td data-label="Schools" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['schools'] }}</td>
                     <td data-label="Exams" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['exams'] }}</td>

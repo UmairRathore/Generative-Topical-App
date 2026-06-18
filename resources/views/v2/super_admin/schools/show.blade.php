@@ -58,7 +58,7 @@
             </thead>
             <tbody>
                 @forelse ($teachers as $t)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.teachers.show', [$school, $t['id']]) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.teachers.show', [$school, hid($t['id'])]) }}'">
                         <td data-label="Teacher" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $t['name'] }}</td>
                         <td data-label="Classes" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $t['classes'] }}</td>
                         <td data-label="Exams" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $t['exams'] }}</td>
@@ -85,7 +85,7 @@
             </thead>
             <tbody>
                 @forelse ($classes as $c)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, $c['id']]) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, hid($c['id'])]) }}'">
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c['name'] }}<div style="font-size: 11px; color: var(--text-faint);">{{ $c['grade'] }}</div></td>
                         <td data-label="Teacher" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['teacher'] }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c['students'] }}</td>

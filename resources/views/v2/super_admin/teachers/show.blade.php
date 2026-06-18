@@ -30,7 +30,7 @@
             </thead>
             <tbody>
                 @forelse ($classes as $c)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, $c->id]) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, hid($c->id)]) }}'">
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c->name }}<div style="font-size: 11px; color: var(--text-faint);">{{ $c->subject?->name }}</div></td>
                         <td data-label="Grade" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c->grade?->name ?? '—' }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c->student_count }}</td>

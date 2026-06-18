@@ -1,7 +1,7 @@
 @extends('v2.layouts.super_admin')
 @section('page_title', $student->name.' — paper')
 
-@php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--emerald-700)' : ($pct >= 40 ? 'var(--accent)' : '#ef4444'); @endphp
+@php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--ok)' : ($pct >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 
 @section('content')
 <div style="max-width: 760px; margin: 0 auto;">
