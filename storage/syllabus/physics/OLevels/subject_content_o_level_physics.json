@@ -1,0 +1,99 @@
+{
+  "subject_code": "5054",
+  "level": "O Level",
+  "source": "Cambridge O Level Physics 5054 syllabus (2025) — subject content, section 3",
+  "topics": [
+    {
+      "id": "1.1", "section": "1 General physics", "title": "Physical quantities and measurement techniques",
+      "keywords": [["scalar", 3], ["vector", 3], ["measuring cylinder", 3], ["micrometer", 3], ["vernier", 3], ["measurement", 2], ["significant figures", 2.5], ["physical quantity", 2.5], ["ruler", 2], ["units", 1.5], ["precision", 2], ["magnitude and direction", 2.5]]
+    },
+    {
+      "id": "1.2", "section": "1 General physics", "title": "Motion",
+      "keywords": [["speed", 2], ["velocity", 2.5], ["acceleration", 3], ["distance-time", 3], ["speed-time", 3], ["distance–time", 3], ["speed–time", 3], ["deceleration", 3], ["displacement", 2], ["uniform acceleration", 3], ["free fall", 2.5], ["gradient of the graph", 2], ["m / s", 1.5]]
+    },
+    {
+      "id": "1.3", "section": "1 General physics", "title": "Mass and weight",
+      "keywords": [["mass", 1.5], ["weight", 2.5], ["gravitational field strength", 3.5], ["newton balance", 3], ["g = 10", 2.5], ["weigh", 2], ["gravitational force on", 2.5]]
+    },
+    {
+      "id": "1.4", "section": "1 General physics", "title": "Density",
+      "keywords": [["density", 4], ["mass per unit volume", 3.5], ["floats", 2.5], ["sinks", 2.5], ["g / cm", 2], ["kg / m", 1.5], ["displacement of water", 2]]
+    },
+    {
+      "id": "1.5", "section": "1 General physics", "title": "Forces",
+      "keywords": [["force", 1.5], ["friction", 3], ["resultant force", 3.5], ["moment", 3], ["turning effect", 3.5], ["pivot", 3], ["principle of moments", 3.5], ["centre of gravity", 3.5], ["centre of mass", 3], ["spring", 2.5], ["spring constant", 3.5], ["extension", 2.5], ["load-extension", 3.5], ["limit of proportionality", 3.5], ["terminal velocity", 3], ["circular path", 3], ["stopping distance", 3], ["braking distance", 3], ["equilibrium", 2.5], ["drag", 2]]
+    },
+    {
+      "id": "1.6", "section": "1 General physics", "title": "Momentum",
+      "keywords": [["momentum", 4], ["impulse", 3.5], ["conservation of momentum", 4], ["collision", 3], ["collide", 2.5], ["recoil", 3], ["kg m / s", 2.5]]
+    },
+    {
+      "id": "1.7", "section": "1 General physics", "title": "Energy, work and power",
+      "keywords": [["kinetic energy", 3.5], ["potential energy", 3.5], ["work done", 3], ["power", 2], ["efficiency", 3.5], ["joule", 2.5], ["watt", 2.5], ["renewable", 3], ["non-renewable", 3], ["energy resource", 3], ["energy transfer", 2.5], ["power station", 3], ["fossil fuel", 3], ["nuclear fuel", 2], ["work = force", 2.5]]
+    },
+    {
+      "id": "1.8", "section": "1 General physics", "title": "Pressure",
+      "keywords": [["pressure", 3.5], ["pascal", 3], ["force per unit area", 3.5], ["atmospheric pressure", 3.5], ["manometer", 3.5], ["barometer", 3.5], ["hydraulic", 3], ["pressure in a liquid", 3.5], ["depth", 1.5]]
+    },
+    {
+      "id": "2.1", "section": "2 Thermal physics", "title": "Kinetic particle model of matter",
+      "keywords": [["kinetic particle model", 4], ["brownian motion", 4], ["states of matter", 3], ["arrangement of particles", 3.5], ["solid, liquid", 2.5], ["gas pressure", 3], ["molecules", 2], ["random motion", 3]]
+    },
+    {
+      "id": "2.2", "section": "2 Thermal physics", "title": "Thermal properties and temperature",
+      "keywords": [["thermal expansion", 3.5], ["specific heat capacity", 4], ["latent heat", 4], ["boiling", 3], ["melting", 3], ["evaporation", 3.5], ["temperature", 2], ["kelvin", 3], ["celsius", 3], ["thermometer", 3], ["internal energy", 3], ["condensation", 3], ["heat capacity", 3]]
+    },
+    {
+      "id": "2.3", "section": "2 Thermal physics", "title": "Transfer of thermal energy",
+      "keywords": [["conduction", 3.5], ["convection", 4], ["thermal radiation", 3.5], ["infra-red radiation", 3], ["conductor of heat", 3], ["insulator", 2.5], ["convection current", 4], ["good conductor", 2.5]]
+    },
+    {
+      "id": "3.1", "section": "3 Properties of waves", "title": "General properties of waves",
+      "keywords": [["wavelength", 3], ["frequency", 2], ["amplitude", 3], ["transverse", 3.5], ["longitudinal wave", 3], ["wavefront", 3.5], ["diffraction", 3.5], ["crest", 3], ["trough", 3], ["wave speed", 3], ["oscillation", 2]]
+    },
+    {
+      "id": "3.2", "section": "3 Properties of waves", "title": "Light",
+      "keywords": [["reflection", 2.5], ["refraction", 3], ["refractive index", 4], ["angle of incidence", 3], ["angle of refraction", 3.5], ["critical angle", 4], ["total internal reflection", 4], ["optical fibre", 4], ["plane mirror", 3.5], ["converging lens", 4], ["focal length", 3.5], ["virtual image", 3.5], ["real image", 3], ["normal", 1.5], ["ray of light", 3]]
+    },
+    {
+      "id": "3.3", "section": "3 Properties of waves", "title": "Electromagnetic spectrum",
+      "keywords": [["electromagnetic spectrum", 4], ["radio waves", 3.5], ["microwaves", 3.5], ["ultraviolet", 3.5], ["x-rays", 3.5], ["gamma rays", 3], ["visible light", 2.5], ["electromagnetic waves", 3], ["speed of light", 2.5]]
+    },
+    {
+      "id": "3.4", "section": "3 Properties of waves", "title": "Sound",
+      "keywords": [["sound wave", 3.5], ["sound in", 2.5], ["compression", 3], ["rarefaction", 4], ["pitch", 3.5], ["loudness", 3.5], ["echo", 3.5], ["ultrasound", 3.5], ["speed of sound", 3.5], ["vibrating", 2.5], ["20000", 2.5], ["audible", 3]]
+    },
+    {
+      "id": "4.1", "section": "4 Electricity and magnetism", "title": "Simple magnetism and magnetic fields",
+      "keywords": [["magnet", 2.5], ["magnetic field", 3], ["magnetic pole", 3], ["north pole", 3], ["south pole", 3], ["induced magnetism", 4], ["soft iron", 3], ["compass", 3], ["magnetic field lines", 3.5], ["ferromagnetic", 3.5], ["permanent magnet", 3]]
+    },
+    {
+      "id": "4.2", "section": "4 Electricity and magnetism", "title": "Electrical quantities",
+      "keywords": [["electric charge", 3], ["current", 2], ["potential difference", 3], ["e.m.f", 3.5], ["resistance", 2.5], ["coulomb", 3], ["static electricity", 3.5], ["charged", 2], ["electric field", 3], ["electrical energy", 2.5], ["ohm", 2.5], ["electrons", 1.5]]
+    },
+    {
+      "id": "4.3", "section": "4 Electricity and magnetism", "title": "Electric circuits",
+      "keywords": [["series circuit", 3.5], ["parallel circuit", 3.5], ["resistor", 3], ["ammeter", 3.5], ["voltmeter", 3.5], ["in series", 2.5], ["in parallel", 2.5], ["potential divider", 3.5], ["thermistor", 3.5], ["light-dependent resistor", 3.5], ["combined resistance", 3], ["circuit diagram", 3], ["variable resistor", 3]]
+    },
+    {
+      "id": "4.4", "section": "4 Electricity and magnetism", "title": "Practical electricity",
+      "keywords": [["fuse", 3.5], ["earth wire", 4], ["live wire", 3.5], ["neutral wire", 3.5], ["mains", 3], ["electrical safety", 3.5], ["kilowatt-hour", 4], ["circuit breaker", 3.5], ["three-pin plug", 4], ["double insulation", 4], ["household", 2.5]]
+    },
+    {
+      "id": "4.5", "section": "4 Electricity and magnetism", "title": "Electromagnetic effects",
+      "keywords": [["electromagnetic induction", 4], ["induced e.m.f", 4], ["transformer", 4], ["generator", 3.5], ["electric motor", 4], ["solenoid", 3.5], ["electromagnet", 3.5], ["current-carrying conductor", 4], ["turns ratio", 4], ["coil", 2], ["dynamo", 3.5]]
+    },
+    {
+      "id": "4.6", "section": "4 Electricity and magnetism", "title": "Uses of an oscilloscope",
+      "keywords": [["oscilloscope", 4.5], ["cathode-ray", 4], ["time-base", 4], ["c.r.o", 4], ["waveform on the screen", 3.5]]
+    },
+    {
+      "id": "5.1", "section": "5 Atomic physics", "title": "The nuclear model of the atom",
+      "keywords": [["nucleus", 3], ["proton number", 4], ["nucleon number", 4], ["isotope", 4], ["nuclear model", 3.5], ["protons and neutrons", 3.5], ["nuclide", 4], ["atomic model", 3], ["scattering", 2.5]]
+    },
+    {
+      "id": "5.2", "section": "5 Atomic physics", "title": "Radioactivity",
+      "keywords": [["radioactive", 4], ["radioactivity", 4], ["alpha particle", 4], ["beta particle", 4], ["gamma radiation", 3.5], ["half-life", 4.5], ["radioactive decay", 4], ["ionising", 3.5], ["background radiation", 4], ["count rate", 3.5], ["nuclear decay", 3.5]]
+    }
+  ]
+}
