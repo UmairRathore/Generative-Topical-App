@@ -13,6 +13,12 @@
 @endphp
 
 @section('content')
+<style>
+    .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .seg button{padding:8px 18px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;background:var(--bg);color:var(--text-soft);transition:background .12s,color .12s;}
+    .seg button.on{background:var(--primary,#061C30);color:#fff;}
+    .seg button + button{border-left:1px solid var(--border);}
+</style>
 <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
     <x-icon name="chev-l" size="14"/> Back to Exams
 </a>
@@ -55,9 +61,9 @@
             <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" x-data="{ mode: 'now' }">
                 @csrf @method('PATCH')
                 <input type="hidden" name="mode" :value="mode">
-                <div style="display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:14px;">
-                    <button type="button" style="padding:8px 16px; font-size:12.5px; font-weight:600; border:0; cursor:pointer;" :style="mode==='now' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='now'">Release now</button>
-                    <button type="button" style="padding:8px 16px; font-size:12.5px; font-weight:600; border:0; cursor:pointer;" :style="mode==='schedule' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='schedule'">Schedule</button>
+                <div class="seg" style="margin-bottom:14px;">
+                    <button type="button" :class="mode==='now' ? 'on' : ''" @click="mode='now'">Release now</button>
+                    <button type="button" :class="mode==='schedule' ? 'on' : ''" @click="mode='schedule'">Schedule</button>
                 </div>
                 <div class="space-y-3">
                     <div x-show="mode==='schedule'">
