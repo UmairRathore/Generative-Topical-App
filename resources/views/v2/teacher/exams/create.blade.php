@@ -13,6 +13,14 @@
     .ex-tabs a{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;font-size:13.5px;font-weight:600;text-decoration:none;color:var(--text-soft);background:var(--surface);}
     .ex-tabs a.on{background:var(--primary,#061C30);color:#fff;}
     .ex-tabs a + a{border-left:1px solid var(--border);}
+    .ms-control{min-height:44px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);cursor:text;}
+    .ms-control.open{border-color:var(--accent);}
+    .ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:3px 6px 3px 9px;border-radius:99px;background:var(--ok-soft,rgba(95,160,82,.14));color:var(--ok);}
+    .ms-chip button{border:0;background:none;cursor:pointer;color:inherit;font-size:14px;line-height:1;padding:0;}
+    .ms-drop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.14);max-height:260px;display:flex;flex-direction:column;overflow:hidden;}
+    .ms-opt{padding:9px 12px;font-size:13px;cursor:pointer;}
+    .ms-opt:hover{background:var(--soft-surface);}
+    [x-cloak]{display:none!important;}
 </style>
 
 <div class="ex-wrap">
@@ -33,7 +41,18 @@
         </div>
     @else
         <form method="POST" action="{{ route('v2.teacher.exams.store') }}"
-              x-data="{ classes: @js($classMeta), classId: '{{ old('class_id', $classes->first()->id) }}', get topics(){ return (this.classId && this.classes[this.classId]) ? this.classes[this.classId].topics : [] } }"
+              x-data="{
+                  classes: @js($classMeta),
+                  classId: '{{ old('class_id', $classes->first()->id) }}',
+                  selected: [],
+                  open: false,
+                  search: '',
+                  get topics(){ return (this.classId && this.classes[this.classId]) ? this.classes[this.classId].topics : []; },
+                  get available(){ const q = this.search.toLowerCase(); const ids = this.selected.map(s => s.id); return this.topics.filter(t => ids.indexOf(t.id) === -1 && t.label.toLowerCase().includes(q)); },
+                  add(t){ this.selected.push(t); this.search = ''; },
+                  remove(id){ this.selected = this.selected.filter(s => s.id !== id); },
+                  onClassChange(){ this.selected = []; this.search = ''; this.open = false; }
+              }"
               class="space-y-5"
               style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 26px;">
             @csrf
@@ -47,7 +66,7 @@
             <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div>
                     <label style="{{ $lbl }}">Class</label>
-                    <select name="class_id" x-model="classId" required style="{{ $fld }}">
+                    <select name="class_id" x-model="classId" @change="onClassChange()" required style="{{ $fld }}">
                         @foreach ($classes as $c)
                             <option value="{{ $c->id }}">{{ $c->name }} - {{ $c->subject?->name }}</option>
                         @endforeach
@@ -62,18 +81,35 @@
             </div>
 
             <div>
-                <label style="{{ $lbl }}">Topics <span style="font-weight:400;color:var(--text-faint);">(pick one or more, or leave all unchecked for a mixed test)</span></label>
-                <div style="max-height: 168px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px; background: var(--bg);">
-                    <template x-if="topics.length === 0">
-                        <div style="padding: 10px 8px; font-size: 12.5px; color: var(--text-faint);">This class's subject has no tagged topics - a test will draw from all its questions.</div>
-                    </template>
-                    <template x-for="t in topics" :key="t.id">
-                        <label style="display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13px;">
-                            <input type="checkbox" name="topic_ids[]" :value="t.id" style="width:15px;height:15px;">
-                            <span x-text="t.label"></span>
-                        </label>
-                    </template>
+                <label style="{{ $lbl }}">Topics <span style="font-weight:400;color:var(--text-faint);">(pick one or more, or leave empty for a mixed test)</span></label>
+                <div style="position: relative;" @click.outside="open = false">
+                    <div class="ms-control" :class="open ? 'open' : ''" @click="open = true; $nextTick(() => $refs.msSearch && $refs.msSearch.focus())">
+                        <template x-for="t in selected" :key="t.id">
+                            <span class="ms-chip">
+                                <span x-text="t.label"></span>
+                                <button type="button" @click.stop="remove(t.id)">&times;</button>
+                            </span>
+                        </template>
+                        <input type="text" x-ref="msSearch" x-model="search" @focus="open = true" @keydown.backspace="search === '' && selected.length && remove(selected[selected.length-1].id)"
+                               :placeholder="selected.length ? '' : (topics.length ? 'Select topics…' : 'No tagged topics for this subject')"
+                               :disabled="!topics.length"
+                               style="flex:1; min-width:120px; border:0; outline:none; background:transparent; font-size:13.5px; color:var(--text); padding:3px 2px;">
+                    </div>
+
+                    <div class="ms-drop" x-show="open && topics.length" x-cloak>
+                        <div style="overflow-y:auto;">
+                            <template x-for="t in available" :key="t.id">
+                                <div class="ms-opt" @click="add(t); $refs.msSearch.focus()" x-text="t.label"></div>
+                            </template>
+                            <template x-if="available.length === 0">
+                                <div style="padding:10px 12px; font-size:12.5px; color:var(--text-faint);" x-text="selected.length === topics.length ? 'All topics selected' : 'No matching topics'"></div>
+                            </template>
+                        </div>
+                    </div>
                 </div>
+
+                {{-- Submitted values --}}
+                <template x-for="t in selected" :key="'h' + t.id"><input type="hidden" name="topic_ids[]" :value="t.id"></template>
             </div>
 
             <div>
