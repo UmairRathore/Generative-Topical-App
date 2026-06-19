@@ -238,6 +238,8 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 // Exams
                 Route::get('exams', [TeacherExam::class, 'index'])->name('exams.index');
                 Route::get('exams/create', [TeacherExam::class, 'create'])->name('exams.create');
+                Route::get('exams/custom', [TeacherExam::class, 'custom'])->name('exams.custom');
+                Route::post('exams/custom', [TeacherExam::class, 'storeCustom'])->name('exams.store_custom');
                 Route::post('exams', [TeacherExam::class, 'store'])->name('exams.store');
                 Route::patch('exams/{exam}/release', [TeacherExam::class, 'release'])->name('exams.release');
                 Route::patch('exams/{exam}/release-results', [TeacherExam::class, 'releaseResults'])->name('exams.release_results');

@@ -23,17 +23,22 @@ class ExamService
      *
      * @param array{class_id:int,topic_id:?int,question_count:int,title:string,duration_minutes:?int,year_from:?int,year_to:?int} $data
      */
+    /** RANDOM mode: draw $count questions from the class subject across one or more topics. */
     public function generate(Teacher $teacher, array $data): Exam
     {
         /** @var SchoolClass $class */
         $class = SchoolClass::findOrFail($data['class_id']);
         $count = max(1, min(40, (int) $data['question_count']));
 
+        // Accept either topic_ids[] (new, multi) or a single topic_id (legacy).
+        $topicIds = array_values(array_filter(array_map('intval',
+            (array) ($data['topic_ids'] ?? (! empty($data['topic_id']) ? [$data['topic_id']] : [])))));
+
         $base = Question::query()
             ->active() // draft / archived questions are never drawn into a test
             ->has('options') // never draw a question with no answer choices (incomplete source data)
             ->where('subject_id', $class->subject_id)
-            ->when($data['topic_id'] ?? null, fn ($q, $t) => $q->where('topic_id', $t))
+            ->when($topicIds, fn ($q, $t) => $q->whereIn('topic_id', $t))
             ->when($data['year_from'] ?? null, fn ($q, $y) => $q->where('year', '>=', $y))
             ->when($data['year_to'] ?? null, fn ($q, $y) => $q->where('year', '<=', $y));
 
@@ -50,12 +55,44 @@ class ExamService
 
         shuffle($ids);
 
-        return DB::transaction(function () use ($teacher, $class, $data, $ids, $count) {
+        return $this->freeze($teacher, $class, $data, $ids, count($topicIds) === 1 ? $topicIds[0] : null);
+    }
+
+    /**
+     * CUSTOM mode: build an exam from the teacher's hand-picked question ids.
+     * Only ids that are active, have options, and belong to the class subject are
+     * kept; selection is capped at 40 and presented in a shuffled order.
+     */
+    public function createFromQuestions(Teacher $teacher, array $data, array $questionIds): Exam
+    {
+        /** @var SchoolClass $class */
+        $class = SchoolClass::findOrFail($data['class_id']);
+
+        $valid = Question::query()->active()->has('options')
+            ->where('subject_id', $class->subject_id)
+            ->whereIn('id', $questionIds)
+            ->pluck('id')->all();
+
+        // Preserve the teacher's selection, drop invalid ids, cap at 40, then shuffle.
+        $ids = array_values(array_intersect(array_map('intval', $questionIds), $valid));
+        $ids = array_slice($ids, 0, 40);
+        abort_if($ids === [], 422, 'Select at least one valid question.');
+        shuffle($ids);
+
+        $topicIds = Question::whereIn('id', $ids)->distinct()->pluck('topic_id')->filter();
+
+        return $this->freeze($teacher, $class, $data, $ids, $topicIds->count() === 1 ? (int) $topicIds->first() : null);
+    }
+
+    /** Create the draft exam + freeze its questions (shared by both modes). */
+    private function freeze(Teacher $teacher, SchoolClass $class, array $data, array $ids, ?int $topicId): Exam
+    {
+        return DB::transaction(function () use ($teacher, $class, $data, $ids, $topicId) {
             $exam = Exam::create([
                 'school_id'        => $teacher->school_id,
                 'class_id'         => $class->id,
                 'subject_id'       => $class->subject_id,
-                'topic_id'         => $data['topic_id'] ?? null,
+                'topic_id'         => $topicId,
                 'created_by'       => $teacher->id,
                 'title'            => $data['title'],
                 'question_count'   => count($ids),
@@ -63,7 +100,7 @@ class ExamService
                 'duration_minutes' => $data['duration_minutes'] ?? null,
                 'year_from'        => $data['year_from'] ?? null,
                 'year_to'          => $data['year_to'] ?? null,
-                // Created as a draft — not visible to students until the teacher
+                // Created as a draft - not visible to students until the teacher
                 // releases it (now or scheduled) with an optional expiry.
                 'status'           => 'draft',
                 'published_at'     => now(),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V2\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\V2\Exam;
+use App\Models\V2\Question;
 use App\Models\V2\SchoolClass;
 use App\Models\V2\Student;
 use App\Models\V2\StudentEnrollment;
@@ -65,7 +66,8 @@ class ExamController extends Controller
 
         $data = $request->validate([
             'class_id'         => ['required', 'integer', Rule::in($classIds)],
-            'topic_id'         => ['nullable', 'integer'],
+            'topic_ids'        => ['nullable', 'array'],
+            'topic_ids.*'      => ['integer'],
             'question_count'   => ['required', 'integer', 'min:1', 'max:40'],
             'title'            => ['required', 'string', 'max:120'],
             'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:240'],
@@ -73,16 +75,8 @@ class ExamController extends Controller
 
         $class = SchoolClass::findOrFail($data['class_id']);
 
-        // Topic (if any) must belong to the class's subject — no out-of-scope topics.
-        if (! empty($data['topic_id'])) {
-            abort_unless(
-                Topic::where('id', $data['topic_id'])->where('subject_id', $class->subject_id)->exists(),
-                422,
-                'Selected topic does not belong to this class subject.'
-            );
-        } else {
-            $data['topic_id'] = null;
-        }
+        // Any chosen topics must belong to the class's subject - no out-of-scope topics.
+        $data['topic_ids'] = $this->validTopicIds($data['topic_ids'] ?? [], $class->subject_id);
 
         $exam = $service->generate($teacher, $data);
         AuditLogger::record('exam.created', $exam, ['class_id' => $class->id, 'count' => $exam->question_count]);
@@ -90,6 +84,67 @@ class ExamController extends Controller
         return redirect()
             ->route('v2.teacher.exams.show', $exam)
             ->with('success', "Test generated with {$exam->question_count} questions and assigned to {$class->name}.");
+    }
+
+    /** CUSTOM mode: browse + hand-pick questions for a class. */
+    public function custom(Request $request)
+    {
+        $teacher = $this->teacher();
+        $classes = $teacher->classes()->with(['subject', 'grade'])->where('is_active', true)->get();
+
+        $classId = $request->integer('class_id') ?: ($classes->first()->id ?? null);
+        $class = $classes->firstWhere('id', $classId);
+
+        $topicIds = $this->validTopicIds((array) $request->input('topic_ids', []), $class?->subject_id);
+
+        $questions = $class
+            ? Question::query()->active()->has('options')
+                ->where('subject_id', $class->subject_id)
+                ->when($topicIds, fn ($q, $t) => $q->whereIn('topic_id', $t))
+                ->with('topic:id,external_id,title')
+                ->orderBy('topic_id')->orderByDesc('year')->orderBy('source_paper')->orderBy('question_number')
+                ->paginate(24)->withQueryString()
+            : null;
+
+        $topics = $class
+            ? Topic::where('subject_id', $class->subject_id)->orderBy('sort_order')->get(['id', 'external_id', 'title'])
+            : collect();
+
+        return view('v2.teacher.exams.custom', compact('classes', 'class', 'classId', 'topics', 'topicIds', 'questions'));
+    }
+
+    public function storeCustom(Request $request, ExamService $service)
+    {
+        $teacher = $this->teacher();
+        $classIds = $teacher->classes()->pluck('v2_classes.id')->all();
+
+        $data = $request->validate([
+            'class_id'         => ['required', 'integer', Rule::in($classIds)],
+            'title'            => ['required', 'string', 'max:120'],
+            'duration_minutes' => ['nullable', 'integer', 'min:1', 'max:240'],
+            'question_ids'     => ['required', 'string'],
+        ]);
+
+        $ids = array_values(array_filter(array_map('intval', explode(',', $data['question_ids']))));
+        abort_if($ids === [], 422, 'Select at least one question.');
+
+        $exam = $service->createFromQuestions($teacher, $data, $ids);
+        AuditLogger::record('exam.created_custom', $exam, ['count' => $exam->question_count]);
+
+        return redirect()
+            ->route('v2.teacher.exams.show', $exam)
+            ->with('success', "Test created with {$exam->question_count} hand-picked questions.");
+    }
+
+    /** Keep only topic ids that belong to the subject. */
+    private function validTopicIds(array $ids, ?int $subjectId): array
+    {
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if ($ids === [] || $subjectId === null) {
+            return [];
+        }
+
+        return Topic::where('subject_id', $subjectId)->whereIn('id', $ids)->pluck('id')->all();
     }
 
     /** Release a draft test — immediately or at a scheduled time, with optional expiry. */
