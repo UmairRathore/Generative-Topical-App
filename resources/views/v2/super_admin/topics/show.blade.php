@@ -1,5 +1,5 @@
 @extends('v2.layouts.super_admin')
-@section('page_title', $school ? $school->name.' — Topics' : 'Topics — platform')
+@section('page_title', $school ? $school->name.' - Topics' : 'Topics - platform')
 
 @section('content')
 @if ($school)
@@ -21,7 +21,7 @@
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
             <div style="font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;">{{ $label }}</div>
             <div class="flex items-baseline gap-2" style="margin-top: 6px;">
-                <span class="serif" style="font-size: 24px; font-weight: 600;">{{ $s['avg'] !== null ? $s['avg'].'%' : '—' }}</span>
+                <span class="serif" style="font-size: 24px; font-weight: 600;">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</span>
                 <span style="font-size: 12.5px; color: var(--text-soft);">avg · {{ $s['exams'] }} {{ \Illuminate\Support\Str::plural('exam', $s['exams']) }} · {{ $s['submissions'] }} subs</span>
             </div>
         </div>

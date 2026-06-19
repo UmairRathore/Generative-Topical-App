@@ -30,7 +30,7 @@
                     <x-crest size="24"/>
                     <span class="mono" style="font-size: 10px; color: var(--gold-700);">9702/12 · 2025</span>
                 </div>
-                <div class="serif" style="font-size: 16px; font-weight: 600;">A Level Physics — Paper 1</div>
+                <div class="serif" style="font-size: 16px; font-weight: 600;">A Level Physics - Paper 1</div>
                 <div style="font-size: 11px; color: var(--text-faint);">40 multiple choice · 1 hour</div>
                 <hr class="gold-rule" style="margin: 14px 0;"/>
                 <div class="serif" style="font-size: 12px; line-height: 1.5; color: var(--text-soft);">
@@ -78,13 +78,13 @@
     <section style="padding: 60px 60px; max-width: 1320px; margin: 0 auto;">
         <div class="uppercase-eyebrow">How it works</div>
         <h2 class="serif" style="font-size: 44px; font-weight: 600; letter-spacing: -0.015em; max-width: 700px; margin-top: 10px;">
-            A test bank, a generator and an analytics suite — under one roof.
+            A test bank, a generator and an analytics suite - under one roof.
         </h2>
         <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 50px;">
             @foreach([
                 ['sparkle',  '40-question Generator', "Pick a subject, allocate questions across topics, choose Cambridge-style settings. Done."],
                 ['filter',   'Selective Picker',      "Filter by topic, year, paper, difficulty, and curate your own paper question by question."],
-                ['trending', 'Mastery Analytics',     "See exactly which topics — and which students — need attention. Generate focused remediation papers."],
+                ['trending', 'Mastery Analytics',     "See exactly which topics - and which students - need attention. Generate focused remediation papers."],
             ] as [$icon, $t, $d])
                 <div class="card-elev" style="padding: 28px;">
                     <div class="flex items-center justify-center" style="width: 44px; height: 44px; border-radius: 8px; background: var(--gold-50); color: var(--gold-700); margin-bottom: 18px;">

@@ -27,8 +27,8 @@
     <div class="grid" style="grid-template-columns: 260px 1fr; gap: 16px;">
         <div class="card-elev" style="padding: 14px;">
             <select class="select" style="margin-bottom: 10px;">
-                <option>Physics — A Level</option>
-                <option>Chemistry — A Level</option>
+                <option>Physics - A Level</option>
+                <option>Chemistry - A Level</option>
             </select>
             <div class="flex flex-col" style="gap: 2px;">
                 @foreach($topics as $i => $t)

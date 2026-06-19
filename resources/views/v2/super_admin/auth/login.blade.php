@@ -1,4 +1,4 @@
-<x-slot:title>Super Admin Login — Generative Topical</x-slot:title>
+<x-slot:title>Super Admin Login - Generative Topical</x-slot:title>
 
 @extends('v2.layouts.auth')
 

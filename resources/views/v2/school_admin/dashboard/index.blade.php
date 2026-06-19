@@ -32,7 +32,7 @@
         $studentPct = $school->max_students > 0 ? round($stats['students'] / $school->max_students * 100) : 0;
     @endphp
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px;">
-        <h2 style="font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text);">License Usage — {{ $school->license_tier }}</h2>
+        <h2 style="font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text);">License Usage - {{ $school->license_tier }}</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             @foreach([
                 ['label' => 'Teachers', 'used' => $stats['teachers'], 'max' => $school->max_teachers, 'pct' => $teacherPct],
@@ -61,7 +61,7 @@
                 <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--emerald-500); margin-top: 5px; flex: none;"></div>
                 <div>
                     <div style="font-size: 13px; color: var(--text);">{{ $log->action }}</div>
-                    <div style="font-size: 11.5px; color: var(--muted);">{{ $log->created_at?->diffForHumans() ?? '—' }}</div>
+                    <div style="font-size: 11.5px; color: var(--muted);">{{ $log->created_at?->diffForHumans() ?? '-' }}</div>
                 </div>
             </div>
             @endforeach

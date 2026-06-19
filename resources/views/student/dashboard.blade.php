@@ -1,6 +1,6 @@
 @php
     $assignedTests = [
-        ['n' => 'Mechanics — Mock Set A',     't' => 'Dr. Saima Iqbal', 's' => 'Physics',   'q' => 40, 'due' => 'May 4', 'st' => 'in-progress', 'prog' => 22],
+        ['n' => 'Mechanics - Mock Set A',     't' => 'Dr. Saima Iqbal', 's' => 'Physics',   'q' => 40, 'due' => 'May 4', 'st' => 'in-progress', 'prog' => 22],
         ['n' => 'Organic Chemistry Topical',  't' => 'Ms. Fariha Aziz', 's' => 'Chemistry', 'q' => 25, 'due' => 'May 6', 'st' => 'not-started', 'prog' => 0],
         ['n' => 'Trigonometry Practice',      't' => 'Mr. A. Mahmood',  's' => 'Math',      'q' => 30, 'due' => 'May 9', 'st' => 'not-started', 'prog' => 0],
     ];
@@ -21,7 +21,7 @@
                 You're <em style="color: var(--accent);">3 days</em> from your Mechanics target. Keep your 12-day streak alive.
             </h2>
             <div class="flex" style="gap: 12px; margin-top: 20px;">
-                <a href="{{ route('student.tests.show', 1) }}" wire:navigate class="btn btn-gold btn-sm">Resume Mechanics — Mock Set A</a>
+                <a href="{{ route('student.tests.show', 1) }}" wire:navigate class="btn btn-gold btn-sm">Resume Mechanics - Mock Set A</a>
                 <a href="{{ route('student.practice') }}" wire:navigate class="btn btn-outline-light btn-sm">Practice a topic</a>
             </div>
         </div>

@@ -50,7 +50,7 @@
 
         @if ($exam->isDraft())
             <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px; line-height: 1.5;">
-                This test is a <strong>draft</strong> — students can't see it yet. Release it now or schedule it, with an optional expiry after which no student can access it.
+                This test is a <strong>draft</strong> - students can't see it yet. Release it now or schedule it, with an optional expiry after which no student can access it.
             </p>
             <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" x-data="{ mode: 'now' }">
                 @csrf @method('PATCH')
@@ -65,12 +65,12 @@
                         <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="{{ $fieldStyle }} width:100%;">
                     </div>
                     <div>
-                        <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Expires at <span style="color:var(--text-faint);">— optional</span></label>
+                        <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Expires at <span style="color:var(--text-faint);">- optional</span></label>
                         <input type="datetime-local" name="expires_at" style="{{ $fieldStyle }} width:100%;">
                     </div>
                     <label class="flex items-center gap-2" style="font-size:12.5px; color:var(--text-soft); cursor:pointer;">
                         <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
-                        Release results immediately — students see their score as they submit
+                        Release results immediately - students see their score as they submit
                     </label>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top:14px;"><x-icon name="play" size="13"/> Release test</button>
@@ -88,7 +88,7 @@
                     @if ($exam->available_until)
                         <strong style="color:var(--text);">{{ $exam->isExpired() ? 'Closed' : 'Closes' }}</strong> {{ $exam->available_until->format('D j M, g:i A') }} ({{ $exam->available_until->diffForHumans() }})
                     @else
-                        <strong style="color:var(--text);">No expiry</strong> — stays open until you close it.
+                        <strong style="color:var(--text);">No expiry</strong> - stays open until you close it.
                     @endif
                 </div>
             </div>
@@ -109,7 +109,7 @@
 
         @if ($exam->resultsReleased())
             <div class="flex items-center gap-2" style="font-size: 13px; color: var(--ok); font-weight: 600; margin-bottom: 14px;">
-                <x-icon name="check" size="15"/> Released {{ $exam->results_released_at->diffForHumans() }} — students can see their results.
+                <x-icon name="check" size="15"/> Released {{ $exam->results_released_at->diffForHumans() }} - students can see their results.
             </div>
             <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
                 @csrf @method('PATCH')
@@ -117,7 +117,7 @@
                 <button type="submit" class="btn btn-ghost btn-sm">Hide results again</button>
             </form>
         @else
-            <div style="font-size: 13px; color: var(--text-soft); margin-bottom: 14px;">Results are currently <strong>hidden</strong> — submitted students see only “awaiting results”.</div>
+            <div style="font-size: 13px; color: var(--text-soft); margin-bottom: 14px;">Results are currently <strong>hidden</strong> - submitted students see only “awaiting results”.</div>
             <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
                 @csrf @method('PATCH')
                 <input type="hidden" name="release" value="1">
@@ -130,7 +130,7 @@
 {{-- Stat cards --}}
 <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px;">
     @foreach ([
-        ['Class average', $avg !== null ? $avg.'%' : '—', 'chart'],
+        ['Class average', $avg !== null ? $avg.'%' : '-', 'chart'],
         ['Submitted', $submittedCount.' / '.$students->count(), 'check'],
         ['Questions', $exam->question_count, 'clipboard'],
         ['Topic', $exam->topic?->title ?? 'Mixed', 'target'],
@@ -182,17 +182,17 @@
                             @elseif ($exam->isLive())
                                 <span class="badge badge-soft">Not started</span>
                             @else
-                                <span class="badge badge-soft">—</span>
+                                <span class="badge badge-soft">-</span>
                             @endif
                         </td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">
-                            {{ $done ? ($a->time_taken ?? '—') : '—' }}
+                            {{ $done ? ($a->time_taken ?? '-') : '-' }}
                         </td>
                         <td style="padding: var(--pad-cell); text-align: right; font-weight: 600; font-size: 13px;">
                             @if ($done)
                                 {{ $a->score }}/{{ $a->total_questions }} <span style="color: var(--text-faint); font-weight: 500;">({{ $a->percentage }}%)</span>
                             @else
-                                <span style="color: var(--text-faint);">—</span>
+                                <span style="color: var(--text-faint);">-</span>
                             @endif
                         </td>
                     </tr>
@@ -217,7 +217,7 @@
                 </div>
             </div>
         @empty
-            <p style="font-size: 13px; color: var(--text-faint);">No submissions yet — stats appear once students complete the test.</p>
+            <p style="font-size: 13px; color: var(--text-faint);">No submissions yet - stats appear once students complete the test.</p>
         @endforelse
     </div>
 </div>

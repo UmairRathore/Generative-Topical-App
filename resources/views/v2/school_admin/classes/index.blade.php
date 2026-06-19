@@ -32,9 +32,9 @@
                     @foreach($classes as $class)
                     <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: 13px 16px; font-size: 14px; font-weight: 500; color: var(--text);">
-                            {{ $class->grade?->name ?? '—' }}{{ $class->section ? " · {$class->section}" : '' }}
+                            {{ $class->grade?->name ?? '-' }}{{ $class->section ? " · {$class->section}" : '' }}
                         </td>
-                        <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $class->subject?->name ?? '—' }}</td>
+                        <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $class->subject?->name ?? '-' }}</td>
                         <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $class->classTeachers->count() }}</td>
                         <td style="padding: 13px 16px;">
                             <span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{ $class->is_active ? 'background:#d1fae5;color:#065f46;' : 'background:#f3f4f6;color:#6b7280;' }}">

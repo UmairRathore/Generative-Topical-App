@@ -5,7 +5,7 @@
             <span class="text-brand-gold">does this student actually understand?</span></h1>
         <p class="mt-6 text-brand-charcoal/70 text-lg leading-8">
             Generative Topical was created by educators frustrated with messy past-paper PDFs and shallow practice apps.
-            We rebuilt the Cambridge revision experience from the ground up — every question hand-tagged, every diagram
+            We rebuilt the Cambridge revision experience from the ground up - every question hand-tagged, every diagram
             preserved, every mark scheme mapped.
         </p>
     </section>
@@ -31,7 +31,7 @@
         <div class="mt-6 grid md:grid-cols-2 gap-6">
             @foreach([
                 ['Rigour over rapid', 'We will never ship a question that has not passed our QA pipeline. A wrong answer is worse than no question.'],
-                ['Teachers know best', 'Our tools follow how teachers actually teach — by topic, by paper, by misconception.'],
+                ['Teachers know best', 'Our tools follow how teachers actually teach - by topic, by paper, by misconception.'],
                 ['Fair to every learner', 'No tracking ads. No stealth upsells. Students see exactly what their teacher sees.'],
                 ['Built for institutions', 'Schools demand reliability. Our platform is auditable, exportable, and compliant.'],
             ] as [$h, $p])

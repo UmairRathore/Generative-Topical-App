@@ -17,7 +17,7 @@
 <div class="flex items-center justify-between" style="margin-bottom: 24px;">
     <div>
         <h2 class="serif" style="font-size: 26px; font-weight: 600;">Exams</h2>
-        <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Generate topic tests, then release them to students — now or at a scheduled time, with an optional expiry.</p>
+        <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Generate topic tests, then release them to students - now or at a scheduled time, with an optional expiry.</p>
     </div>
     <a href="{{ route('v2.teacher.exams.create') }}" class="btn btn-primary"><x-icon name="plus" size="14"/> Create Exam</a>
 </div>
@@ -64,7 +64,7 @@
                         <span style="color: var(--text-faint);"> / {{ $exam->schoolClass?->student_count ?? 0 }} students</span>
                     </td>
                     @php $avg = ($exam->avg_score !== null && $exam->question_count) ? round($exam->avg_score / $exam->question_count * 100) : null; @endphp
-                    <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600;">{{ $avg !== null ? $avg.'%' : '—' }}</td>
+                    <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600;">{{ $avg !== null ? $avg.'%' : '-' }}</td>
                     <td style="padding: var(--pad-cell); text-align: right; white-space: nowrap;">
                         @if ($exam->isDraft())
                             <button type="button" class="btn btn-primary btn-sm"
@@ -93,7 +93,7 @@
           style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 460px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
         @csrf @method('PATCH')
         <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">Release test</h3>
-        <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 18px;" x-text="'“' + relTitle + '” — choose when students can take it.'"></p>
+        <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 18px;" x-text="'“' + relTitle + '” - choose when students can take it.'"></p>
 
         <input type="hidden" name="mode" :value="mode">
         <div class="qb-seg" style="display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;">
@@ -107,13 +107,13 @@
         </div>
 
         <div style="margin-bottom: 14px;">
-            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Expires at <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">— optional; no access after this</span></label>
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Expires at <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">- optional; no access after this</span></label>
             <input type="datetime-local" name="expires_at" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
 
         <label class="flex items-center gap-2" style="font-size:12.5px;color:var(--text-soft);cursor:pointer;margin-bottom:20px;">
             <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
-            Release results immediately — students see their score as they submit
+            Release results immediately - students see their score as they submit
         </label>
 
         <div class="flex items-center justify-end gap-2">

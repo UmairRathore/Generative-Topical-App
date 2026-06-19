@@ -36,7 +36,7 @@
                     @endphp
                     <tr>
                         <td class="mono" style="font-weight: 600; color: var(--gold-700);">{{ $p->paper_code }}</td>
-                        <td style="font-weight: 500;">{{ $p->subject?->name ?? '—' }}</td>
+                        <td style="font-weight: 500;">{{ $p->subject?->name ?? '-' }}</td>
                         <td>{{ $p->session }} {{ $p->year }}</td>
                         <td>{{ $p->total_questions }}</td>
                         <td><span class="badge {{ $cls }}">{{ $status }}</span></td>

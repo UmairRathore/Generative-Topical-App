@@ -16,7 +16,7 @@
                 Teacher <em style="color: var(--accent); font-style: italic;">Portal</em>
             </h1>
             <p style="font-size: 16px; color: rgba(250,247,239,0.75); line-height: 1.6; max-width: 420px; margin-top: 16px;">
-                Build topical tests, track student progress, and manage your classes — all in one place.
+                Build topical tests, track student progress, and manage your classes - all in one place.
             </p>
         </div>
     </div>

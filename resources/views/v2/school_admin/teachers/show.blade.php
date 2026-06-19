@@ -29,8 +29,8 @@
             <dl class="space-y-3">
                 @foreach([
                     ['Email',       $teacher->email],
-                    ['Phone',       $teacher->phone ?? '—'],
-                    ['Employee ID', $teacher->employee_id ?? '—'],
+                    ['Phone',       $teacher->phone ?? '-'],
+                    ['Employee ID', $teacher->employee_id ?? '-'],
                     ['Status',      ucfirst($teacher->status)],
                     ['Last Login',  $teacher->last_login_at?->diffForHumans() ?? 'Never'],
                 ] as [$label, $val])

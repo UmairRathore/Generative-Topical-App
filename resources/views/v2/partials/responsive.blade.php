@@ -5,7 +5,7 @@
 
 /* --- Question diagrams ------------------------------------------------
    Width is set inline, uniform-scaled from each crop's own point size
-   (QuestionImage::displayWidth) — every crop shares one 200 DPI, so one scale
+   (QuestionImage::displayWidth) - every crop shares one 200 DPI, so one scale
    means the internal label text is a CONSTANT size across diagrams. Here we
    only keep them in-column (max-width:100%), borderless and centered. */
 .v2-figure-wrap { text-align: center; margin: 14px 0; }
@@ -75,7 +75,7 @@
     table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
 
     /* Data tables (.tbl, e.g. the question bank) read as a horizontally-scrolling
-       mess on phones — stack each row into a labelled card instead. (The rule
+       mess on phones - stack each row into a labelled card instead. (The rule
        above stays for content tables inside questions.) */
     .tbl { display: block; overflow-x: visible; white-space: normal; }
     .tbl thead { display: none; }
@@ -88,7 +88,7 @@
     .fade-in [style*="padding: 28px"] { padding: 16px !important; }
 
     /* Question-bank action row: search on its own line, then type+answer, then
-       the apply/reset buttons — instead of squeezing all five across. */
+       the apply/reset buttons - instead of squeezing all five across. */
     .qb-actions { flex-wrap: wrap; align-items: stretch; }
     .qb-actions .qb-search { flex: 1 1 100% !important; }
     .qb-actions .qb-type,

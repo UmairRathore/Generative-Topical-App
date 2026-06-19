@@ -29,7 +29,7 @@
             <dl class="space-y-3">
                 @foreach([
                     ['Email',      $student->email],
-                    ['Roll No.',   $student->roll_number ?? '—'],
+                    ['Roll No.',   $student->roll_number ?? '-'],
                     ['Status',     ucfirst($student->status)],
                     ['Last Login', $student->last_login_at?->diffForHumans() ?? 'Never'],
                 ] as [$label, $val])

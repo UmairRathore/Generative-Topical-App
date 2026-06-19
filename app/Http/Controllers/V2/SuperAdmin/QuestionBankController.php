@@ -213,7 +213,7 @@ class QuestionBankController extends Controller
     public function destroy(Question $question)
     {
         if (! in_array($question->status, self::DELETABLE, true)) {
-            return back()->with('err', 'Active questions can’t be deleted — move them to draft, under review, or archived first.');
+            return back()->with('err', 'Active questions can’t be deleted - move them to draft, under review, or archived first.');
         }
 
         DB::transaction(function () use ($question) {

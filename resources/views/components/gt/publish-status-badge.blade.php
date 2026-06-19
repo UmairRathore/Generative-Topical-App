@@ -17,7 +17,7 @@
         in_array($rev, ['review', 'rejected'], true)            => ['Needs Review', 'warning', 'flag'],
         $rev === 'acceptable_fallback'                          => ['Fallback',     'gold',    'photo'],
         in_array($rev, ['pass', 'approved', 'render_fix'], true) && $vis === 'public' => ['Approved', 'emerald', 'check-badge'],
-        default                                                 => ['—',            'neutral', 'question-mark-circle'],
+        default                                                 => ['-',            'neutral', 'question-mark-circle'],
     };
 @endphp
 <x-gt.badge :tone="$tone" :icon="$icon" {{ $attributes }}>{{ $label }}</x-gt.badge>

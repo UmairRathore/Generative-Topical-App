@@ -87,7 +87,7 @@
             <div>
                 <label style="{{ $labelStyle }}">Topic</label>
                 <select name="topic_id" x-model="topic" style="{{ $fieldStyle }}">
-                    <option value="">— Untagged —</option>
+                    <option value="">- Untagged -</option>
                     <template x-for="t in topics.filter(t => String(t.subject_id) === String(subject))" :key="t.id">
                         <option :value="t.id" x-text="t.label" :selected="String(t.id) === String(topic)"></option>
                     </template>
@@ -112,7 +112,7 @@
 
         {{-- Stem diagrams --}}
         <div class="qb-sub" style="margin-top: 18px;">
-            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 4px;">Stem diagrams <span style="{{ $optStr }}">— optional</span></div>
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 4px;">Stem diagrams <span style="{{ $optStr }}">- optional</span></div>
             <p style="font-size: 11.5px; color: var(--text-faint); margin-bottom: 12px;">For a figure that sits <strong>inside</strong> the text, fill the before/after text and add a “between” diagram. For a figure simply shown below the stem, use “after the text”.</p>
 
             {{-- between: text_before -> diagram -> text_after --}}
@@ -120,7 +120,7 @@
             <textarea name="text_before" rows="2" style="{{ $fieldStyle }} resize: vertical;" placeholder="Lead-in text shown above the in-line diagram…">{{ $vBefore }}</textarea>
 
             <div style="margin: 12px 0;">
-                <label style="{{ $labelStyle }}">In-line diagram(s) — between the text</label>
+                <label style="{{ $labelStyle }}">In-line diagram(s) - between the text</label>
                 @include('v2.super_admin.question_bank._uploader', ['existing' => $betweenImages, 'name' => 'question_images_between', 'multiple' => true])
             </div>
 
@@ -202,7 +202,7 @@
                         <input type="file" name="answer_image" accept="image/png,image/jpeg,image/webp,image/gif" hidden
                                @change="url = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : ''">
                         <span x-show="!url"><x-icon name="plus" size="13"/> {{ $answerImage ? 'Click to replace the answer image' : 'Click to upload the table / graph image' }}</span>
-                        <span x-show="url" style="font-size:11px;color:var(--text-faint);">New image selected — click to change</span>
+                        <span x-show="url" style="font-size:11px;color:var(--text-faint);">New image selected - click to change</span>
                     </label>
                 </div>
                 <p style="font-size: 11.5px; color: var(--text-faint); margin-top: 10px;">The image is shown with selectable <strong>A / B / C / D</strong> circles beside it. Leave the A–D option text empty unless you also want to label each row.</p>
@@ -218,7 +218,7 @@
             <div>
                 <label style="{{ $labelStyle }}">Difficulty</label>
                 <select name="difficulty" style="{{ $fieldStyle }}">
-                    <option value="">—</option>
+                    <option value="">-</option>
                     @foreach ($difficulties as $d)<option value="{{ $d }}" @selected(old('difficulty', $question->difficulty) === $d)>{{ ucfirst($d) }}</option>@endforeach
                 </select>
             </div>

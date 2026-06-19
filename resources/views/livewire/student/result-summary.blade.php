@@ -38,7 +38,7 @@
                 <li class="flex items-center justify-between p-3 text-sm">
                     <span class="font-semibold text-brand-charcoal">Q{{ $attempt->question?->question_number }}</span>
                     <span class="text-brand-slate">
-                        Picked {{ $attempt->selected_answer ?? '—' }}
+                        Picked {{ $attempt->selected_answer ?? '-' }}
                         @if ($attempt->correct_answer)
                             &middot; correct {{ $attempt->correct_answer }}
                         @endif

@@ -38,7 +38,7 @@
             <div>
                 <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px;">Enrol in Class <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
                 <select name="class_id" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text);">
-                    <option value="">— Skip for now —</option>
+                    <option value="">- Skip for now -</option>
                     @foreach($classes as $class)
                         <option value="{{ $class->id }}" {{ old('class_id') == $class->id ? 'selected' : '' }}>
                             {{ $class->grade?->name }}{{ $class->section ? " · {$class->section}" : '' }}{{ $class->subject ? " ({$class->subject->name})" : '' }}

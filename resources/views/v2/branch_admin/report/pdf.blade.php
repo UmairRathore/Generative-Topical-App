@@ -41,7 +41,7 @@
             <tr>
                 <td style="width:33%;">
                     <div class="muted" style="font-size:10px; text-transform:uppercase; letter-spacing:1px;">Overall average</div>
-                    <div class="kpi" style="color: {{ $stats['overall']['tests'] ? $tone($stats['overall']['avg']) : '#8A93A0' }};">{{ $stats['overall']['tests'] ? $stats['overall']['avg'].'%' : '—' }}</div>
+                    <div class="kpi" style="color: {{ $stats['overall']['tests'] ? $tone($stats['overall']['avg']) : '#8A93A0' }};">{{ $stats['overall']['tests'] ? $stats['overall']['avg'].'%' : '-' }}</div>
                 </td>
                 <td style="width:33%;">
                     <div class="muted" style="font-size:10px; text-transform:uppercase; letter-spacing:1px;">Tests completed</div>

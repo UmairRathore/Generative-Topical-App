@@ -7,7 +7,7 @@
         <x-icon name="chev-l" size="12"/> All Schools
     </a>
     <div style="padding: var(--pad-card); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);">
-        <p style="color: var(--text-soft); font-size: 14px;">School edit form — coming in next module.</p>
+        <p style="color: var(--text-soft); font-size: 14px;">School edit form - coming in next module.</p>
     </div>
 </div>
 @endsection

@@ -39,12 +39,12 @@
                                     <span style="display: inline-block; min-width: 46px; padding: 4px 8px; border-radius: 6px; font-size: 12.5px; font-weight: 600; background: {{ $cellBg($cell['percent']) }}; color: {{ $barColor($cell['percent']) }};"
                                           title="{{ $cell['correct'] }}/{{ $cell['total'] }}">{{ $cell['percent'] }}%</span>
                                 @else
-                                    <span style="color: var(--text-faint); font-size: 12px;">—</span>
+                                    <span style="color: var(--text-faint); font-size: 12px;">-</span>
                                 @endif
                             </td>
                         @endforeach
                         <td style="padding: var(--pad-cell); text-align: center; font-weight: 700; font-size: 13px;">
-                            {{ $row['overall'] !== null ? $row['overall'].'%' : '—' }}
+                            {{ $row['overall'] !== null ? $row['overall'].'%' : '-' }}
                         </td>
                     </tr>
                 @endforeach

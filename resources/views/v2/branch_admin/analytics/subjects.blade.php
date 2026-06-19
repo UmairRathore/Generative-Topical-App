@@ -25,8 +25,8 @@
                     <td data-label="Classes" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['classes'] }}</td>
                     <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['students'] }}</td>
                     <td data-label="Exams" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['exams'] }}</td>
-                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $r['submissions'] ?: '—' }}</td>
-                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $r['avg'] !== null ? $r['avg'].'%' : '—' }}</td>
+                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $r['submissions'] ?: '-' }}</td>
+                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $r['avg'] !== null ? $r['avg'].'%' : '-' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="6" style="padding: 40px; text-align: center; color: var(--text-faint); font-size: 14px;">No subjects yet.</td></tr>

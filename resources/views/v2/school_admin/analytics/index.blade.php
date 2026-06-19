@@ -6,7 +6,7 @@
 @section('content')
 <div style="margin-bottom: 22px;">
     <h2 class="serif" style="font-size: 26px; font-weight: 600;">School Analytics</h2>
-    <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Whole-school performance — drill into any teacher, class, or student.</p>
+    <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Whole-school performance - drill into any teacher, class, or student.</p>
 </div>
 
 {{-- Break down by dimension --}}
@@ -24,7 +24,7 @@
         ['Teachers', $overview['teachers'], 'user'],
         ['Classes', $overview['classes'], 'calendar'],
         ['Exams', $overview['exams'], 'clipboard'],
-        ['School average', $overview['avg'] !== null ? $overview['avg'].'%' : '—', 'chart'],
+        ['School average', $overview['avg'] !== null ? $overview['avg'].'%' : '-', 'chart'],
     ] as [$label, $value, $icon])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
             <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">
@@ -37,7 +37,7 @@
 
 {{-- School per-topic --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 22px;">
-    <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">Performance by topic — whole school</div>
+    <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">Performance by topic - whole school</div>
     @include('v2.partials.topic_bars', ['stats' => $topicStats])
 </div>
 
@@ -57,7 +57,7 @@
                         <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $t['name'] }}</td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $t['classes'] }}</td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $t['exams'] }}</td>
-                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $t['avg'] !== null ? $tone($t['avg']) : 'var(--text-faint)' }};">{{ $t['avg'] !== null ? $t['avg'].'%' : '—' }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $t['avg'] !== null ? $tone($t['avg']) : 'var(--text-faint)' }};">{{ $t['avg'] !== null ? $t['avg'].'%' : '-' }}</td>
                         <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.school.analytics.teacher', hid($t['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
                     </tr>
                 @empty
@@ -85,7 +85,7 @@
                         </td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $c['students'] }}</td>
                         <td style="padding: var(--pad-cell); font-size: 13px;">{{ $c['exams'] }}</td>
-                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $c['avg'] !== null ? $tone($c['avg']) : 'var(--text-faint)' }};">{{ $c['avg'] !== null ? $c['avg'].'%' : '—' }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $c['avg'] !== null ? $tone($c['avg']) : 'var(--text-faint)' }};">{{ $c['avg'] !== null ? $c['avg'].'%' : '-' }}</td>
                         <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.school.analytics.class', hid($c['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
                     </tr>
                 @empty

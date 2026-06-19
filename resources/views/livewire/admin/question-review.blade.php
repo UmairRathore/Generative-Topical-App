@@ -8,7 +8,7 @@
         'blocker'             => ['Blocker',    'badge-blocker'],
     ];
     $qaValue = $question->qa_status?->value;
-    [$qaLabel, $qaCls] = $statusMap[$qaValue] ?? ['—', 'badge-soft'];
+    [$qaLabel, $qaCls] = $statusMap[$qaValue] ?? ['-', 'badge-soft'];
 @endphp
 <div>
     <x-gt.page-header
@@ -31,18 +31,18 @@
             <div class="flex justify-between items-start" style="margin-bottom: 24px;">
                 <div>
                     <div style="font-size: 11px; font-weight: 600; color: var(--gold-700); text-transform: uppercase; letter-spacing: 0.08em;">
-                        Q-{{ $question->id }} · {{ $question->paper?->subject?->name ?? 'Subject' }} · {{ $question->topics->first()?->name ?? '—' }}
+                        Q-{{ $question->id }} · {{ $question->paper?->subject?->name ?? 'Subject' }} · {{ $question->topics->first()?->name ?? '-' }}
                     </div>
                     <h2 class="serif" style="font-size: 22px; font-weight: 600; margin-top: 6px;">{{ $question->paper?->paper_code ?? 'Paper' }} · Q{{ $question->question_number }}</h2>
                     <div style="font-size: 12px; color: var(--text-faint); margin-top: 4px;">
-                        Updated {{ optional($question->updated_at)->diffForHumans() }} · {{ $question->paper?->session ?? '—' }} {{ $question->paper?->year ?? '' }}
+                        Updated {{ optional($question->updated_at)->diffForHumans() }} · {{ $question->paper?->session ?? '-' }} {{ $question->paper?->year ?? '' }}
                     </div>
                 </div>
                 <span class="badge {{ $qaCls }}">{{ $qaLabel }}</span>
             </div>
 
             <p class="serif" style="font-size: 17px; line-height: 1.55; color: var(--text);">
-                {{ $question->clean_question_text ?: $question->question_text ?: '—' }}
+                {{ $question->clean_question_text ?: $question->question_text ?: '-' }}
             </p>
 
             <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px;">
@@ -85,19 +85,19 @@
             <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 22px;">
                 <div>
                     <div style="font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em;">Layout</div>
-                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->layout_type?->value ?? '—' }}</div>
+                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->layout_type?->value ?? '-' }}</div>
                 </div>
                 <div>
                     <div style="font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em;">Visibility</div>
-                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->visibility?->value ?? '—' }}</div>
+                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->visibility?->value ?? '-' }}</div>
                 </div>
                 <div>
                     <div style="font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em;">Review status</div>
-                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->review_status?->value ?? '—' }}</div>
+                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->review_status?->value ?? '-' }}</div>
                 </div>
                 <div>
                     <div style="font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em;">Source</div>
-                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->paper?->source_file ?? '—' }}</div>
+                    <div style="font-size: 13px; font-weight: 500; margin-top: 4px;">{{ $question->paper?->source_file ?? '-' }}</div>
                 </div>
             </div>
 

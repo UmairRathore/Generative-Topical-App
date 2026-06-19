@@ -13,7 +13,7 @@
         <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $student->name }}</h2>
         <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Roll {{ $student->roll_number }}@if ($student->email) · {{ $student->email }}@endif</p>
     </div>
-    {{-- AI progress report — generates + saves a JSON record; PDF is rendered on demand --}}
+    {{-- AI progress report - generates + saves a JSON record; PDF is rendered on demand --}}
     <form method="POST" action="{{ route('v2.branch.report.generate', $student) }}" class="flex items-center gap-2" style="flex-wrap: wrap;">
         @csrf
         <select name="duration" class="select" style="width: auto; padding: 7px 12px; font-size: 13px;">
@@ -35,7 +35,7 @@
                 @foreach ($reports as $r)
                     <tr style="border-bottom: 1px solid var(--border);">
                         <td data-label="Period" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ ucfirst($r->period_label) }}</td>
-                        <td data-label="Score" style="padding: var(--pad-cell); font-size: 13px;">{{ $r->overall_avg !== null ? $r->overall_avg.'%' : '—' }} · {{ $r->tests_count }} {{ \Illuminate\Support\Str::plural('test', $r->tests_count) }}</td>
+                        <td data-label="Score" style="padding: var(--pad-cell); font-size: 13px;">{{ $r->overall_avg !== null ? $r->overall_avg.'%' : '-' }} · {{ $r->tests_count }} {{ \Illuminate\Support\Str::plural('test', $r->tests_count) }}</td>
                         <td data-label="Source" style="padding: var(--pad-cell); font-size: 12px; color: var(--text-soft);">{{ $r->source === 'openai' ? 'AI (OpenAI)' : 'Generated' }}</td>
                         <td data-label="Generated" style="padding: var(--pad-cell); font-size: 12px; color: var(--text-faint);">{{ $r->created_at->diffForHumans() }}</td>
                         <td data-label="" style="padding: var(--pad-cell); text-align: right;">

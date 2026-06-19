@@ -27,7 +27,7 @@
     @foreach ([
         ['Students', $studentCount, 'users'],
         ['Exams', $exams->count(), 'clipboard'],
-        ['Class average', $classAvg !== null ? $classAvg.'%' : '—', 'chart'],
+        ['Class average', $classAvg !== null ? $classAvg.'%' : '-', 'chart'],
         ['Topics covered', count($topicStats), 'target'],
     ] as [$label, $value, $icon])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
@@ -53,7 +53,7 @@
             </div>
         </div>
     @empty
-        <p style="font-size: 13px; color: var(--text-faint);">No completed exams yet — analytics appear once students submit tests.</p>
+        <p style="font-size: 13px; color: var(--text-faint);">No completed exams yet - analytics appear once students submit tests.</p>
     @endforelse
 </div>
 
@@ -88,12 +88,12 @@
                                         <span style="display: inline-block; min-width: 46px; padding: 4px 8px; border-radius: 6px; font-size: 12.5px; font-weight: 600; background: {{ $cellBg($cell['percent']) }}; color: {{ $barColor($cell['percent']) }};"
                                               title="{{ $cell['correct'] }}/{{ $cell['total'] }}">{{ $cell['percent'] }}%</span>
                                     @else
-                                        <span style="color: var(--text-faint); font-size: 12px;">—</span>
+                                        <span style="color: var(--text-faint); font-size: 12px;">-</span>
                                     @endif
                                 </td>
                             @endforeach
                             <td style="padding: var(--pad-cell); text-align: center; font-weight: 700; font-size: 13px;">
-                                {{ $row['overall'] !== null ? $row['overall'].'%' : '—' }}
+                                {{ $row['overall'] !== null ? $row['overall'].'%' : '-' }}
                             </td>
                         </tr>
                     @endforeach

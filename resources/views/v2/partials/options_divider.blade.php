@@ -1,5 +1,5 @@
 {{-- Separates the answer choices from the question. Shows an "Options" label,
-     then the option-table image (option_table layout — the table IS the answers),
+     then the option-table image (option_table layout - the table IS the answers),
      so answer diagrams are never mistaken for question diagrams.
      Prop: $q (a V2 Question with `images` loaded). --}}
 <div class="flex items-center gap-2" style="margin: 20px 0 12px;">

@@ -6,7 +6,7 @@
         ['name' => 'Ibrahim Sheikh', 'reg' => 'Y12-021', 'score' => 71,   'time' => '60m', 'flagged' => 3, 'status' => 'Submitted',   'date' => 'Apr 28 · 14:35'],
         ['name' => 'Mariam Riaz',    'reg' => 'Y12-009', 'score' => 66,   'time' => '49m', 'flagged' => 0, 'status' => 'Submitted',   'date' => 'Apr 28 · 14:24'],
         ['name' => 'Omar Tariq',     'reg' => 'Y12-018', 'score' => 62,   'time' => '55m', 'flagged' => 1, 'status' => 'Submitted',   'date' => 'Apr 28 · 14:29'],
-        ['name' => 'Sana Iftikhar',  'reg' => 'Y12-003', 'score' => null, 'time' => '—',   'flagged' => 0, 'status' => 'Not started', 'date' => '—'],
+        ['name' => 'Sana Iftikhar',  'reg' => 'Y12-003', 'score' => null, 'time' => '-',   'flagged' => 0, 'status' => 'Not started', 'date' => '-'],
         ['name' => 'Usman Akram',    'reg' => 'Y12-011', 'score' => null, 'time' => '32m', 'flagged' => 0, 'status' => 'In progress', 'date' => 'Now'],
     ];
     $worst = [
@@ -17,7 +17,7 @@
         ['Q31', 'Waves',    3, 6],
     ];
 @endphp
-<x-layouts.dashboard role="teacher" :breadcrumb="['Submissions','Mechanics — Mock Set A']" pageTitle="Mechanics — Mock Set A">
+<x-layouts.dashboard role="teacher" :breadcrumb="['Submissions','Mechanics - Mock Set A']" pageTitle="Mechanics - Mock Set A">
     <x-slot:actions>
         <div class="flex" style="gap: 10px;">
             <button class="btn btn-ghost btn-sm"><x-icon name="download" size="13"/>Export CSV</button>
@@ -71,7 +71,7 @@
                                         </div>
                                     </div>
                                 @else
-                                    <span style="color: var(--text-faint);">—</span>
+                                    <span style="color: var(--text-faint);">-</span>
                                 @endif
                             </td>
                             <td class="mono" style="font-size: 12px;">{{ $r['time'] }}</td>
@@ -79,7 +79,7 @@
                                 @if($r['flagged'] > 0)
                                     <span class="badge badge-review">{{ $r['flagged'] }}</span>
                                 @else
-                                    <span style="color: var(--text-faint);">—</span>
+                                    <span style="color: var(--text-faint);">-</span>
                                 @endif
                             </td>
                             <td><span class="badge {{ $stCls }}">{{ $r['status'] }}</span></td>
@@ -93,7 +93,7 @@
 
         <div class="card-elev">
             <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 14px;">Question difficulty (class)</h3>
-            <p style="font-size: 12px; color: var(--text-soft); margin-bottom: 14px;">Most-missed questions — consider re-teaching.</p>
+            <p style="font-size: 12px; color: var(--text-soft); margin-bottom: 14px;">Most-missed questions - consider re-teaching.</p>
             @foreach($worst as [$q, $topic, $w, $of])
                 <div class="flex items-center" style="gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border-soft);">
                     <div class="mono" style="font-size: 11px; font-weight: 700; color: var(--gold-700); width: 32px;">{{ $q }}</div>

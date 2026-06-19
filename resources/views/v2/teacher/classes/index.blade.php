@@ -4,7 +4,7 @@
 @section('content')
 <div style="margin-bottom: 22px;">
     <h2 class="serif" style="font-size: 26px; font-weight: 600;">Classes</h2>
-    <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Class analytics — per-topic performance and how each student is doing.</p>
+    <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Class analytics - per-topic performance and how each student is doing.</p>
 </div>
 
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">

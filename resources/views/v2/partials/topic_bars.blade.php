@@ -11,5 +11,5 @@
         </div>
     </div>
 @empty
-    <p style="font-size: 13px; color: var(--text-faint);">{{ $empty ?? 'No completed exams yet — stats appear once students submit tests.' }}</p>
+    <p style="font-size: 13px; color: var(--text-faint);">{{ $empty ?? 'No completed exams yet - stats appear once students submit tests.' }}</p>
 @endforelse

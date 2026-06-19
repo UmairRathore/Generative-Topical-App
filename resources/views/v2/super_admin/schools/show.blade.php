@@ -34,7 +34,7 @@
         ['Classes', $overview['classes']],
         ['Exams', $overview['exams']],
         ['Submissions', $overview['submissions']],
-        ['Avg score', $overview['avg'] !== null ? $overview['avg'].'%' : '—'],
+        ['Avg score', $overview['avg'] !== null ? $overview['avg'].'%' : '-'],
     ] as [$label, $value])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;">
             <div style="font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;">{{ $label }}</div>
@@ -63,7 +63,7 @@
                         <td data-label="Classes" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $t['classes'] }}</td>
                         <td data-label="Exams" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $t['exams'] }}</td>
                         <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $t['submissions'] }}</td>
-                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $t['avg'] !== null ? $t['avg'].'%' : '—' }}</td>
+                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $t['avg'] !== null ? $t['avg'].'%' : '-' }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No teachers.</td></tr>
@@ -89,7 +89,7 @@
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c['name'] }}<div style="font-size: 11px; color: var(--text-faint);">{{ $c['grade'] }}</div></td>
                         <td data-label="Teacher" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['teacher'] }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c['students'] }}</td>
-                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $c['avg'] !== null ? $c['avg'].'%' : '—' }}</td>
+                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $c['avg'] !== null ? $c['avg'].'%' : '-' }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="4" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No classes.</td></tr>
@@ -102,6 +102,6 @@
 {{-- Performance by topic --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-top: 20px;">
     <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Performance by topic (school-wide)</div>
-    @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet — topic stats appear once students complete tests.'])
+    @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet - topic stats appear once students complete tests.'])
 </div>
 @endsection

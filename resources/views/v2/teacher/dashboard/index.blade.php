@@ -16,7 +16,7 @@
         ['Classes', $overview['classes'], 'users'],
         ['Students', $overview['students'], 'user'],
         ['Exams', $overview['exams'], 'clipboard'],
-        ['Average', $overview['avg'] !== null ? $overview['avg'].'%' : '—', 'chart'],
+        ['Average', $overview['avg'] !== null ? $overview['avg'].'%' : '-', 'chart'],
     ] as [$label, $value, $icon])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
             <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">
@@ -33,7 +33,7 @@
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
             <div style="font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;">{{ $label }}</div>
             <div class="flex items-baseline gap-2" style="margin-top: 6px;">
-                <span class="serif" style="font-size: 22px; font-weight: 600;">{{ $s['avg'] !== null ? $s['avg'].'%' : '—' }}</span>
+                <span class="serif" style="font-size: 22px; font-weight: 600;">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</span>
                 <span style="font-size: 12.5px; color: var(--text-soft);">{{ $s['exams'] }} {{ \Illuminate\Support\Str::plural('exam', $s['exams']) }} · {{ $s['submissions'] }} subs</span>
             </div>
         </div>
@@ -45,7 +45,7 @@
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px;">
         <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Performance by topic</div>
         <div style="font-size: 12px; color: var(--text-faint); margin-bottom: 14px;">Across your exams.</div>
-        @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet — analytics appear once your students complete tests.'])
+        @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet - analytics appear once your students complete tests.'])
     </div>
 
     {{-- Classes --}}
@@ -63,9 +63,9 @@
                 @forelse ($classes as $c)
                     <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.teacher.classes.show', hid($c['id'])) }}'">
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c['name'] }}<div style="font-size: 11px; color: var(--text-faint);">{{ $c['subject'] }}</div></td>
-                        <td data-label="Grade" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['grade'] ?? '—' }}</td>
+                        <td data-label="Grade" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['grade'] ?? '-' }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c['students'] }}</td>
-                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px; color: {{ $c['avg'] !== null ? $tone($c['avg']) : 'var(--text-faint)' }};">{{ $c['avg'] !== null ? $c['avg'].'%' : '—' }}</td>
+                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px; color: {{ $c['avg'] !== null ? $tone($c['avg']) : 'var(--text-faint)' }};">{{ $c['avg'] !== null ? $c['avg'].'%' : '-' }}</td>
                         <td data-label="" style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.teacher.classes.show', hid($c['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
                     </tr>
                 @empty

@@ -36,7 +36,7 @@
                 <label class="block">
                     <span class="mb-1 block text-xs font-semibold uppercase text-neutral-500">Correct answer</span>
                     <select wire:model="correct_answer" class="w-full rounded-md border border-neutral-300 bg-white px-2 py-2 text-sm dark:border-neutral-600 dark:bg-neutral-900">
-                        <option value="">— pending —</option>
+                        <option value="">- pending -</option>
                         @foreach (['A','B','C','D'] as $l) <option value="{{ $l }}">{{ $l }}</option> @endforeach
                     </select>
                 </label>
@@ -160,7 +160,7 @@
                     <div class="flex items-center gap-2">
                         <input type="file" wire:model="newQuestionImages.{{ $i }}" accept="image/*" class="block flex-1 text-xs">
                         <select wire:model="newQuestionImageRoles.{{ $i }}" class="rounded-md border border-neutral-300 bg-white px-2 py-1 text-xs dark:border-neutral-600 dark:bg-neutral-900">
-                            <option value="">— role —</option>
+                            <option value="">- role -</option>
                             @foreach ($allowedRoles as $r) <option value="{{ $r }}">{{ $r }}</option> @endforeach
                         </select>
                         @error("newQuestionImageRoles.$i") <span class="text-xs text-rose-600">{{ $message }}</span> @enderror

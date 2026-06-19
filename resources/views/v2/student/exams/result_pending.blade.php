@@ -15,7 +15,7 @@
 
     <div style="margin-top: 22px; padding: 16px 18px; background: var(--soft-surface); border-radius: var(--r-lg); font-size: 13.5px; color: var(--text-soft); line-height: 1.6;">
         You completed this test{{ $attempt->submitted_at ? ' '.$attempt->submitted_at->diffForHumans() : '' }}.
-        Your teacher hasn’t released the results yet — your <strong>score and answers</strong> will appear here once they do.
+        Your teacher hasn’t released the results yet - your <strong>score and answers</strong> will appear here once they do.
     </div>
 
     <a href="{{ route('v2.student.exams.index') }}" class="btn btn-ghost" style="margin-top: 22px;">Back to my exams</a>

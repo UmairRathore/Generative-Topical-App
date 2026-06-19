@@ -35,8 +35,8 @@
                     <td data-label="Teachers" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $s['teachers'] }}</td>
                     <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $s['students'] }}</td>
                     <td data-label="Classes" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $s['classes'] }}</td>
-                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $s['subs'] ?: '—' }}</td>
-                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $s['avg'] !== null ? $s['avg'].'%' : '—' }}</td>
+                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $s['subs'] ?: '-' }}</td>
+                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="9" style="padding: 48px; text-align: center; color: var(--text-faint); font-size: 14px;">No schools yet.</td></tr>

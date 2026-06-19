@@ -16,7 +16,7 @@
     <header class="flex items-center" style="height: 64px; background: var(--emerald-900); color: var(--ivory); padding: 0 28px; gap: 24px; border-bottom: 1px solid rgba(212,164,55,0.2);">
         <x-crest size="28" variant="mono-light"/>
         <div>
-            <div class="serif" style="font-size: 16px; font-weight: 600;">Mechanics — Mock Set A</div>
+            <div class="serif" style="font-size: 16px; font-weight: 600;">Mechanics - Mock Set A</div>
             <div style="font-size: 11px; color: rgba(250,247,239,0.6);">9702/12 style · Y12 Physics · 60 minutes</div>
         </div>
         <div class="flex-1"></div>

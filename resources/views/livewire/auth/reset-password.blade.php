@@ -60,7 +60,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
         <div class="uppercase-eyebrow">Reset password</div>
         <h1 class="serif" style="font-size: 28px; font-weight: 600; margin-top: 8px;">Choose a new password</h1>
-        <p style="color: var(--text-soft); margin-top: 6px; font-size: 14px;">Pick something strong — at least 8 characters.</p>
+        <p style="color: var(--text-soft); margin-top: 6px; font-size: 14px;">Pick something strong - at least 8 characters.</p>
 
         <form wire:submit="resetPassword" style="margin-top: 24px;">
             <label class="label">Email</label>

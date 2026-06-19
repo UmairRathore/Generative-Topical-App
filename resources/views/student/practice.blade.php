@@ -14,7 +14,7 @@
             <p style="color: var(--text-soft); margin-top: 6px;">Untimed, with instant explanations after each question.</p>
 
             <label class="label" style="margin-top: 24px;">Subject</label>
-            <select class="select"><option>Physics — A Level (9702)</option><option>Chemistry — A Level (9701)</option></select>
+            <select class="select"><option>Physics - A Level (9702)</option><option>Chemistry - A Level (9701)</option></select>
 
             <label class="label" style="margin-top: 18px;">Topic</label>
             <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">

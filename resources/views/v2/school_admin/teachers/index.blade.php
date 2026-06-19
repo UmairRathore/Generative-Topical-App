@@ -39,7 +39,7 @@
                     <tr style="border-bottom: 1px solid var(--border);">
                         <td style="padding: 13px 16px; font-size: 14px; font-weight: 500; color: var(--text);">{{ $teacher->name }}</td>
                         <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $teacher->email }}</td>
-                        <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $teacher->employee_id ?? '—' }}</td>
+                        <td style="padding: 13px 16px; font-size: 13px; color: var(--muted);">{{ $teacher->employee_id ?? '-' }}</td>
                         <td style="padding: 13px 16px;">
                             <span style="display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; {{ $teacher->status === 'active' ? 'background:#d1fae5;color:#065f46;' : 'background:#fee2e2;color:#991b1b;' }}">
                                 {{ ucfirst($teacher->status) }}

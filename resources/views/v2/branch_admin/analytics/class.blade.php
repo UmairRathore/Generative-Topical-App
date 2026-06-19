@@ -24,7 +24,7 @@
     @foreach ([
         ['Students', $studentCount, 'users'],
         ['Exams', $exams->count(), 'clipboard'],
-        ['Class average', $classAvg !== null ? $classAvg.'%' : '—', 'chart'],
+        ['Class average', $classAvg !== null ? $classAvg.'%' : '-', 'chart'],
         ['Topics covered', count($topicStats), 'target'],
     ] as [$label, $value, $icon])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">

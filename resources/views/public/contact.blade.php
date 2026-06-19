@@ -4,7 +4,7 @@
             <p class="text-xs uppercase tracking-[0.2em] font-semibold text-brand-gold">Contact</p>
             <h1 class="mt-2 font-display text-4xl md:text-5xl font-semibold tracking-tight text-brand-emerald">Talk to us.</h1>
             <p class="mt-4 text-brand-charcoal/70 max-w-md">
-                Schools, tutors, and curriculum designers — we'd love to hear how Generative Topical could help your students.
+                Schools, tutors, and curriculum designers - we'd love to hear how Generative Topical could help your students.
             </p>
             <ul class="mt-8 space-y-4 text-sm text-brand-charcoal/80">
                 <li class="flex items-start gap-3">

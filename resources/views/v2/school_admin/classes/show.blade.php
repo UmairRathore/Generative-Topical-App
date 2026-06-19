@@ -20,15 +20,15 @@
             <dl class="space-y-3">
                 <div>
                     <dt style="font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">Grade</dt>
-                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->grade?->name ?? '—' }}</dd>
+                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->grade?->name ?? '-' }}</dd>
                 </div>
                 <div>
                     <dt style="font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">Subject</dt>
-                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->subject?->name ?? '—' }}</dd>
+                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->subject?->name ?? '-' }}</dd>
                 </div>
                 <div>
                     <dt style="font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">Section</dt>
-                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->section ?? '—' }}</dd>
+                    <dd style="font-size: 14px; color: var(--text); margin-top: 2px;">{{ $class->section ?? '-' }}</dd>
                 </div>
                 <div>
                     <dt style="font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em;">Students Enrolled</dt>
@@ -48,7 +48,7 @@
                     @foreach($class->classTeachers as $ct)
                     <div class="flex items-center justify-between" style="padding: 10px; border-radius: 8px; background: var(--bg);">
                         <div>
-                            <div style="font-size: 13px; font-weight: 500; color: var(--text);">{{ $ct->teacher?->name ?? '—' }}</div>
+                            <div style="font-size: 13px; font-weight: 500; color: var(--text);">{{ $ct->teacher?->name ?? '-' }}</div>
                             @if($ct->is_primary) <div style="font-size: 11px; color: var(--accent); font-weight: 600;">Primary</div> @endif
                         </div>
                         <form method="POST" action="{{ route('v2.school.classes.remove_teacher', $class) }}" style="display:inline;">
@@ -87,7 +87,7 @@
                 <div class="space-y-2">
                     @foreach($class->enrollments as $enrollment)
                     <div class="flex items-center justify-between" style="padding: 8px 10px; border-radius: 8px; background: var(--bg);">
-                        <div style="font-size: 13px; color: var(--text);">{{ $enrollment->student?->name ?? '—' }}</div>
+                        <div style="font-size: 13px; color: var(--text);">{{ $enrollment->student?->name ?? '-' }}</div>
                         <span style="font-size: 11.5px; color: var(--muted);">{{ $enrollment->student?->roll_number }}</span>
                     </div>
                     @endforeach

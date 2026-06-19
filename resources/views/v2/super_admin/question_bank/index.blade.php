@@ -86,7 +86,7 @@
     <input type="hidden" name="view" value="{{ $view }}">
     <div class="grid" style="grid-template-columns: repeat(6, 1fr); gap: 14px;">
 
-        {{-- 1. Level / Grade — always enabled --}}
+        {{-- 1. Level / Grade - always enabled --}}
         <div>
             <label style="{{ $labelStyle }}">Level / Grade</label>
             <select name="level" x-model="level" @change="onLevel()" style="{{ $selStyle }} width: 100%;">
@@ -97,7 +97,7 @@
             </select>
         </div>
 
-        {{-- 2. Subject — needs a level --}}
+        {{-- 2. Subject - needs a level --}}
         <div>
             <label style="{{ $labelStyle }}">Subject</label>
             <select name="subject" x-model="subject" @change="onSubject()" :disabled="!level" style="{{ $selStyle }} width: 100%;">
@@ -108,7 +108,7 @@
             </select>
         </div>
 
-        {{-- 3. Year — needs a subject --}}
+        {{-- 3. Year - needs a subject --}}
         <div>
             <label style="{{ $labelStyle }}">Year</label>
             <select name="year" x-model="year" @change="onYear()" :disabled="!subject" style="{{ $selStyle }} width: 100%;">
@@ -119,7 +119,7 @@
             </select>
         </div>
 
-        {{-- 4. Session — needs a year --}}
+        {{-- 4. Session - needs a year --}}
         <div>
             <label style="{{ $labelStyle }}">Session</label>
             <select name="session" x-model="session" @change="onSession()" :disabled="!year" style="{{ $selStyle }} width: 100%;">
@@ -130,7 +130,7 @@
             </select>
         </div>
 
-        {{-- 5. Paper variant — needs a session --}}
+        {{-- 5. Paper variant - needs a session --}}
         <div>
             <label style="{{ $labelStyle }}">Paper variant</label>
             <select name="variant" x-model="variant" :disabled="!session" style="{{ $selStyle }} width: 100%;">
@@ -141,7 +141,7 @@
             </select>
         </div>
 
-        {{-- 6. Topic — needs level + subject --}}
+        {{-- 6. Topic - needs level + subject --}}
         <div>
             <label style="{{ $labelStyle }}">Topic</label>
             <select name="topic" x-model="topic" :disabled="!subject" style="{{ $selStyle }} width: 100%;">
@@ -183,7 +183,7 @@
     </div>
 </form>
 
-{{-- Quick status filter — visible in both table + gallery views --}}
+{{-- Quick status filter - visible in both table + gallery views --}}
 <div class="flex items-center" style="gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
     <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-right: 2px;">Status</span>
     @foreach (['' => 'All', 'active' => 'Active', 'draft' => 'Draft', 'under_review' => 'Under review', 'archived' => 'Archived'] as $val => $lbl)
@@ -277,7 +277,7 @@
                         </div>
                     </td>
                     <td data-label="Grade" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
-                        <div style="font-size: 13px; font-weight: 700;">{{ $q->subject?->level ?? '—' }}</div>
+                        <div style="font-size: 13px; font-weight: 700;">{{ $q->subject?->level ?? '-' }}</div>
                         <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">{{ $q->subject?->code }}</div>
                     </td>
                     <td data-label="Topic" style="padding: var(--pad-cell); vertical-align: top; white-space: nowrap;">
@@ -300,11 +300,11 @@
                         @if ($q->correct_answer)
                             <span class="badge badge-pass" style="font-weight: 700;">{{ $q->correct_answer }}</span>
                         @else
-                            <span style="color: var(--text-faint);">—</span>
+                            <span style="color: var(--text-faint);">-</span>
                         @endif
                     </td>
                     <td data-label="Diagrams" style="padding: var(--pad-cell); vertical-align: top; text-align: center; font-size: 12.5px; color: var(--text-soft);">
-                        {{ $q->images_count ?: '—' }}
+                        {{ $q->images_count ?: '-' }}
                     </td>
                     <td data-label="Status" style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
                         <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>

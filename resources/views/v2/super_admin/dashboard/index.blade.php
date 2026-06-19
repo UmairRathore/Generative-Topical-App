@@ -60,8 +60,8 @@
                             <span class="badge {{ $s['status'] === 'active' ? 'badge-pass' : ($s['status'] === 'suspended' ? 'badge-blocker' : 'badge-soft') }}">{{ $s['status'] }}</span>
                         </td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $s['students'] }}</td>
-                        <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $s['subs'] ?: '—' }}</td>
-                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: right; font-weight: 600; font-size: 13px;">{{ $s['avg'] !== null ? $s['avg'].'%' : '—' }}</td>
+                        <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $s['subs'] ?: '-' }}</td>
+                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: right; font-weight: 600; font-size: 13px;">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="5" style="padding: 36px; text-align: center; color: var(--text-faint); font-size: 13px;">No schools yet.</td></tr>
@@ -78,7 +78,7 @@
                 <div style="width: 8px; height: 8px; border-radius: 50%; background: var(--emerald-500); margin-top: 5px; flex: none;"></div>
                 <div style="min-width: 0;">
                     <div style="font-size: 12.5px; color: var(--text);">{{ $log->action }}</div>
-                    <div style="font-size: 11px; color: var(--text-faint);">{{ $log->actor_type }} · {{ $log->created_at?->diffForHumans() ?? '—' }}</div>
+                    <div style="font-size: 11px; color: var(--text-faint);">{{ $log->actor_type }} · {{ $log->created_at?->diffForHumans() ?? '-' }}</div>
                 </div>
             </div>
         @empty
@@ -103,7 +103,7 @@
                     <div style="font-size: 12.5px; font-weight: 500;">{{ $r['grade'] }}</div>
                     <div style="font-size: 11px; color: var(--text-faint);">{{ $r['schools'] }} {{ \Illuminate\Support\Str::plural('school', $r['schools']) }} · {{ $r['submissions'] }} subs</div>
                 </div>
-                <span style="font-size: 13px; font-weight: 700; color: {{ $r['avg'] !== null ? $tone($r['avg']) : 'var(--text-faint)' }};">{{ $r['avg'] !== null ? $r['avg'].'%' : '—' }}</span>
+                <span style="font-size: 13px; font-weight: 700; color: {{ $r['avg'] !== null ? $tone($r['avg']) : 'var(--text-faint)' }};">{{ $r['avg'] !== null ? $r['avg'].'%' : '-' }}</span>
             </div>
         @empty
             <p style="font-size: 12.5px; color: var(--text-faint);">No data yet.</p>
@@ -122,7 +122,7 @@
                     <div style="font-size: 12.5px; font-weight: 500;">{{ $r['subject'] }}</div>
                     <div style="font-size: 11px; color: var(--text-faint);">{{ $r['schools'] }} {{ \Illuminate\Support\Str::plural('school', $r['schools']) }} · {{ $r['submissions'] }} subs</div>
                 </div>
-                <span style="font-size: 13px; font-weight: 700; color: {{ $r['avg'] !== null ? $tone($r['avg']) : 'var(--text-faint)' }};">{{ $r['avg'] !== null ? $r['avg'].'%' : '—' }}</span>
+                <span style="font-size: 13px; font-weight: 700; color: {{ $r['avg'] !== null ? $tone($r['avg']) : 'var(--text-faint)' }};">{{ $r['avg'] !== null ? $r['avg'].'%' : '-' }}</span>
             </a>
         @empty
             <p style="font-size: 12.5px; color: var(--text-faint);">No data yet.</p>

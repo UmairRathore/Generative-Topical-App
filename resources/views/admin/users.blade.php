@@ -52,8 +52,8 @@
                         $color = $roleStr === 'admin' ? 'var(--gold-700)' : ($roleStr === 'teacher' ? 'var(--emerald-800)' : 'var(--slate-600)');
                         $initials = collect(explode(' ', $u->name))->map(fn($p) => mb_substr($p, 0, 1))->take(2)->implode('');
                         $isActive = ($u->status ?? 'Active') === 'Active';
-                        $school = $u->school ?? '—';
-                        $last = $u->last ?? optional($u->created_at)->diffForHumans() ?? '—';
+                        $school = $u->school ?? '-';
+                        $last = $u->last ?? optional($u->created_at)->diffForHumans() ?? '-';
                     @endphp
                     <tr>
                         <td>

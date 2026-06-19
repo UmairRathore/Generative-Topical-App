@@ -16,7 +16,7 @@
         ['Students', $summary['students'] ?? 0],
         ['Exams', $summary['exams'] ?? 0],
         ['Submissions', $summary['submissions'] ?? 0],
-        ['Avg score', isset($summary['avg']) && $summary['avg'] !== null ? $summary['avg'].'%' : '—'],
+        ['Avg score', isset($summary['avg']) && $summary['avg'] !== null ? $summary['avg'].'%' : '-'],
     ] as [$label, $value])
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 16px;">
             <div style="font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; font-weight: 600;">{{ $label }}</div>
@@ -49,7 +49,7 @@
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c['name'] }}</td>
                         <td data-label="Teacher" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['teacher'] }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c['students'] }}</td>
-                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $c['avg'] !== null ? $c['avg'].'%' : '—' }}</td>
+                        <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $c['avg'] !== null ? $c['avg'].'%' : '-' }}</td>
                     </tr>
                 @empty
                     <tr><td colspan="4" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No classes in this grade.</td></tr>

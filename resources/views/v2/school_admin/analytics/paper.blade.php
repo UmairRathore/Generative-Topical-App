@@ -1,5 +1,5 @@
 @extends('v2.layouts.school_admin')
-@section('page_title', $student->name.' — paper')
+@section('page_title', $student->name.' - paper')
 
 @php $pct = $attempt->percentage; $tone = $pct >= 60 ? 'var(--ok)' : ($pct >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 

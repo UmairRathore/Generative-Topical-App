@@ -1,5 +1,5 @@
 @extends('v2.layouts.super_admin')
-@section('page_title', 'Subjects — platform')
+@section('page_title', 'Subjects - platform')
 
 @section('content')
 <a href="{{ route('v2.super_admin.dashboard') }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
@@ -24,8 +24,8 @@
                     <td data-label="Subject" style="padding: var(--pad-cell); font-size: 13px; font-weight: 600;">{{ $r['subject'] }}</td>
                     <td data-label="Schools" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['schools'] }}</td>
                     <td data-label="Exams" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $r['exams'] }}</td>
-                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $r['submissions'] ?: '—' }}</td>
-                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $r['avg'] !== null ? $r['avg'].'%' : '—' }}</td>
+                    <td data-label="Subs" style="padding: var(--pad-cell); text-align: center; font-size: 13px; color: var(--text-soft);">{{ $r['submissions'] ?: '-' }}</td>
+                    <td data-label="Avg" style="padding: var(--pad-cell); text-align: center; font-weight: 600; font-size: 13px;">{{ $r['avg'] !== null ? $r['avg'].'%' : '-' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="5" style="padding: 40px; text-align: center; color: var(--text-faint); font-size: 14px;">No subjects yet.</td></tr>

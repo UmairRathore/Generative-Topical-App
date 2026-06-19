@@ -1,6 +1,6 @@
 @props([
     'title' => 'Coming soon',
-    'body' => 'Detailed screen — wireframed in the design canvas.',
+    'body' => 'Detailed screen - wireframed in the design canvas.',
     'backLabel' => 'Back to dashboard',
     'backHref' => null,
 ])

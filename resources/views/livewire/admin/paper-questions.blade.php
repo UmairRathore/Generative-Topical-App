@@ -67,7 +67,7 @@
                             @endif
                         </td>
                         <td class="px-3 py-2 text-right">{{ $q->assets->count() }}</td>
-                        <td class="px-3 py-2 text-xs">{{ $q->optionTable ? 'yes' : '—' }}</td>
+                        <td class="px-3 py-2 text-xs">{{ $q->optionTable ? 'yes' : '-' }}</td>
                         <td class="px-3 py-2 whitespace-nowrap text-right">
                             <a href="{{ route('admin.papers.questions.edit', [$paper, $q]) }}" class="rounded bg-brand-emerald px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-brand-forest">Edit</a>
                             <button type="button" wire:click="preview({{ $q->id }})" class="rounded border border-brand-border px-2.5 py-1 text-xs text-brand-emerald transition hover:border-brand-gold">{{ $previewId === $q->id ? 'Hide' : 'Preview' }}</button>

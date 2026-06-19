@@ -1,10 +1,10 @@
 @php
     $recentTests = [
-        ['name' => 'Mechanics — Mock Set A',    'class' => 'Y12 Physics',   'subject' => 'Physics',     'q' => 40, 'attempts' => 28, 'avg' => 72, 'date' => 'Apr 28', 'status' => 'active'],
+        ['name' => 'Mechanics - Mock Set A',    'class' => 'Y12 Physics',   'subject' => 'Physics',     'q' => 40, 'attempts' => 28, 'avg' => 72, 'date' => 'Apr 28', 'status' => 'active'],
         ['name' => 'Organic Chemistry Topical', 'class' => 'Y13 Chemistry', 'subject' => 'Chemistry',   'q' => 25, 'attempts' => 19, 'avg' => 81, 'date' => 'Apr 26', 'status' => 'completed'],
         ['name' => 'Waves & Oscillations',      'class' => 'Y12 Physics',   'subject' => 'Physics',     'q' => 30, 'attempts' => 28, 'avg' => 68, 'date' => 'Apr 22', 'status' => 'completed'],
         ['name' => 'Algebra Foundation',        'class' => 'Y11 Math',      'subject' => 'Mathematics', 'q' => 40, 'attempts' => 32, 'avg' => 75, 'date' => 'Apr 19', 'status' => 'completed'],
-        ['name' => 'Electricity — Pre-Mock',    'class' => 'Y13 Physics',   'subject' => 'Physics',     'q' => 40, 'attempts' => 24, 'avg' => 79, 'date' => 'Apr 15', 'status' => 'completed'],
+        ['name' => 'Electricity - Pre-Mock',    'class' => 'Y13 Physics',   'subject' => 'Physics',     'q' => 40, 'attempts' => 24, 'avg' => 79, 'date' => 'Apr 15', 'status' => 'completed'],
     ];
     $mastery = [
         ['Mechanics',       88, 'Strong'],
@@ -30,7 +30,7 @@
         <div class="relative">
             <div class="uppercase-eyebrow" style="color: var(--accent);">Y12 Physics · Term 2 · Week 9</div>
             <h2 class="serif" style="font-size: 28px; font-weight: 600; margin-top: 8px; letter-spacing: -0.01em; max-width: 580px; line-height: 1.2;">
-                12 students completed <em style="color: var(--accent);">Mechanics — Mock Set A.</em> Average 72%, weakest topic: Momentum.
+                12 students completed <em style="color: var(--accent);">Mechanics - Mock Set A.</em> Average 72%, weakest topic: Momentum.
             </h2>
             <div class="flex" style="gap: 12px; margin-top: 20px;">
                 <a href="{{ route('teacher.submissions') }}" wire:navigate class="btn btn-gold btn-sm">Review submissions</a>

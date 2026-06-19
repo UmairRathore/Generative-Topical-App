@@ -7,7 +7,7 @@
     ];
 @endphp
 <x-layouts.dashboard role="student"
-    :breadcrumb="['My Tests','Mechanics — Mock Set A','Review mistakes']"
+    :breadcrumb="['My Tests','Mechanics - Mock Set A','Review mistakes']"
     pageTitle="Review your mistakes">
     <x-slot:actions>
         <div class="flex" style="gap: 10px;">
@@ -34,7 +34,7 @@
                     <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
                         <div style="padding: 14px 16px; border-radius: 8px; border: 1.5px solid #FECACA; background: var(--error-soft);">
                             <div style="font-size: 10px; font-weight: 700; color: #B91C1C; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Your answer</div>
-                            <div class="serif" style="font-size: 18px; font-weight: 600;">{{ $it['s'] ? $it['s'].' — Incorrect' : 'Skipped' }}</div>
+                            <div class="serif" style="font-size: 18px; font-weight: 600;">{{ $it['s'] ? $it['s'].' - Incorrect' : 'Skipped' }}</div>
                         </div>
                         <div style="padding: 14px 16px; border-radius: 8px; border: 1.5px solid #BBF7D0; background: var(--success-soft);">
                             <div style="font-size: 10px; font-weight: 700; color: #15803D; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">Correct answer</div>

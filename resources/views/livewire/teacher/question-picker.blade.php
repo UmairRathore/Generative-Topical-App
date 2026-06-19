@@ -86,7 +86,7 @@
             @endif
             <hr class="divider" style="margin: 14px 0;"/>
             <label class="label">Test name</label>
-            <input class="input" placeholder="e.g. Topical Practice — Mechanics"/>
+            <input class="input" placeholder="e.g. Topical Practice - Mechanics"/>
             <label class="label" style="margin-top: 12px;">Assign to</label>
             <select class="select"><option>Y12 Physics A</option><option>Y13 Physics</option></select>
             <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" @disabled(count($picked) === 0)>

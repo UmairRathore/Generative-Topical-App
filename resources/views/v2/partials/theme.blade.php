@@ -1,13 +1,13 @@
 {{--
     ╔══════════════════════════════════════════════════════════════════════╗
-    ║  V2 THEME CONTROL PANEL — the one file to change the app's colors.     ║
+    ║  V2 THEME CONTROL PANEL - the one file to change the app's colors.     ║
     ║  Edit here, refresh the page. No build step. Scoped to V2 (V1 untouched).║
     ╠══════════════════════════════════════════════════════════════════════╣
     ║  • Switch the whole app:  change $default below to any palette key.     ║
     ║  • Preview any palette:   add ?theme=NAME to any V2 URL                 ║
     ║                           (e.g. ...?theme=heritage).                    ║
     ║  • Add a new theme:       add one entry to $themes. Every colour is      ║
-    ║                           optional except primary/accent/bg — anything  ║
+    ║                           optional except primary/accent/bg - anything  ║
     ║                           omitted is derived. Recognised role keys:      ║
     ║                             sidebar, primary, hover, accent, bg, card,   ║
     ║                             border, ok (correct), bad (incorrect),       ║
@@ -19,9 +19,9 @@
     $default = 'instructure';                    // ← change this to switch the app
     // ── 2. PALETTES ──────────────────────────────────────────────────────
     $themes = [
-        'instructure' => [            // instructure.com — deep navy primary + brand blue
+        'instructure' => [            // instructure.com - deep navy primary + brand blue
             'sidebar' => '#061C30',   // primary navy
-            'primary' => '#061C30',   // primary navy — buttons/cards (white text on it)
+            'primary' => '#061C30',   // primary navy - buttons/cards (white text on it)
             'hover'   => '#0E2D45',   // primary hover (lighter navy)
             'accent'  => '#0097D3',   // brand blue (highlights / active nav / links)
             'ink'     => '#061C30',   // body text on white = primary navy
@@ -86,7 +86,7 @@
     $lt = fn ($h, $a) => $mix($h, '#FFFFFF', $a);   // lighten toward white
     $dk = fn ($h, $a) => $mix($h, '#000000', $a);   // darken toward black
 
-    // roles — explicit where given, otherwise derived
+    // roles - explicit where given, otherwise derived
     $primary   = $t['primary'];
     $accent    = $t['accent'];
     $bg        = $t['bg'];

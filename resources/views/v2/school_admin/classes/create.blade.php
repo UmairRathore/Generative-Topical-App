@@ -25,7 +25,7 @@
             <div>
                 <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px;">Subject <span style="font-weight: 400; color: var(--muted);">(optional)</span></label>
                 <select name="subject_id" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text);">
-                    <option value="">— None / General —</option>
+                    <option value="">- None / General -</option>
                     @foreach($subjects as $ss)
                         <option value="{{ $ss->subject_id }}" {{ old('subject_id') == $ss->subject_id ? 'selected' : '' }}>
                             {{ $ss->subject?->name ?? $ss->subject_id }}{{ $ss->grade ? " ({$ss->grade->short_name})" : '' }}
