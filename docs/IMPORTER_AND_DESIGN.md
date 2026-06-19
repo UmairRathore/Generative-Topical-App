@@ -67,6 +67,26 @@ Super-admin CRUD questions attach to a synthetic per-subject paper
 constraint hold; uploads land under `v2/questions/custom/<id>/` and are the only
 files deleted on question delete (imported paper crops are never touched).
 
+### Topic tagging
+
+Questions import with `topic_id = null`; a tagging pass assigns topics.
+
+- **A-Level (9702):** `v2:tag-questions` + `QuestionTopicClassifier` — a tuned,
+  hardcoded keyword/score map over the 9702 subtopics, plus
+  `v2:apply-topic-overrides` for curated corrections.
+- **O-Level (5054) and future subjects:** `v2:tag-by-keywords --subject=<code>`
+  — subject-generic. It reads a syllabus JSON
+  (`storage/syllabus/physics/OLevels/subject_content_o_level_physics.json`, 23
+  topics with weighted keywords), upserts the topics into `v2_topics`, then
+  scores each question's text + options + table cells + image captions/OCR and
+  assigns the highest-scoring topic (low-confidence → `needs_review`). ~94% of
+  5054 questions tag; image-only questions with no text keywords stay untagged.
+
+The question bank's **cascading filters** (Level → Subject → Year → Session →
+Variant; Topic ← Level + Subject) only enable a child once its parent is chosen,
+so O/A-Level Physics never cross-populate; a bold **Grade** column / gallery
+header label distinguishes them.
+
 ---
 
 ## 2. Rendering design choices (shared across every subject & role)
