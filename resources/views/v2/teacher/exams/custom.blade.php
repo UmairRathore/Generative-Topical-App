@@ -4,6 +4,8 @@
 @php
     $fld = 'padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text);';
     $sessionLabels = ['m' => 'Feb/Mar', 's' => 'May/Jun', 'w' => 'Oct/Nov'];
+    $allTopicsJson = $topics->map(fn ($t) => ['id' => (string) $t->id, 'label' => $t->external_id.'. '.$t->title])->values();
+    $selectedTopicsJson = $topics->filter(fn ($t) => in_array($t->id, $topicIds))->map(fn ($t) => ['id' => (string) $t->id, 'label' => $t->external_id.'. '.$t->title])->values();
 @endphp
 
 @section('content')
@@ -14,6 +16,14 @@
     .ex-tabs a + a{border-left:1px solid var(--border);}
     .pick-row{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;cursor:pointer;background:var(--surface);}
     .pick-bar{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 -6px 24px rgba(0,0,0,.08);padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:8px;}
+    .ms-control{min-height:42px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);cursor:text;}
+    .ms-control.open{border-color:var(--accent);}
+    .ms-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 5px 3px 9px;border-radius:99px;background:var(--ok-soft,rgba(95,160,82,.14));color:var(--ok);}
+    .ms-chip button{border:0;background:none;cursor:pointer;color:inherit;font-size:14px;line-height:1;padding:0;}
+    .ms-drop{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.14);max-height:240px;display:flex;flex-direction:column;overflow:hidden;}
+    .ms-opt{padding:9px 12px;font-size:13px;cursor:pointer;}
+    .ms-opt:hover{background:var(--soft-surface);}
+    [x-cloak]{display:none!important;}
 </style>
 
 <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
@@ -42,7 +52,16 @@
     }">
 
     {{-- Filters --}}
-    <form method="GET" action="{{ route('v2.teacher.exams.custom') }}"
+    <form method="GET" id="topicFilterForm" action="{{ route('v2.teacher.exams.custom') }}"
+          x-data="{
+              open: false,
+              search: '',
+              all: @js($allTopicsJson),
+              sel: @js($selectedTopicsJson),
+              get available(){ const q = this.search.toLowerCase(); const ids = this.sel.map(s => s.id); return this.all.filter(t => ids.indexOf(t.id) === -1 && t.label.toLowerCase().includes(q)); },
+              add(t){ this.sel.push(t); this.search = ''; this.$nextTick(() => document.getElementById('topicFilterForm').submit()); },
+              remove(id){ this.sel = this.sel.filter(s => s.id !== id); this.$nextTick(() => document.getElementById('topicFilterForm').submit()); }
+          }"
           style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; margin-bottom: 16px;">
         <div class="flex items-end gap-4" style="flex-wrap: wrap;">
             <div>
@@ -53,18 +72,27 @@
                     @endforeach
                 </select>
             </div>
-            <div style="flex: 1; min-width: 240px;">
+            <div style="flex: 1; min-width: 280px;">
                 <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:5px;">Filter by topic</label>
-                <div style="display:flex; flex-wrap:wrap; gap:6px; max-height:84px; overflow-y:auto;">
-                    @forelse ($topics as $t)
-                        <label class="badge {{ in_array($t->id, $topicIds) ? 'badge-pass' : 'badge-soft' }}" style="cursor:pointer; font-weight:500; gap:5px; display:inline-flex; align-items:center;">
-                            <input type="checkbox" name="topic_ids[]" value="{{ $t->id }}" @checked(in_array($t->id, $topicIds)) onchange="this.form.submit()" style="width:13px;height:13px;">
-                            {{ $t->external_id }}. {{ \Illuminate\Support\Str::limit($t->title, 20) }}
-                        </label>
-                    @empty
-                        <span style="font-size:12.5px; color:var(--text-faint);">No tagged topics for this subject - showing all questions.</span>
-                    @endforelse
+                <div style="position: relative;" @click.outside="open = false">
+                    <div class="ms-control" :class="open ? 'open' : ''" @click="open = true; $nextTick(() => $refs.tsearch && $refs.tsearch.focus())">
+                        <template x-for="t in sel" :key="t.id">
+                            <span class="ms-chip"><span x-text="t.label"></span><button type="button" @click.stop="remove(t.id)">&times;</button></span>
+                        </template>
+                        <input type="text" x-ref="tsearch" x-model="search" @focus="open = true"
+                               :placeholder="sel.length ? '' : (all.length ? 'All topics - type to filter…' : 'No tagged topics')"
+                               :disabled="!all.length"
+                               style="flex:1; min-width:120px; border:0; outline:none; background:transparent; font-size:13px; color:var(--text); padding:2px;">
+                    </div>
+                    <div class="ms-drop" x-show="open && all.length" x-cloak>
+                        <div style="overflow-y:auto;">
+                            <template x-for="t in available" :key="t.id"><div class="ms-opt" @click="add(t)" x-text="t.label"></div></template>
+                            <template x-if="available.length === 0"><div style="padding:10px 12px; font-size:12.5px; color:var(--text-faint);" x-text="sel.length === all.length ? 'All topics selected' : 'No matching topics'"></div></template>
+                        </div>
+                    </div>
                 </div>
+                {{-- submitted filter values --}}
+                <template x-for="t in sel" :key="'h' + t.id"><input type="hidden" name="topic_ids[]" :value="t.id"></template>
             </div>
         </div>
     </form>
