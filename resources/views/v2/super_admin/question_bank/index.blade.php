@@ -59,7 +59,8 @@
 </div>
 
 {{-- Filters --}}
-<form method="GET" action="{{ route('v2.super_admin.question_bank.index') }}"
+<style>.qbf select:disabled{opacity:.55;cursor:not-allowed;background:var(--soft-surface);}</style>
+<form method="GET" class="qbf" action="{{ route('v2.super_admin.question_bank.index') }}"
       x-data='{
           level: @json($filters["level"] ?? ""),
           subject: @json((string) ($filters["subject"] ?? "")),
@@ -83,7 +84,6 @@
       }'
       style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px; margin-bottom: 18px;">
     <input type="hidden" name="view" value="{{ $view }}">
-    @php $dis = 'opacity:.5; cursor:not-allowed; background: var(--soft-surface);'; @endphp
     <div class="grid" style="grid-template-columns: repeat(6, 1fr); gap: 14px;">
 
         {{-- 1. Level / Grade — always enabled --}}
@@ -100,7 +100,7 @@
         {{-- 2. Subject — needs a level --}}
         <div>
             <label style="{{ $labelStyle }}">Subject</label>
-            <select name="subject" x-model="subject" @change="onSubject()" :disabled="!level" :style="!level ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+            <select name="subject" x-model="subject" @change="onSubject()" :disabled="!level" style="{{ $selStyle }} width: 100%;">
                 <option value="" x-text="level ? 'All subjects' : 'Select a level first'"></option>
                 <template x-for="s in subjectOptions" :key="s.id">
                     <option :value="s.id" x-text="s.name + ' (' + s.code + ')'" :selected="String(s.id) === String(subject)"></option>
@@ -111,7 +111,7 @@
         {{-- 3. Year — needs a subject --}}
         <div>
             <label style="{{ $labelStyle }}">Year</label>
-            <select name="year" x-model="year" @change="onYear()" :disabled="!subject" :style="!subject ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+            <select name="year" x-model="year" @change="onYear()" :disabled="!subject" style="{{ $selStyle }} width: 100%;">
                 <option value="">All years</option>
                 <template x-for="y in yearOptions" :key="y">
                     <option :value="y" x-text="y" :selected="String(y) === String(year)"></option>
@@ -122,7 +122,7 @@
         {{-- 4. Session — needs a year --}}
         <div>
             <label style="{{ $labelStyle }}">Session</label>
-            <select name="session" x-model="session" @change="onSession()" :disabled="!year" :style="!year ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+            <select name="session" x-model="session" @change="onSession()" :disabled="!year" style="{{ $selStyle }} width: 100%;">
                 <option value="">All sessions</option>
                 <template x-for="code in sessionOptions" :key="code">
                     <option :value="code" x-text="sessionLabels[code] || code" :selected="code === session"></option>
@@ -133,7 +133,7 @@
         {{-- 5. Paper variant — needs a session --}}
         <div>
             <label style="{{ $labelStyle }}">Paper variant</label>
-            <select name="variant" x-model="variant" :disabled="!session" :style="!session ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+            <select name="variant" x-model="variant" :disabled="!session" style="{{ $selStyle }} width: 100%;">
                 <option value="">All variants</option>
                 <template x-for="v in variantOptions" :key="v">
                     <option :value="v" x-text="'Paper ' + v" :selected="v === variant"></option>
@@ -144,7 +144,7 @@
         {{-- 6. Topic — needs level + subject --}}
         <div>
             <label style="{{ $labelStyle }}">Topic</label>
-            <select name="topic" x-model="topic" :disabled="!subject" :style="!subject ? '{{ $dis }}' : ''" style="{{ $selStyle }} width: 100%;">
+            <select name="topic" x-model="topic" :disabled="!subject" style="{{ $selStyle }} width: 100%;">
                 <option value="">All topics</option>
                 <template x-for="t in topicOptions" :key="t.id">
                     <option :value="t.id" x-text="t.external_id + '. ' + t.title" :selected="String(t.id) === String(topic)"></option>
