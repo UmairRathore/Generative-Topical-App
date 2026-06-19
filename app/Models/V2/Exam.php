@@ -19,19 +19,20 @@ class Exam extends Model
         'school_id', 'class_id', 'subject_id', 'topic_id', 'created_by',
         'title', 'question_count', 'total_marks', 'duration_minutes',
         'year_from', 'year_to', 'shuffle', 'status', 'published_at',
-        'released_at', 'available_from', 'available_until',
+        'released_at', 'available_from', 'available_until', 'results_released_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'shuffle'         => 'boolean',
-            'question_count'  => 'integer',
-            'total_marks'     => 'integer',
-            'published_at'    => 'datetime',
-            'released_at'     => 'datetime',
-            'available_from'  => 'datetime',
-            'available_until' => 'datetime',
+            'shuffle'             => 'boolean',
+            'question_count'      => 'integer',
+            'total_marks'         => 'integer',
+            'published_at'        => 'datetime',
+            'released_at'         => 'datetime',
+            'available_from'      => 'datetime',
+            'available_until'     => 'datetime',
+            'results_released_at' => 'datetime',
         ];
     }
 
@@ -111,6 +112,12 @@ class Exam extends Model
     public function isLive(): bool
     {
         return $this->isReleased() && ! $this->isScheduled() && ! $this->isExpired();
+    }
+
+    /** Have results (score + answers) been released to students? */
+    public function resultsReleased(): bool
+    {
+        return $this->results_released_at !== null;
     }
 
     /** One word for the current state: draft | scheduled | live | expired. */

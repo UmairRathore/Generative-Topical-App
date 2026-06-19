@@ -72,7 +72,7 @@
                                 <x-icon name="play" size="12"/> Release
                             </button>
                         @endif
-                        <a href="{{ route('v2.teacher.exams.show', $exam) }}" class="btn btn-ghost btn-sm">Results <x-icon name="chev-r" size="13"/></a>
+                        <a href="{{ route('v2.teacher.exams.show', $exam) }}" class="btn btn-ghost btn-sm">Manage <x-icon name="chev-r" size="13"/></a>
                     </td>
                 </tr>
             @empty
@@ -106,10 +106,15 @@
             <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
 
-        <div style="margin-bottom: 20px;">
+        <div style="margin-bottom: 14px;">
             <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Expires at <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">— optional; no access after this</span></label>
             <input type="datetime-local" name="expires_at" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
+
+        <label class="flex items-center gap-2" style="font-size:12.5px;color:var(--text-soft);cursor:pointer;margin-bottom:20px;">
+            <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
+            Release results immediately — students see their score as they submit
+        </label>
 
         <div class="flex items-center justify-end gap-2">
             <button type="button" class="btn btn-ghost" @click="relOpen = false">Cancel</button>

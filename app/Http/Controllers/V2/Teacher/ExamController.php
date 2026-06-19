@@ -99,9 +99,10 @@ class ExamController extends Controller
         abort_unless($exam->created_by === $teacher->id, 403);
 
         $data = $request->validate([
-            'mode'       => ['required', Rule::in(['now', 'schedule'])],
-            'release_at' => ['nullable', 'required_if:mode,schedule', 'date'],
-            'expires_at' => ['nullable', 'date'],
+            'mode'            => ['required', Rule::in(['now', 'schedule'])],
+            'release_at'      => ['nullable', 'required_if:mode,schedule', 'date'],
+            'expires_at'      => ['nullable', 'date'],
+            'release_results' => ['nullable', 'boolean'],
         ]);
 
         $from  = $data['mode'] === 'schedule' ? Carbon::parse($data['release_at']) : now();
@@ -110,20 +111,42 @@ class ExamController extends Controller
         abort_if($until && $until->lessThanOrEqualTo($from), 422, 'Expiry must be after the release time.');
 
         $exam->update([
-            'status'          => 'released',
-            'released_at'     => now(),
-            'available_from'  => $from,
-            'available_until' => $until,
+            'status'              => 'released',
+            'released_at'         => now(),
+            'available_from'      => $from,
+            'available_until'     => $until,
+            // Optionally make results visible the moment students submit.
+            'results_released_at' => $request->boolean('release_results') ? now() : $exam->results_released_at,
         ]);
 
         AuditLogger::record('exam.released', $exam, [
-            'from'  => $from->toDateTimeString(),
-            'until' => $until?->toDateTimeString(),
+            'from'    => $from->toDateTimeString(),
+            'until'   => $until?->toDateTimeString(),
+            'results' => $request->boolean('release_results'),
         ]);
 
-        return back()->with('success', $exam->isScheduled()
-            ? 'Test scheduled to open '.$from->diffForHumans().'.'
-            : 'Test released — students can take it now.');
+        $msg = $exam->isScheduled() ? 'Test scheduled to open '.$from->diffForHumans().'.' : 'Test released — students can take it now.';
+        if ($request->boolean('release_results')) {
+            $msg .= ' Results will be visible to students as they submit.';
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    /** Release (or re-hide) results — the score + answer review — to students. */
+    public function releaseResults(Exam $exam, Request $request)
+    {
+        $teacher = $this->teacher();
+        abort_unless($exam->created_by === $teacher->id, 403);
+
+        $release = $request->boolean('release', true);
+        $exam->update(['results_released_at' => $release ? ($exam->results_released_at ?? now()) : null]);
+
+        AuditLogger::record('exam.results_'.($release ? 'released' : 'hidden'), $exam);
+
+        return back()->with('success', $release
+            ? 'Results released — students can now see their scores and answers.'
+            : 'Results hidden — students can no longer see their scores.');
     }
 
     public function show(Exam $exam, ExamService $service)

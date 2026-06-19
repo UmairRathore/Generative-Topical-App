@@ -79,6 +79,11 @@ class ExamController extends Controller
             return redirect()->route('v2.student.exams.take', $exam);
         }
 
+        // Score + answers are hidden until the teacher releases results.
+        if (! $exam->resultsReleased()) {
+            return view('v2.student.exams.result_pending', ['exam' => $exam, 'attempt' => $attempt]);
+        }
+
         $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic']);
         $answers = $attempt->answers()->get()->keyBy('question_id');
 

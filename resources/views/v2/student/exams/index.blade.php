@@ -25,12 +25,14 @@
                 </div>
             </div>
             <div class="flex items-center gap-4" style="flex: none;">
-                @if ($done)
+                @if ($done && $exam->resultsReleased())
                     <div style="text-align: right;">
                         <div style="font-size: 18px; font-weight: 700; color: var(--emerald-700);">{{ $a->percentage }}%</div>
                         <div style="font-size: 11.5px; color: var(--text-faint);">{{ $a->score }}/{{ $a->total_questions }}</div>
                     </div>
                     <a href="{{ route('v2.student.exams.result', $exam) }}" class="btn btn-ghost btn-sm">View result</a>
+                @elseif ($done)
+                    <span class="badge badge-soft" title="Your teacher hasn't released results yet">Submitted · awaiting results</span>
                 @elseif ($exam->isScheduled())
                     <span class="badge badge-soft" title="{{ $exam->available_from->format('D j M, g:i A') }}">Opens {{ $exam->available_from->diffForHumans() }}</span>
                 @elseif ($exam->isExpired())

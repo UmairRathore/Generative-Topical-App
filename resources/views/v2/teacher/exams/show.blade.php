@@ -1,10 +1,5 @@
 @extends('v2.layouts.teacher')
-@section('page_title', 'Exam Results')
-
-@section('content')
-<a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="14"/> Back to Exams
-</a>
+@section('page_title', 'Manage test')
 
 @php
     $stateBadge = [
@@ -14,12 +9,24 @@
         'expired'   => ['badge-blocker', 'Expired'],
     ];
     [$sbClass, $sbLabel] = $stateBadge[$exam->effectiveStatus()];
+    $fieldStyle = 'padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text);';
 @endphp
-<div class="flex items-start justify-between" style="margin-bottom: 18px;">
+
+@section('content')
+<a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="14"/> Back to Exams
+</a>
+
+<div class="flex items-start justify-between" style="margin-bottom: 18px; gap: 16px; flex-wrap: wrap;">
     <div>
         <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $exam->title }}</h2>
         <div class="flex items-center gap-2" style="margin-top: 6px; flex-wrap: wrap;">
             <span class="badge {{ $sbClass }}">{{ $sbLabel }}</span>
+            @if ($exam->resultsReleased())
+                <span class="badge badge-pass">Results released</span>
+            @elseif ($exam->isReleased())
+                <span class="badge badge-soft">Results hidden</span>
+            @endif
             <span class="badge badge-soft">{{ $exam->schoolClass?->name }}</span>
             <span class="badge badge-emerald">{{ $exam->topic?->title ?? 'Mixed topics' }}</span>
             <span class="badge badge-soft">{{ $exam->question_count }} questions</span>
@@ -31,47 +38,93 @@
     <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--ok-rgb,95,160,82),.12); border: 1px solid var(--ok); border-radius: 8px; font-size: 13px; color: var(--ok); font-weight: 600;">{{ session('success') }}</div>
 @endif
 
-{{-- Release / window --}}
-<div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 18px 20px; margin-bottom: 22px;">
-    @if ($exam->isDraft())
-        <div x-data="{ mode: 'now' }">
-            <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">This test is a draft — students can't see it yet.</div>
-            <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px;">Release it now or schedule it, with an optional expiry after which no student can access it.</p>
-            <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" class="flex items-end gap-3" style="flex-wrap: wrap;">
+{{-- ============ MANAGE: availability + results ============ --}}
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 24px; align-items: stretch;">
+
+    {{-- Availability --}}
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px;">
+        <div class="flex items-center gap-2" style="margin-bottom: 14px;">
+            <x-icon name="clipboard" size="15"/>
+            <span style="font-size: 14px; font-weight: 700;">Test availability</span>
+        </div>
+
+        @if ($exam->isDraft())
+            <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px; line-height: 1.5;">
+                This test is a <strong>draft</strong> — students can't see it yet. Release it now or schedule it, with an optional expiry after which no student can access it.
+            </p>
+            <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" x-data="{ mode: 'now' }">
                 @csrf @method('PATCH')
                 <input type="hidden" name="mode" :value="mode">
-                <div style="display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
-                    <button type="button" style="padding:8px 15px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;" :style="mode==='now' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='now'">Now</button>
-                    <button type="button" style="padding:8px 15px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;" :style="mode==='schedule' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='schedule'">Schedule</button>
+                <div style="display:inline-flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:14px;">
+                    <button type="button" style="padding:8px 16px; font-size:12.5px; font-weight:600; border:0; cursor:pointer;" :style="mode==='now' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='now'">Release now</button>
+                    <button type="button" style="padding:8px 16px; font-size:12.5px; font-weight:600; border:0; cursor:pointer;" :style="mode==='schedule' ? 'background:var(--primary,#061C30);color:#fff;' : 'background:var(--bg);color:var(--text-soft);'" @click="mode='schedule'">Schedule</button>
                 </div>
-                <div x-show="mode==='schedule'">
-                    <label style="display:block;font-size:11px;color:var(--text-faint);margin-bottom:4px;">Opens at</label>
-                    <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text);">
+                <div class="space-y-3">
+                    <div x-show="mode==='schedule'">
+                        <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Opens at</label>
+                        <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="{{ $fieldStyle }} width:100%;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Expires at <span style="color:var(--text-faint);">— optional</span></label>
+                        <input type="datetime-local" name="expires_at" style="{{ $fieldStyle }} width:100%;">
+                    </div>
+                    <label class="flex items-center gap-2" style="font-size:12.5px; color:var(--text-soft); cursor:pointer;">
+                        <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
+                        Release results immediately — students see their score as they submit
+                    </label>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top:14px;"><x-icon name="play" size="13"/> Release test</button>
+            </form>
+        @else
+            <div style="font-size: 13px; color: var(--text-soft); line-height: 1.7;">
+                <div>
+                    @if ($exam->isScheduled())
+                        <strong style="color:var(--text);">Opens</strong> {{ $exam->available_from->format('D j M, g:i A') }} ({{ $exam->available_from->diffForHumans() }})
+                    @else
+                        <strong style="color:var(--text);">Released</strong> {{ $exam->released_at?->diffForHumans() }}, open since {{ $exam->available_from?->format('D j M, g:i A') }}
+                    @endif
                 </div>
                 <div>
-                    <label style="display:block;font-size:11px;color:var(--text-faint);margin-bottom:4px;">Expires at (optional)</label>
-                    <input type="datetime-local" name="expires_at" style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:13px;color:var(--text);">
+                    @if ($exam->available_until)
+                        <strong style="color:var(--text);">{{ $exam->isExpired() ? 'Closed' : 'Closes' }}</strong> {{ $exam->available_until->format('D j M, g:i A') }} ({{ $exam->available_until->diffForHumans() }})
+                    @else
+                        <strong style="color:var(--text);">No expiry</strong> — stays open until you close it.
+                    @endif
                 </div>
-                <button type="submit" class="btn btn-primary"><x-icon name="play" size="13"/> Release</button>
+            </div>
+        @endif
+    </div>
+
+    {{-- Results --}}
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px;">
+        <div class="flex items-center gap-2" style="margin-bottom: 14px;">
+            <x-icon name="chart" size="15"/>
+            <span style="font-size: 14px; font-weight: 700;">Results to students</span>
+        </div>
+
+        <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px; line-height: 1.5;">
+            <strong>{{ $submittedCount }}</strong> of {{ $students->count() }} {{ \Illuminate\Support\Str::plural('student', $students->count()) }} submitted.
+            Students don't see their score or answers until you release results.
+        </p>
+
+        @if ($exam->resultsReleased())
+            <div class="flex items-center gap-2" style="font-size: 13px; color: var(--ok); font-weight: 600; margin-bottom: 14px;">
+                <x-icon name="check" size="15"/> Released {{ $exam->results_released_at->diffForHumans() }} — students can see their results.
+            </div>
+            <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
+                @csrf @method('PATCH')
+                <input type="hidden" name="release" value="0">
+                <button type="submit" class="btn btn-ghost btn-sm">Hide results again</button>
             </form>
-        </div>
-    @else
-        <div class="flex items-center gap-2" style="flex-wrap: wrap; font-size: 13px; color: var(--text-soft);">
-            <span class="badge {{ $sbClass }}">{{ $sbLabel }}</span>
-            <span>
-                @if ($exam->isScheduled())
-                    Opens {{ $exam->available_from->format('D j M, g:i A') }} ({{ $exam->available_from->diffForHumans() }})
-                @else
-                    Released {{ $exam->released_at?->diffForHumans() }}
-                @endif
-                @if ($exam->available_until)
-                    · {{ $exam->isExpired() ? 'closed' : 'closes' }} {{ $exam->available_until->format('D j M, g:i A') }}
-                @else
-                    · no expiry
-                @endif
-            </span>
-        </div>
-    @endif
+        @else
+            <div style="font-size: 13px; color: var(--text-soft); margin-bottom: 14px;">Results are currently <strong>hidden</strong> — submitted students see only “awaiting results”.</div>
+            <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
+                @csrf @method('PATCH')
+                <input type="hidden" name="release" value="1">
+                <button type="submit" class="btn btn-primary"><x-icon name="check" size="13"/> Release results to students</button>
+            </form>
+        @endif
+    </div>
 </div>
 
 {{-- Stat cards --}}
@@ -120,7 +173,7 @@
                         </td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $student->roll_number }}</td>
                         <td style="padding: var(--pad-cell);">
-                            @if ($a && $a->status === 'submitted')
+                            @if ($done)
                                 <span class="badge badge-pass">Completed</span>
                             @elseif ($a)
                                 <span class="badge badge-review">In progress</span>
@@ -133,10 +186,10 @@
                             @endif
                         </td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">
-                            {{ $a && $a->status === 'submitted' ? ($a->time_taken ?? '—') : '—' }}
+                            {{ $done ? ($a->time_taken ?? '—') : '—' }}
                         </td>
                         <td style="padding: var(--pad-cell); text-align: right; font-weight: 600; font-size: 13px;">
-                            @if ($a && $a->status === 'submitted')
+                            @if ($done)
                                 {{ $a->score }}/{{ $a->total_questions }} <span style="color: var(--text-faint); font-weight: 500;">({{ $a->percentage }}%)</span>
                             @else
                                 <span style="color: var(--text-faint);">—</span>
