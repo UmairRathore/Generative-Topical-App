@@ -7,6 +7,7 @@
         ['id' => 'v2.super_admin.dashboard', 'icon' => 'home',   'label' => 'Dashboard', 'href' => route('v2.super_admin.dashboard')],
         ['id' => 'v2.super_admin.schools',   'icon' => 'school', 'label' => 'Schools',   'href' => route('v2.super_admin.schools.index')],
         ['section' => 'Analytics'],
+        ['id' => 'v2.super_admin.stats',     'icon' => 'chart',  'label' => 'Platform Analytics', 'href' => route('v2.super_admin.stats')],
         ['id' => 'v2.super_admin.grades',    'icon' => 'layers', 'label' => 'Grades',    'href' => route('v2.super_admin.grades.index')],
         ['id' => 'v2.super_admin.subjects',  'icon' => 'grid',   'label' => 'Subjects',  'href' => route('v2.super_admin.subjects.index')],
         ['id' => 'v2.super_admin.topics',    'icon' => 'target', 'label' => 'Topics',    'href' => route('v2.super_admin.topics.index')],

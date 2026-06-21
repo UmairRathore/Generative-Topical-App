@@ -7,6 +7,7 @@
         ['id' => 'v2.teacher.dashboard', 'icon' => 'home', 'label' => 'Dashboard', 'href' => route('v2.teacher.dashboard')],
         ['id' => 'v2.teacher.exams', 'icon' => 'clipboard', 'label' => 'Exams', 'href' => route('v2.teacher.exams.index')],
         ['id' => 'v2.teacher.classes', 'icon' => 'users', 'label' => 'Classes', 'href' => route('v2.teacher.classes.index')],
+        ['id' => 'v2.teacher.stats', 'icon' => 'chart', 'label' => 'Class Analytics', 'href' => route('v2.teacher.stats')],
     ];
 @endphp
 <!DOCTYPE html>

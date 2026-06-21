@@ -14,9 +14,11 @@ use App\Http\Controllers\V2\BranchAdmin\ReportController as BranchReport;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
+use App\Http\Controllers\V2\Student\StatsController as StudentStats;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
 use App\Http\Controllers\V2\SuperAdmin\ClassController as SuperAdminClass;
 use App\Http\Controllers\V2\SuperAdmin\DashboardController as SuperAdminDashboard;
+use App\Http\Controllers\V2\SuperAdmin\StatsController as SuperAdminStats;
 use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
 use App\Http\Controllers\V2\SuperAdmin\SchoolController as SuperAdminSchool;
@@ -28,6 +30,7 @@ use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
 use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
 use App\Http\Controllers\V2\Teacher\DashboardController as TeacherDashboard;
 use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
+use App\Http\Controllers\V2\Teacher\StatsController as TeacherStats;
 use App\Http\Controllers\V2\SecureImageController;
 use Illuminate\Support\Facades\Route;
 
@@ -58,6 +61,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
             Route::middleware('v2.must_change_password:v2_super_admin,v2.super_admin.change_password')->group(function () {
                 Route::get('dashboard', [SuperAdminDashboard::class, 'index'])->name('dashboard');
+
+                // Platform analytics / stats
+                Route::get('stats', [SuperAdminStats::class, 'index'])->name('stats');
 
                 // Platform-wide rollups (cross-school)
                 Route::get('grades', [SuperAdminGrade::class, 'platform'])->name('grades.index');
@@ -235,6 +241,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::middleware('v2.must_change_password:v2_teacher,v2.teacher.change_password')->group(function () {
                 Route::get('dashboard', [TeacherDashboard::class, 'index'])->name('dashboard');
 
+                // Class analytics / stats
+                Route::get('stats', [TeacherStats::class, 'index'])->name('stats');
+
                 // Exams
                 Route::get('exams', [TeacherExam::class, 'index'])->name('exams.index');
                 Route::get('exams/create', [TeacherExam::class, 'create'])->name('exams.create');
@@ -270,6 +279,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::post('logout', [StudentAuth::class, 'logout'])->name('logout');
 
             Route::get('dashboard', [StudentDashboard::class, 'index'])->name('dashboard');
+
+            // Performance / stats
+            Route::get('stats', [StudentStats::class, 'index'])->name('stats');
 
             // Exams
             Route::get('exams', [StudentExam::class, 'index'])->name('exams.index');

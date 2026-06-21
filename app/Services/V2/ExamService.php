@@ -258,6 +258,66 @@ class ExamService
         ];
     }
 
+    /** Last $limit submitted attempts in chronological order — for a trend line. */
+    public function studentScoreTrend(int $studentId, int $limit = 10): array
+    {
+        return ExamAttempt::where('student_id', $studentId)
+            ->where('status', 'submitted')
+            ->with(['exam:id,title,subject_id', 'exam.subject:id,name'])
+            ->orderByDesc('submitted_at')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(fn ($a) => [
+                'label'   => $a->exam?->title ?? 'Exam',
+                'score'   => $a->percentage,
+                'date'    => $a->submitted_at?->format('d M'),
+                'subject' => $a->exam?->subject?->name ?? '',
+            ])->all();
+    }
+
+    /** Flat per-topic stats for one student across all submitted attempts. */
+    public function studentTopicStats(int $studentId): array
+    {
+        return $this->topicStats(
+            DB::table('v2_exam_answers as a')
+                ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+                ->where('at.student_id', $studentId)
+                ->where('at.status', 'submitted')
+        );
+    }
+
+    /** Exams submitted per month for one calendar year: 12 ints (Jan..Dec). */
+    public function studentMonthlyActivity(int $studentId, ?int $year = null): array
+    {
+        $year ??= (int) now()->year;
+
+        $counts = ExamAttempt::where('student_id', $studentId)
+            ->where('status', 'submitted')
+            ->whereYear('submitted_at', $year)
+            ->selectRaw('MONTH(submitted_at) as m, count(*) as c')
+            ->groupBy('m')->pluck('c', 'm');
+
+        return array_map(fn ($m) => (int) ($counts[$m] ?? 0), range(1, 12));
+    }
+
+    /** Avg% of the last 5 submitted attempts minus the previous 5. Null if too little history. */
+    public function studentImprovement(int $studentId): ?float
+    {
+        $base = fn () => ExamAttempt::where('student_id', $studentId)
+            ->where('status', 'submitted')->orderByDesc('submitted_at');
+
+        $recent   = $base()->limit(5)->get();
+        $previous = $base()->offset(5)->limit(5)->get();
+
+        if ($recent->isEmpty() || $previous->isEmpty()) {
+            return null;
+        }
+
+        return round($recent->avg(fn ($a) => $a->percentage) - $previous->avg(fn ($a) => $a->percentage), 1);
+    }
+
     /** Per-topic stats aggregated across every submitted attempt in a whole school. */
     public function schoolTopicStats(int $schoolId, ?int $branchId = null): array
     {
@@ -274,6 +334,84 @@ class ExamService
                 ->where('e.created_by', $teacherId)
                 ->where('at.status', 'submitted')
         );
+    }
+
+    /** Completion rate (submitted / started) + exams-this-month for one teacher. */
+    public function teacherEngagement(int $teacherId): array
+    {
+        $attempts = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('e.created_by', $teacherId);
+
+        $total     = (clone $attempts)->count();
+        $submitted = (clone $attempts)->where('at.status', 'submitted')->count();
+
+        return [
+            'completion'       => $total ? (int) round($submitted / $total * 100) : 0,
+            'exams_this_month' => DB::table('v2_exams')->where('created_by', $teacherId)
+                ->whereYear('created_at', now()->year)->whereMonth('created_at', now()->month)->count(),
+        ];
+    }
+
+    /** Score distribution (5 bins: 0-20,21-40,41-60,61-80,81-100) over a teacher's submitted attempts. */
+    public function teacherScoreDistribution(int $teacherId): array
+    {
+        $pcts = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('e.created_by', $teacherId)->where('at.status', 'submitted')
+            ->where('at.total_questions', '>', 0)
+            ->selectRaw('at.score / at.total_questions * 100 as pct')->pluck('pct');
+
+        $bins = [0, 0, 0, 0, 0];
+        foreach ($pcts as $p) {
+            $bins[$p <= 20 ? 0 : ($p <= 40 ? 1 : ($p <= 60 ? 2 : ($p <= 80 ? 3 : 4)))]++;
+        }
+
+        return $bins;
+    }
+
+    /** Per-exam avg% + submission count over time (oldest first), for a combo chart. */
+    public function teacherExamTrend(int $teacherId, int $limit = 15): array
+    {
+        return DB::table('v2_exams as e')
+            ->leftJoin('v2_exam_attempts as at', fn ($j) => $j->on('at.exam_id', '=', 'e.id')->where('at.status', 'submitted'))
+            ->where('e.created_by', $teacherId)
+            ->groupBy('e.id', 'e.title', 'e.created_at')
+            ->orderBy('e.created_at')
+            ->limit($limit)
+            ->selectRaw('e.title, e.created_at, count(at.id) as cnt, avg(at.score / nullif(at.total_questions,0)) * 100 as avg_pct')
+            ->get()
+            ->map(fn ($r) => [
+                'title' => $r->title,
+                'date'  => \Illuminate\Support\Carbon::parse($r->created_at)->format('d M'),
+                'count' => (int) $r->cnt,
+                'avg'   => $r->avg_pct !== null ? (int) round($r->avg_pct) : null,
+            ])->all();
+    }
+
+    /** Per-student avg across a teacher's exams (their enrolled students), worst-first. */
+    public function teacherStudentPerformance(int $teacherId): array
+    {
+        $classIds = DB::table('v2_class_teachers')->where('teacher_id', $teacherId)->pluck('class_id');
+        if ($classIds->isEmpty()) {
+            return [];
+        }
+
+        $studentIds = DB::table('v2_student_enrollments')->whereIn('class_id', $classIds)
+            ->where('status', 'active')->distinct()->pluck('student_id');
+
+        $perf = DB::table('v2_exam_attempts as at')->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
+            ->where('e.created_by', $teacherId)->where('at.status', 'submitted')
+            ->selectRaw('at.student_id, count(*) attempts, avg(at.score / nullif(at.total_questions,0)) * 100 avg_pct')
+            ->groupBy('at.student_id')->get()->keyBy('student_id');
+
+        return Student::whereIn('id', $studentIds)->orderBy('name')->get(['id', 'name', 'roll_number'])
+            ->map(fn ($s) => [
+                'id'       => $s->id,
+                'name'     => $s->name,
+                'roll'     => $s->roll_number,
+                'attempts' => (int) ($perf[$s->id]->attempts ?? 0),
+                'avg'      => isset($perf[$s->id]) && $perf[$s->id]->avg_pct !== null ? (int) round($perf[$s->id]->avg_pct) : null,
+            ])
+            ->sortBy(fn ($r) => $r['avg'] ?? 999)->values()->all();
     }
 
     /** Overview totals for one teacher (their classes/students/exams + avg). */
