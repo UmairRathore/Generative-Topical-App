@@ -193,11 +193,42 @@
 </div>
 
 {{-- View toggle --}}
+@php
+    // Periodic Table is a reference, offered only while a Chemistry subject
+    // (A- or O-Level) is the active filter — never as question content.
+    $ptSubject = $filters['subject'] ? $subjects->firstWhere('id', $filters['subject']) : null;
+    $ptPath = config('v2.periodic_table');
+    $periodicTable = ($ptSubject && in_array($ptSubject->code, config('v2.periodic_table_codes', []), true))
+        ? '/storage/'.$ptPath.'?v='.(@filemtime(public_path('storage/'.$ptPath)) ?: 1) : null;
+@endphp
 <div class="flex items-center justify-between" style="margin-bottom: 14px;">
     <div style="font-size: 12.5px; color: var(--text-faint);">
         {{ number_format($stats['matched']) }} {{ Str::plural('question', $stats['matched']) }} match
     </div>
     <div class="flex items-center" style="gap: 6px;">
+        @if ($periodicTable)
+            <style>
+                .pt-float{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:70;width:min(920px,94vw);max-height:78vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 14px 42px rgba(0,0,0,.22);overflow:hidden;}
+            </style>
+            <div x-data="{ ptOpen: false }" style="display: inline-flex;">
+                <button type="button" class="btn btn-sm" :class="ptOpen ? 'btn-primary' : 'btn-ghost'" @click="ptOpen = !ptOpen" title="Show the Periodic Table">
+                    <x-icon name="layers" size="14"/> Periodic Table
+                </button>
+                {{-- Pinned floating reference: stays fixed in the viewport while you scroll the
+                     question list and closes only via the × button or Esc — no page-dimming
+                     backdrop, so the page behind stays fully scrollable and clickable. --}}
+                <div x-show="ptOpen" x-cloak
+                     @keydown.escape.window="ptOpen = false" class="pt-float">
+                    <div class="flex items-center justify-between" style="padding: 9px 13px; border-bottom: 1px solid var(--border); flex: none;">
+                        <span class="flex items-center gap-2" style="font-size: 12.5px; font-weight: 600; color: var(--text-soft);"><x-icon name="layers" size="13"/> Periodic Table &middot; {{ $ptSubject->name }}</span>
+                        <button type="button" class="btn btn-ghost btn-sm" @click="ptOpen = false" aria-label="Close"><x-icon name="x" size="14"/></button>
+                    </div>
+                    <div style="overflow: auto; padding: 12px; background: #fff;">
+                        <img src="{{ $periodicTable }}" alt="Periodic Table of the Elements" style="display: block; max-width: 100%; height: auto; margin: 0 auto;">
+                    </div>
+                </div>
+            </div>
+        @endif
         <a href="{{ request()->fullUrlWithQuery(['view' => 'table', 'page' => 1]) }}"
            class="btn btn-sm {{ $view === 'table' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="list" size="14"/> Table</a>
         <a href="{{ request()->fullUrlWithQuery(['view' => 'gallery', 'page' => 1]) }}"
