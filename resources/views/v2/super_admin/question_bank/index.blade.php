@@ -41,6 +41,11 @@
     <a href="{{ route('v2.super_admin.question_bank.create') }}" class="btn btn-primary" style="flex: none;"><x-icon name="plus" size="14"/> New question</a>
 </div>
 
+{{-- Everything inside #qb-region is swapped in place on filter / pill / pager /
+     trash / restore actions — the element itself stays, so the delegated JS
+     handlers below survive and scroll position is preserved. --}}
+<div id="qb-region" data-index-url="{{ route('v2.super_admin.question_bank.index') }}">
+
 {{-- Stats --}}
 <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;">
     @foreach ([
@@ -60,7 +65,7 @@
 
 {{-- Filters --}}
 <style>.qbf select:disabled{opacity:.55;cursor:not-allowed;background:var(--soft-surface);}</style>
-<form method="GET" class="qbf" action="{{ route('v2.super_admin.question_bank.index') }}"
+<form method="GET" class="qbf" id="qb-filter-form" action="{{ route('v2.super_admin.question_bank.index') }}"
       x-data='{
           level: @json($filters["level"] ?? ""),
           subject: @json((string) ($filters["subject"] ?? "")),
@@ -278,32 +283,28 @@
                 @else
                     <span class="badge badge-blocker" style="font-size: 10px;">No answer</span>
                 @endif
-                <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
+                <span id="qb-badge-{{ $q->id }}" class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
                 @if ($q->trashed())
                     <span class="badge badge-soft" style="font-size: 10px;">In Trash</span>
-                    <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;">
+                    <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;" data-qb-ajax>
                         @csrf @method('PATCH')
                         <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--emerald-700);" title="Restore from Trash"><x-icon name="check" size="12"/> Restore</button>
                     </form>
                 @else
-                    <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
-                    <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
-                        @csrf @method('PATCH')
-                        <select name="status" onchange="this.form.submit()" title="Change status"
-                                style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
-                            @foreach ($statuses as $st)
-                                <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
-                            @endforeach
-                        </select>
-                    </form>
-                    @if (in_array($q->status, $deletable, true))
-                        <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Move to Trash"
-                                data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
-                                data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
-                                @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
-                            <x-icon name="trash" size="12"/>
-                        </button>
-                    @endif
+                    <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm" data-qb-edit><x-icon name="edit" size="12"/> Edit</a>
+                    <select title="Change status"
+                            data-status-url="{{ route('v2.super_admin.question_bank.status', $q) }}" data-id="{{ $q->id }}" data-prev="{{ $q->status }}"
+                            style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
+                        @foreach ($statuses as $st)
+                            <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
+                        @endforeach
+                    </select>
+                    <button type="button" id="qb-trash-{{ $q->id }}" class="btn btn-ghost btn-sm" style="color: var(--bad);@unless (in_array($q->status, $deletable, true)) display:none;@endunless" title="Move to Trash"
+                            data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                            data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                            @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                        <x-icon name="trash" size="12"/>
+                    </button>
                 @endif
             </div>
             <div style="padding: 20px 22px; max-width: 760px;">
@@ -373,35 +374,31 @@
                         {{ $q->images_count ?: '-' }}
                     </td>
                     <td data-label="Status" style="padding: var(--pad-cell); vertical-align: top; text-align: center;">
-                        <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
+                        <span id="qb-badge-{{ $q->id }}" class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
                     </td>
                     <td data-label="Actions" style="padding: var(--pad-cell); vertical-align: top; text-align: right; white-space: nowrap;">
                         <div class="flex items-center" style="gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
                             @if ($q->trashed())
                                 <span class="badge badge-soft" style="font-size: 10px;">In Trash</span>
-                                <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;">
+                                <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;" data-qb-ajax>
                                     @csrf @method('PATCH')
                                     <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--emerald-700);" title="Restore from Trash"><x-icon name="check" size="12"/> Restore</button>
                                 </form>
                             @else
-                                <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
-                                <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
-                                    @csrf @method('PATCH')
-                                    <select name="status" onchange="this.form.submit()" title="Change status"
-                                            style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
-                                        @foreach ($statuses as $st)
-                                            <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
-                                        @endforeach
-                                    </select>
-                                </form>
-                                @if (in_array($q->status, $deletable, true))
-                                    <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Move to Trash"
-                                            data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
-                                            data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
-                                            @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
-                                        <x-icon name="trash" size="12"/>
-                                    </button>
-                                @endif
+                                <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm" data-qb-edit><x-icon name="edit" size="12"/> Edit</a>
+                                <select title="Change status"
+                                        data-status-url="{{ route('v2.super_admin.question_bank.status', $q) }}" data-id="{{ $q->id }}" data-prev="{{ $q->status }}"
+                                        style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
+                                    @foreach ($statuses as $st)
+                                        <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
+                                    @endforeach
+                                </select>
+                                <button type="button" id="qb-trash-{{ $q->id }}" class="btn btn-ghost btn-sm" style="color: var(--bad);@unless (in_array($q->status, $deletable, true)) display:none;@endunless" title="Move to Trash"
+                                        data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                                        data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                                        @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                                    <x-icon name="trash" size="12"/>
+                                </button>
                             @endif
                         </div>
                     </td>
@@ -456,7 +453,7 @@
         </p>
         <div class="flex items-center justify-end gap-2">
             <button type="button" class="btn btn-ghost" @click="delOpen = false">Cancel</button>
-            <form method="POST" :action="delAction" style="display: inline;">
+            <form method="POST" :action="delAction" style="display: inline;" data-qb-ajax @submit="delOpen = false">
                 @csrf @method('DELETE')
                 <button type="submit" class="btn" style="background: var(--bad); color: #fff; border-color: var(--bad);"><x-icon name="trash" size="13"/> Move to Trash</button>
             </form>
@@ -465,5 +462,150 @@
 </div>
 
 </div>{{-- /delete-confirmation modal scope --}}
+
+</div>{{-- /#qb-region --}}
+
+{{-- Lightweight toast (lives outside #qb-region so it survives content swaps) --}}
+<div id="qb-toast" role="status" aria-live="polite"
+     style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(12px);z-index:90;display:none;align-items:center;gap:8px;background:var(--primary,#061C30);color:#fff;font-size:13px;font-weight:600;padding:12px 18px;border-radius:99px;box-shadow:0 12px 32px rgba(0,0,0,.28);max-width:min(92vw,460px);opacity:0;transition:opacity .18s,transform .18s;"></div>
+
+<script>
+(function () {
+    var region = document.getElementById('qb-region');
+    if (!region || region.dataset.qbBound) return;
+    region.dataset.qbBound = '1';
+
+    var CSRF = @json(csrf_token());
+    var INDEX_URL = region.dataset.indexUrl;
+    var toastEl = document.getElementById('qb-toast');
+    var toastTimer = null;
+
+    function toast(msg, bad) {
+        toastEl.textContent = msg;
+        toastEl.style.background = bad ? 'var(--bad,#b3261e)' : 'var(--primary,#061C30)';
+        toastEl.style.display = 'flex';
+        requestAnimationFrame(function () { toastEl.style.opacity = '1'; toastEl.style.transform = 'translateX(-50%) translateY(0)'; });
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function () {
+            toastEl.style.opacity = '0'; toastEl.style.transform = 'translateX(-50%) translateY(12px)';
+            setTimeout(function () { toastEl.style.display = 'none'; }, 200);
+        }, 3500);
+    }
+
+    // ---- Swap the region's contents from a freshly-fetched list URL. Alpine's
+    //      mutation observer re-initialises the new nodes automatically. ----
+    var loadSeq = 0;
+    function loadRegion(url, push) {
+        var seq = ++loadSeq;
+        region.style.opacity = '0.55';
+        region.style.pointerEvents = 'none';
+        fetch(url, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                if (seq !== loadSeq) return; // a newer request superseded this one
+                var doc = new DOMParser().parseFromString(html, 'text/html');
+                var fresh = doc.getElementById('qb-region');
+                if (fresh) {
+                    region.innerHTML = fresh.innerHTML;
+                    if (push !== false) history.pushState({ qb: true }, '', url);
+                } else {
+                    window.location.href = url; // unexpected (e.g. session expired) — hard nav
+                }
+            })
+            .catch(function () { window.location.href = url; })
+            .finally(function () {
+                if (seq === loadSeq) { region.style.opacity = ''; region.style.pointerEvents = ''; }
+            });
+    }
+
+    function postForm(action, formData) {
+        return fetch(action, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'fetch', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+            credentials: 'same-origin',
+            body: formData,
+        });
+    }
+
+    // ---- Status dropdown: PATCH in place, update the badge + trash button, no reload ----
+    region.addEventListener('change', function (e) {
+        var sel = e.target.closest('select[data-status-url]');
+        if (!sel) return;
+        var id = sel.dataset.id, prev = sel.dataset.prev, next = sel.value;
+        if (next === prev) return;
+        sel.disabled = true;
+        var body = new FormData();
+        body.append('_method', 'PATCH');
+        body.append('status', next);
+        postForm(sel.dataset.statusUrl, body)
+            .then(function (r) { return r.json().then(function (d) { return r.ok ? d : Promise.reject(d); }); })
+            .then(function (d) {
+                sel.dataset.prev = next;
+                var badge = document.getElementById('qb-badge-' + id);
+                if (badge) {
+                    var cls = { active: 'badge-pass', under_review: 'badge-review', archived: 'badge-blocker' }[next] || 'badge-soft';
+                    badge.className = 'badge ' + cls;
+                    badge.textContent = next.charAt(0).toUpperCase() + next.slice(1).replace(/_/g, ' ');
+                }
+                var trash = document.getElementById('qb-trash-' + id);
+                if (trash) trash.style.display = d.deletable ? '' : 'none';
+                toast(d.message || 'Status updated.');
+            })
+            .catch(function (d) { sel.value = prev; toast((d && d.message) || 'Could not update status.', true); })
+            .finally(function () { sel.disabled = false; });
+    });
+
+    // ---- Filter form: Apply without a reload ----
+    region.addEventListener('submit', function (e) {
+        var form = e.target;
+
+        // (a) the GET filter form
+        if (form.id === 'qb-filter-form') {
+            e.preventDefault();
+            var params = new URLSearchParams(new FormData(form));
+            params.set('page', '1'); // a new filter starts at page 1
+            loadRegion(form.action + '?' + params.toString());
+            return;
+        }
+
+        // (b) trash / restore forms inside the region — POST, then refresh the region
+        if (form.dataset.qbAjax !== undefined) {
+            e.preventDefault();
+            postForm(form.action, new FormData(form))
+                .then(function (r) { return r.json().then(function (d) { return r.ok ? d : Promise.reject(d); }); })
+                .then(function (d) { toast(d.message || 'Done.'); loadRegion(window.location.href, false); })
+                .catch(function (d) { toast((d && d.message) || 'That action could not be completed.', true); });
+        }
+    });
+
+    // ---- Clicks: pills / view toggle / pager / reset = AJAX; edit = full nav with return ----
+    region.addEventListener('click', function (e) {
+        var a = e.target.closest('a[href]');
+        if (!a || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
+
+        // Edit/create links carry the current (possibly filtered) URL so the editor
+        // can send the admin back to exactly this list. They navigate normally.
+        if (a.dataset.qbEdit !== undefined) {
+            var u = new URL(a.href, window.location.origin);
+            u.searchParams.set('return', window.location.href);
+            a.href = u.toString();
+            return; // allow default navigation
+        }
+
+        // Any link that points back at the list itself → swap in place.
+        var dest = new URL(a.href, window.location.origin);
+        var base = new URL(INDEX_URL, window.location.origin);
+        if (dest.pathname === base.pathname) {
+            e.preventDefault();
+            loadRegion(a.href);
+        }
+    });
+
+    // ---- Back / forward buttons re-load the matching list state ----
+    window.addEventListener('popstate', function () {
+        if (document.getElementById('qb-region')) loadRegion(window.location.href, false);
+    });
+})();
+</script>
 
 @endsection

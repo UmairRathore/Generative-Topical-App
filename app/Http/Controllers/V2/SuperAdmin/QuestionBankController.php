@@ -228,8 +228,9 @@ class QuestionBankController extends Controller
             $this->syncImages($question, $request, $data['answer_mode']);
         });
 
-        return redirect()
-            ->route('v2.super_admin.question_bank.index')
+        // Return to the filtered/paged list the editor came from, so the admin
+        // keeps their place instead of being dropped at an unfiltered page 1.
+        return redirect($this->safeReturn($request) ?? route('v2.super_admin.question_bank.index'))
             ->with('ok', 'Question updated.');
     }
 
@@ -239,30 +240,38 @@ class QuestionBankController extends Controller
      * restore is lossless, and frozen exams keep rendering it (ExamQuestion::question
      * uses withTrashed). Active questions must be archived/drafted first.
      */
-    public function destroy(Question $question)
+    public function destroy(Request $request, Question $question)
     {
         if (! in_array($question->status, self::DELETABLE, true)) {
-            return back()->with('err', 'Active questions can’t be moved to Trash - set them to draft, under review, or archived first.');
+            $msg = 'Active questions can’t be moved to Trash - set them to draft, under review, or archived first.';
+
+            return $request->wantsJson()
+                ? response()->json(['ok' => false, 'message' => $msg], 422)
+                : back()->with('err', $msg);
         }
 
         $question->delete(); // soft delete (sets deleted_at; row, options and images all kept)
 
-        return redirect()
-            ->route('v2.super_admin.question_bank.index')
-            ->with('ok', 'Question moved to Trash. You can restore it any time from the Trash view.');
+        $msg = 'Question moved to Trash. You can restore it any time from the Trash view.';
+
+        return $request->wantsJson()
+            ? response()->json(['ok' => true, 'message' => $msg])
+            : redirect()->route('v2.super_admin.question_bank.index')->with('ok', $msg);
     }
 
     /**
      * Bring a soft-deleted question back into the bank. Soft-deleted models don't
      * route-bind (the SoftDeletes scope hides them), so we resolve the hashid by hand.
      */
-    public function restore(string $question)
+    public function restore(Request $request, string $question)
     {
         $id = unhid($question) ?? (ctype_digit($question) ? (int) $question : null);
         $q = Question::onlyTrashed()->findOrFail($id);
         $q->restore();
 
-        return back()->with('ok', 'Question restored.');
+        return $request->wantsJson()
+            ? response()->json(['ok' => true, 'message' => 'Question restored.'])
+            : back()->with('ok', 'Question restored.');
     }
 
     public function setStatus(Request $request, Question $question)
@@ -270,7 +279,36 @@ class QuestionBankController extends Controller
         $validated = $request->validate(['status' => ['required', Rule::in(self::STATUSES)]]);
         $question->update(['status' => $validated['status']]);
 
-        return back()->with('ok', 'Question marked '.str_replace('_', ' ', $validated['status']).'.');
+        $msg = 'Question marked '.str_replace('_', ' ', $validated['status']).'.';
+
+        // AJAX (status dropdown on the list): respond with JSON so the page
+        // updates the badge in place instead of reloading and losing scroll.
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok'        => true,
+                'message'   => $msg,
+                'status'    => $validated['status'],
+                'deletable' => in_array($validated['status'], self::DELETABLE, true),
+            ]);
+        }
+
+        return back()->with('ok', $msg);
+    }
+
+    /**
+     * A safe "go back to where I was" URL passed through the editor — only ever
+     * a question-bank index URL on this host, never an open redirect.
+     */
+    private function safeReturn(Request $request): ?string
+    {
+        $return = $request->input('return') ?: $request->query('return');
+        if (! $return) {
+            return null;
+        }
+
+        $base = route('v2.super_admin.question_bank.index');
+
+        return str_starts_with((string) $return, $base) ? (string) $return : null;
     }
 
     /* ---------------------------------------------------------------------- */

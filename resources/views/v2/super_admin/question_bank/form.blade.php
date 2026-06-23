@@ -72,6 +72,14 @@
       x-data='{ subject: @json((string) $vSubject), topic: @json((string) $vTopic), topics: @json($topicsJson), mode: @json($initialMode), correct: @json((string) $vAnswer) }'>
     @csrf
     @if ($editing) @method('PUT') @endif
+    {{-- Carries the filtered/paged list URL the editor was opened from, so saving
+         returns there instead of an unfiltered page 1. --}}
+    <input type="hidden" name="return" value="{{ request('return') }}">
+    @if (request('return'))
+        <a href="{{ request('return') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft);text-decoration:none;margin-bottom:14px;">
+            <x-icon name="chev-l" size="14"/> Back to list
+        </a>
+    @endif
 
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px;">
 
