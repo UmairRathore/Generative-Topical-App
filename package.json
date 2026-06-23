@@ -4,7 +4,8 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "capture:screens": "node scripts/capture-route-screenshots.js"
+        "capture:screens": "node scripts/capture-route-screenshots.js",
+        "capture:flows": "node scripts/capture-module-flows.mjs"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.0.7",

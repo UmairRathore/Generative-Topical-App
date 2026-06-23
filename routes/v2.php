@@ -16,11 +16,13 @@ use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
 use App\Http\Controllers\V2\Student\StatsController as StudentStats;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
+use App\Http\Controllers\V2\SuperAdmin\BranchController as SuperAdminBranch;
 use App\Http\Controllers\V2\SuperAdmin\ClassController as SuperAdminClass;
 use App\Http\Controllers\V2\SuperAdmin\DashboardController as SuperAdminDashboard;
 use App\Http\Controllers\V2\SuperAdmin\StatsController as SuperAdminStats;
 use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
+use App\Http\Controllers\V2\SuperAdmin\QuestionFlagController as SuperAdminQuestionFlag;
 use App\Http\Controllers\V2\SuperAdmin\SchoolController as SuperAdminSchool;
 use App\Http\Controllers\V2\SuperAdmin\StudentController as SuperAdminStudent;
 use App\Http\Controllers\V2\SuperAdmin\SubjectController as SuperAdminSubject;
@@ -30,6 +32,7 @@ use App\Http\Controllers\V2\Teacher\AuthController as TeacherAuth;
 use App\Http\Controllers\V2\Teacher\ClassController as TeacherClass;
 use App\Http\Controllers\V2\Teacher\DashboardController as TeacherDashboard;
 use App\Http\Controllers\V2\Teacher\ExamController as TeacherExam;
+use App\Http\Controllers\V2\Teacher\QuestionFlagController as TeacherQuestionFlag;
 use App\Http\Controllers\V2\Teacher\StatsController as TeacherStats;
 use App\Http\Controllers\V2\SecureImageController;
 use Illuminate\Support\Facades\Route;
@@ -68,6 +71,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 // Platform-wide rollups (cross-school)
                 Route::get('grades', [SuperAdminGrade::class, 'platform'])->name('grades.index');
                 Route::get('subjects', [SuperAdminSubject::class, 'platform'])->name('subjects.index');
+                Route::patch('subjects/{subject}/toggle', [SuperAdminSubject::class, 'toggle'])->name('subjects.toggle');
                 Route::get('subjects/{subject}', [SuperAdminSubject::class, 'showPlatform'])->name('subjects.show');
                 Route::get('topics', [SuperAdminTopic::class, 'platform'])->name('topics.index');
 
@@ -76,15 +80,18 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create'); // stub — create not built yet
                 Route::get('schools/{school}', [SuperAdminSchool::class, 'show'])->name('schools.show');
                 Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit'); // stub — edit not built yet
-                Route::get('schools/{school}/grades', [SuperAdminGrade::class, 'index'])->name('schools.grades.index');
-                Route::get('schools/{school}/grades/{grade}', [SuperAdminGrade::class, 'show'])->name('schools.grades.show');
-                Route::get('schools/{school}/teachers/{teacher}', [SuperAdminTeacher::class, 'show'])->name('schools.teachers.show');
-                Route::get('schools/{school}/subjects', [SuperAdminSubject::class, 'index'])->name('schools.subjects.index');
-                Route::get('schools/{school}/subjects/{subject}', [SuperAdminSubject::class, 'show'])->name('schools.subjects.show');
-                Route::get('schools/{school}/topics', [SuperAdminTopic::class, 'show'])->name('schools.topics.index');
-                Route::get('schools/{school}/classes/{class}', [SuperAdminClass::class, 'show'])->name('schools.classes.show');
-                Route::get('schools/{school}/students/{student}', [SuperAdminStudent::class, 'show'])->name('schools.students.show');
-                Route::get('schools/{school}/exams/{exam}/students/{student}/paper', [SuperAdminStudent::class, 'paper'])->name('schools.student_paper');
+
+                // Branch sits between a school and its teachers/classes/students. Every
+                // leaf drill-down is reached THROUGH a branch so the hierarchy holds.
+                Route::prefix('schools/{school}/branches/{branch}')->name('schools.branches.')->group(function () {
+                    Route::get('/', [SuperAdminBranch::class, 'show'])->name('show');
+                    Route::get('grades/{grade}', [SuperAdminGrade::class, 'show'])->name('grades.show');
+                    Route::get('subjects/{subject}', [SuperAdminSubject::class, 'show'])->name('subjects.show');
+                    Route::get('teachers/{teacher}', [SuperAdminTeacher::class, 'show'])->name('teachers.show');
+                    Route::get('classes/{class}', [SuperAdminClass::class, 'show'])->name('classes.show');
+                    Route::get('students/{student}', [SuperAdminStudent::class, 'show'])->name('students.show');
+                    Route::get('exams/{exam}/students/{student}/paper', [SuperAdminStudent::class, 'paper'])->name('student_paper');
+                });
 
                 // Question bank — browse + full CRUD (Super Admin only). 'create' before '{question}'.
                 Route::get('question-bank', [SuperAdminQuestionBank::class, 'index'])->name('question_bank.index');
@@ -93,7 +100,12 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::get('question-bank/{question}/edit', [SuperAdminQuestionBank::class, 'edit'])->name('question_bank.edit');
                 Route::put('question-bank/{question}', [SuperAdminQuestionBank::class, 'update'])->name('question_bank.update');
                 Route::delete('question-bank/{question}', [SuperAdminQuestionBank::class, 'destroy'])->name('question_bank.destroy');
+                Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');
                 Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
+
+                // Teacher-submitted question flags — triage queue + close.
+                Route::get('question-flags', [SuperAdminQuestionFlag::class, 'index'])->name('question_flags.index');
+                Route::patch('question-flags/{question}/resolve', [SuperAdminQuestionFlag::class, 'resolve'])->name('question_flags.resolve');
 
                 Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
             });
@@ -248,17 +260,28 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::get('exams', [TeacherExam::class, 'index'])->name('exams.index');
                 Route::get('exams/create', [TeacherExam::class, 'create'])->name('exams.create');
                 Route::get('exams/custom', [TeacherExam::class, 'custom'])->name('exams.custom');
+                Route::get('exams/custom/selected', [TeacherExam::class, 'selectedCards'])->name('exams.custom_selected');
                 Route::post('exams/custom', [TeacherExam::class, 'storeCustom'])->name('exams.store_custom');
+                // Random generator: live preview + per-question swap before committing.
+                Route::get('exams/generate/preview', [TeacherExam::class, 'generatePreview'])->name('exams.generate_preview');
+                Route::get('exams/generate/swap', [TeacherExam::class, 'swapPreview'])->name('exams.generate_swap');
+                Route::get('exams/generate/regenerate', [TeacherExam::class, 'regeneratePreview'])->name('exams.generate_regenerate');
                 Route::post('exams', [TeacherExam::class, 'store'])->name('exams.store');
                 Route::patch('exams/{exam}/release', [TeacherExam::class, 'release'])->name('exams.release');
                 Route::patch('exams/{exam}/release-results', [TeacherExam::class, 'releaseResults'])->name('exams.release_results');
                 Route::get('exams/{exam}', [TeacherExam::class, 'show'])->name('exams.show');
                 Route::get('exams/{exam}/students/{student}/paper', [TeacherExam::class, 'studentPaper'])->name('exams.student_paper');
 
+                // Report a wrong/broken question (from the exam preview or question gallery).
+                Route::post('questions/{question}/flag', [TeacherQuestionFlag::class, 'store'])->name('questions.flag');
+
                 // Classes (analytics: per-topic + per-student-per-topic)
                 Route::get('classes', [TeacherClass::class, 'index'])->name('classes.index');
                 Route::get('classes/{class}', [TeacherClass::class, 'show'])->name('classes.show');
                 Route::get('students/{student}', [TeacherClass::class, 'student'])->name('students.show');
+
+                // Notifications (bell links here; full paginated list)
+                Route::view('notifications', 'v2.teacher.notifications')->name('notifications.index');
             });
         });
     });

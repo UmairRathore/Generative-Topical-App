@@ -17,5 +17,7 @@ class ExamQuestion extends Model
     }
 
     public function exam(): BelongsTo { return $this->belongsTo(Exam::class, 'exam_id'); }
-    public function question(): BelongsTo { return $this->belongsTo(Question::class, 'question_id'); }
+    // withTrashed: a frozen exam must still render its questions even if the source
+    // question was later soft-deleted from the bank (historical papers stay intact).
+    public function question(): BelongsTo { return $this->belongsTo(Question::class, 'question_id')->withTrashed(); }
 }

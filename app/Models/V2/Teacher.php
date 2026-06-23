@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -82,5 +83,11 @@ class Teacher extends Authenticatable
         return $this->belongsToMany(SchoolClass::class, 'v2_class_teachers', 'teacher_id', 'class_id')
             ->withPivot('is_primary')
             ->withTimestamps();
+    }
+
+    /** In-app notifications addressed to this teacher (bell + page). */
+    public function v2Notifications(): MorphMany
+    {
+        return $this->morphMany(Notification::class, 'notifiable')->latest();
     }
 }

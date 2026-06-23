@@ -9,7 +9,7 @@
 
 @foreach ($q->stemBlocks() as $block)
     @if ($block['type'] === 'text')
-        <div style="{{ $txtStyle }}">{{ $block['text'] }}</div>
+        <div style="{{ $txtStyle }}">{!! sci($block['text']) !!}</div>
     @elseif ($block['type'] === 'figure')
         {{-- centered, borderless figure. Width is uniform-scaled from the crop's
              own point size (see QuestionImage::displayWidth) so label text stays

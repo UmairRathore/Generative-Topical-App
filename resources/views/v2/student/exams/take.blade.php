@@ -121,6 +121,48 @@
     </form>
 </div>
 
+@if ($periodicTable)
+    {{-- Periodic Table reference: docked side panel on desktop, button + full-screen modal on mobile. Chemistry exams only. --}}
+    <style>
+        [x-cloak]{display:none!important}
+        .pt-fab{position:fixed;bottom:22px;right:22px;z-index:46;display:inline-flex;align-items:center;gap:7px;padding:11px 16px;border-radius:99px;border:0;background:var(--primary,#061C30);color:#fff;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 22px rgba(0,0,0,.22);}
+        .pt-shell{position:fixed;inset:0;z-index:45;pointer-events:none;}
+        .pt-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:opacity .15s;pointer-events:none;}
+        .pt-shell.is-open .pt-backdrop{opacity:1;pointer-events:auto;}
+        .pt-card{position:absolute;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;transition:transform .2s ease;}
+        .pt-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--border);flex:none;}
+        .pt-close{border:0;background:none;cursor:pointer;color:var(--text-soft);padding:4px;display:inline-flex;}
+        .pt-body{overflow:auto;padding:12px;flex:1;background:var(--soft-surface);-webkit-overflow-scrolling:touch;}
+        .pt-body img{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;border-radius:6px;}
+        @media (max-width:1023px){
+            .pt-card{inset:12px;border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.4);transform:translateY(10px);}
+            .pt-shell.is-open .pt-card{transform:none;}
+        }
+        @media (min-width:1024px){
+            .pt-backdrop{display:none;}
+            .pt-card{top:64px;right:0;bottom:0;width:clamp(360px,32vw,460px);border-left:1px solid var(--border);box-shadow:-10px 0 30px rgba(0,0,0,.10);transform:translateX(100%);}
+            .pt-shell.is-open .pt-card{transform:none;}
+        }
+    </style>
+    <div x-data="{ open: window.matchMedia('(min-width:1024px)').matches }" x-cloak @keydown.escape.window="open = false">
+        <button type="button" class="pt-fab" @click="open = true" x-show="!open" x-transition.opacity>
+            <x-icon name="grid" size="16"/> Periodic Table
+        </button>
+        <div class="pt-shell" :class="open ? 'is-open' : ''">
+            <div class="pt-backdrop" @click="open = false"></div>
+            <div class="pt-card">
+                <div class="pt-head">
+                    <span style="font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;"><x-icon name="grid" size="14"/> Periodic Table</span>
+                    <button type="button" class="pt-close" @click="open = false" aria-label="Close"><x-icon name="x" size="16"/></button>
+                </div>
+                <div class="pt-body">
+                    <img src="{{ $periodicTable }}" alt="Periodic Table of the Elements">
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
 <script>
 function examTaker(total, hasLimit, remaining, elapsed) {
     return {

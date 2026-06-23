@@ -4,8 +4,8 @@
 @php $tone = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)'); @endphp
 
 @section('content')
-<a href="{{ route('v2.super_admin.schools.show', $school) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="12"/> {{ $school->name }}
+<a href="{{ route('v2.super_admin.schools.branches.show', [$school, $branch]) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="12"/> {{ $school->name }} · {{ $branch->name }}
 </a>
 
 <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $student->name }}</h2>
@@ -49,7 +49,7 @@
                 <div>
                     <div style="font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 12px;">Tests</div>
                     @foreach ($subject['tests'] as $t)
-                        <a href="{{ route('v2.super_admin.schools.student_paper', [$school, hid($t['exam_id']), $student]) }}"
+                        <a href="{{ route('v2.super_admin.schools.branches.student_paper', [$school, $branch, hid($t['exam_id']), $student]) }}"
                            class="flex items-center justify-between"
                            style="padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; text-decoration: none; color: inherit;">
                             <div style="min-width: 0;">

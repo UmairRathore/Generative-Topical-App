@@ -2,6 +2,9 @@
     $user = auth('v2_super_admin')->user();
     $currentRouteName = request()->route()?->getName() ?? '';
 
+    // Distinct questions with at least one open flag — shown as a nav badge.
+    $openFlagCount = \App\Models\V2\QuestionFlag::where('status', 'open')->distinct('question_id')->count('question_id');
+
     $nav = [
         ['section' => 'Platform'],
         ['id' => 'v2.super_admin.dashboard', 'icon' => 'home',   'label' => 'Dashboard', 'href' => route('v2.super_admin.dashboard')],
@@ -12,7 +15,8 @@
         ['id' => 'v2.super_admin.subjects',  'icon' => 'grid',   'label' => 'Subjects',  'href' => route('v2.super_admin.subjects.index')],
         ['id' => 'v2.super_admin.topics',    'icon' => 'target', 'label' => 'Topics',    'href' => route('v2.super_admin.topics.index')],
         ['section' => 'Content'],
-        ['id' => 'v2.super_admin.question_bank', 'icon' => 'book', 'label' => 'Question Bank', 'href' => route('v2.super_admin.question_bank.index')],
+        ['id' => 'v2.super_admin.question_bank',  'icon' => 'book', 'label' => 'Question Bank', 'href' => route('v2.super_admin.question_bank.index')],
+        ['id' => 'v2.super_admin.question_flags', 'icon' => 'flag', 'label' => 'Question Flags', 'href' => route('v2.super_admin.question_flags.index'), 'badge' => $openFlagCount],
         ['section' => 'System'],
         ['id' => 'v2.super_admin.audit.index',  'icon' => 'eye',    'label' => 'Audit Log',    'href' => route('v2.super_admin.audit.index')],
     ];
@@ -60,7 +64,10 @@
                        style="width: calc(100% - 16px); padding: 9px 14px; margin: 1px 8px; border-radius: 6px; font-size: 13.5px; text-decoration: none; transition: all .15s;
                               {{ $active ? 'background: rgba(var(--accent-rgb),0.13); color: var(--accent); font-weight: 600; border-left: 2px solid var(--accent);' : 'background: transparent; color: rgba(250,247,239,0.78); font-weight: 500; border-left: 2px solid transparent;' }}">
                         <x-icon :name="$item['icon']" size="17" />
-                        {{ $item['label'] }}
+                        <span style="flex:1;">{{ $item['label'] }}</span>
+                        @if (!empty($item['badge']))
+                            <span style="flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--emerald-900,#062a1f);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;">{{ $item['badge'] }}</span>
+                        @endif
                     </a>
                 @endif
             @endforeach

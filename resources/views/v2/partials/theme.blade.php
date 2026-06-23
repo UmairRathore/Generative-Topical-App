@@ -225,4 +225,6 @@
     }
     .tbl tbody tr:hover td { background: rgba(var(--accent-rgb), 0.06) !important; }
     .chip:hover { border-color: var(--accent); color: var(--accent); }
+    /* SciText sub/superscripts (H₂O, mol dm⁻³) - no line-height jump */
+    sub, sup { font-size: 0.72em; line-height: 0; }
 </style>

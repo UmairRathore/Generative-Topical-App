@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Question extends Model
 {
     use HasHashid;
+    // Questions are never permanently deleted — "delete" soft-deletes (recoverable from Trash).
+    use SoftDeletes;
 
     protected $table = 'v2_questions';
 
@@ -79,6 +82,17 @@ class Question extends Model
     public function images(): HasMany
     {
         return $this->hasMany(QuestionImage::class, 'question_id')->orderBy('sort_order');
+    }
+
+    /** Teacher-submitted "this looks wrong" reports against this question. */
+    public function flags(): HasMany
+    {
+        return $this->hasMany(QuestionFlag::class, 'question_id');
+    }
+
+    public function openFlags(): HasMany
+    {
+        return $this->flags()->where('status', 'open');
     }
 
     /** Only questions usable in a generated test: a known correct answer. */

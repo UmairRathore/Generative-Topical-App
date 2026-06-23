@@ -87,6 +87,7 @@
             </button>
             @hasSection('page_title')<h1 class="serif" style="font-size: 20px; font-weight: 600; color: var(--text);">@yield('page_title')</h1>@endif
             <div class="flex-1"></div>
+            <livewire:teacher.notification-bell />
             <x-theme-toggle />
         </header>
 

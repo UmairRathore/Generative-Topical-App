@@ -28,11 +28,13 @@ class AnalyticsController extends BaseController
         $bid = $this->branchId();
 
         return view('v2.branch_admin.analytics.index', [
-            'branch'     => $this->branch(),
-            'overview'   => $service->schoolOverview($sid, $bid),
-            'topicStats' => $service->schoolTopicStats($sid, $bid),
-            'teachers'   => $service->schoolTeacherRows($sid, $bid),
-            'classes'    => $service->schoolClassRows($sid, $bid),
+            'branch'      => $this->branch(),
+            'overview'    => $service->schoolOverview($sid, $bid),
+            'grades'      => $service->gradeWideRows($sid, $bid),
+            'subjects'    => $service->subjectWideRows($sid, $bid),
+            'topicGroups' => $service->schoolTopicStatsBySubject($sid, $bid),
+            'teachers'    => $service->schoolTeacherRows($sid, $bid),
+            'classes'     => $service->schoolClassRows($sid, $bid),
         ]);
     }
 

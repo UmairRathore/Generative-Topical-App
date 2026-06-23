@@ -98,12 +98,25 @@
                 {{ session('success') }}
             </div>
         @endif
+        @if(session('info'))
+            <div style="margin: 16px 28px 0; padding: 12px 16px; background: var(--warn-soft, rgba(217,160,32,.12)); border: 1px solid var(--warn); border-radius: 8px; font-size: 13px; color: var(--warn);">
+                {{ session('info') }}
+            </div>
+        @endif
+        @if(session('error') || (isset($errors) && $errors->any()))
+            <div style="margin: 16px 28px 0; padding: 12px 16px; background: var(--bad-soft, rgba(200,40,40,.10)); border: 1px solid var(--bad); border-radius: 8px; font-size: 13px; color: var(--bad);">
+                {{ session('error') ?? $errors->first() }}
+            </div>
+        @endif
 
         <div class="fade-in" style="padding: 28px; flex: 1;">
             @yield('content')
         </div>
     </main>
 </div>
+{{-- Modals render here — a direct child of <body>, outside the animated .fade-in
+     wrapper, so position:fixed is relative to the viewport (true centering). --}}
+@stack('modals')
 @livewireScripts
 @fluxScripts
 </body>

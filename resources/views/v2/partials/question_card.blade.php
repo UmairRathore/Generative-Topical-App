@@ -64,7 +64,7 @@
             @else
                 <div class="flex items-center gap-3" style="padding: 9px 13px; border: 1px solid; border-radius: 8px; {{ $style }}">
                     <span class="{{ $circle }}">{{ $opt->label }}</span>
-                    @if (trim((string) $opt->text) !== '')<span style="font-size: 13.5px;">{{ $opt->text }}</span>@endif
+                    @if (trim((string) $opt->text) !== '')<span style="font-size: 13.5px;">{!! sci($opt->text) !!}</span>@endif
                     <span style="flex: 1;"></span>
                     @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct answer</span>@endif
                 </div>

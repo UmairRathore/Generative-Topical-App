@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\Hashid;
+use App\Support\SciText;
 use App\Support\SignedImage;
 
 if (! function_exists('v2_actor')) {
@@ -54,5 +55,20 @@ if (! function_exists('unhid')) {
     function unhid(?string $code): ?int
     {
         return Hashid::decode($code);
+    }
+}
+
+if (! function_exists('sci')) {
+    /**
+     * Render question/option text with scientific sub/superscripts as safe HTML
+     * (use inside {!! !!}). Toggle: $enabled null => config('v2.sci_format');
+     * pass false to force plain text (identical to the old {{ }} output), true
+     * to force formatting on.
+     */
+    function sci(?string $text, ?bool $enabled = null): string
+    {
+        $enabled ??= (bool) config('v2.sci_format', true);
+
+        return $enabled ? SciText::format($text) : e($text);
     }
 }

@@ -24,6 +24,34 @@
     .ms-opt{padding:9px 12px;font-size:13px;cursor:pointer;}
     .ms-opt:hover{background:var(--soft-surface);}
     [x-cloak]{display:none!important;}
+    .view-seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+    .view-seg a{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--text-soft);background:var(--bg);}
+    .view-seg a.on{background:var(--primary,#061C30);color:#fff;}
+    .view-seg a + a{border-left:1px solid var(--border);}
+    .gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:14px;}
+    .gal-card{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;}
+    .gal-card.is-sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;}
+    .gal-pick{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);background:var(--soft-surface);cursor:pointer;flex-wrap:wrap;}
+    .gal-pick input{width:17px;height:17px;flex:none;}
+    .gal-body{padding:16px 18px;}
+    @media (max-width:560px){.gal-grid{grid-template-columns:1fr;}}
+    .sel-shell{position:fixed;inset:0;z-index:60;pointer-events:none;}
+    .sel-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);opacity:0;transition:opacity .15s;pointer-events:none;}
+    .sel-shell.is-open .sel-backdrop{opacity:1;pointer-events:auto;}
+    .sel-drawer{position:absolute;top:0;right:0;bottom:0;width:clamp(380px,44vw,600px);display:flex;flex-direction:column;background:var(--bg);border-left:1px solid var(--border);box-shadow:-12px 0 36px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .2s ease;pointer-events:auto;}
+    .sel-shell.is-open .sel-drawer{transform:none;}
+    .sel-head{flex:none;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);background:var(--surface);}
+    .sel-x{border:0;background:none;cursor:pointer;color:var(--text-soft);padding:5px;display:inline-flex;border-radius:7px;}
+    .sel-x:hover{background:var(--soft-surface);}
+    .sel-body{flex:1;min-height:0;overflow-y:auto;padding:14px 16px;background:var(--soft-surface);}
+    .sel-num{flex:none;width:22px;height:22px;border-radius:99px;background:var(--soft-surface);color:var(--text-soft);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+    .sel-rm{flex:none;border:0;background:none;cursor:pointer;color:var(--text-faint);padding:4px;display:inline-flex;border-radius:6px;}
+    .sel-rm:hover{background:var(--bad-soft,rgba(200,60,60,.12));color:var(--bad);}
+    .sel-foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-top:1px solid var(--border);background:var(--surface);}
+    .selq-card{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;margin-bottom:12px;}
+    .selq-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg);}
+    .selq-body{padding:14px 16px;}
+    @media (max-width:560px){.sel-drawer{width:100%;}}
 </style>
 
 <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
@@ -44,12 +72,31 @@
 @else
 <div x-data="{
         classKey: '{{ $classId }}',
+        selUrl: '{{ route('v2.teacher.exams.custom_selected') }}',
         selected: [],
+        panel: false,
+        cardsHtml: '',
+        loading: false,
         init(){ try { this.selected = JSON.parse(localStorage.getItem('exPick_'+this.classKey) || '[]'); } catch(e){ this.selected = []; } },
         has(id){ return this.selected.includes(id); },
-        toggle(id){ var i = this.selected.indexOf(id); if (i > -1) this.selected.splice(i,1); else this.selected.push(id); localStorage.setItem('exPick_'+this.classKey, JSON.stringify(this.selected)); },
-        clear(){ this.selected = []; localStorage.removeItem('exPick_'+this.classKey); }
-    }">
+        toggle(id){ var i = this.selected.indexOf(id); if (i > -1) this.selected.splice(i,1); else this.selected.push(id); this.persist(); if (this.panel) this.loadCards(); },
+        remove(id){ var i = this.selected.indexOf(id); if (i > -1){ this.selected.splice(i,1); this.persist(); } },
+        clear(){ this.selected = []; this.persist(); this.cardsHtml = ''; },
+        persist(){ localStorage.setItem('exPick_'+this.classKey, JSON.stringify(this.selected)); },
+        openPanel(){ this.panel = true; this.loadCards(); },
+        loadCards(){
+            if (! this.selected.length){ this.cardsHtml = ''; return; }
+            this.loading = true;
+            fetch(this.selUrl + '?ids=' + this.selected.join(','), { headers: { 'X-Requested-With': 'fetch' } })
+                .then(r => r.text())
+                .then(h => { this.cardsHtml = h; })
+                .catch(() => { this.cardsHtml = '<p style=\'padding:16px;color:var(--text-faint);font-size:13px;\'>Could not load the selected questions.</p>'; })
+                .finally(() => { this.loading = false; });
+        },
+        onCardClick(e){ var btn = e.target.closest('[data-remove]'); if (btn){ this.remove(parseInt(btn.dataset.remove, 10)); this.loadCards(); } },
+        onFlagged(e){ var id = e.detail && e.detail.id; if (id != null && this.has(id)){ this.remove(id); if (this.panel) this.loadCards(); } }
+    }"
+    @question-flagged.window="onFlagged($event)">
 
     {{-- Filters --}}
     <form method="GET" id="topicFilterForm" action="{{ route('v2.teacher.exams.custom') }}"
@@ -63,6 +110,8 @@
               remove(id){ this.sel = this.sel.filter(s => s.id !== id); this.$nextTick(() => document.getElementById('topicFilterForm').submit()); }
           }"
           style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; margin-bottom: 16px;">
+        {{-- keep the chosen view (list/gallery) across class + topic filtering --}}
+        <input type="hidden" name="view" value="{{ $view }}">
         <div class="flex items-end gap-4" style="flex-wrap: wrap;">
             <div>
                 <label style="display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:5px;">Class</label>
@@ -98,24 +147,52 @@
     </form>
 
     @if ($questions && $questions->total())
-        <div style="font-size: 12.5px; color: var(--text-faint); margin-bottom: 10px;">
-            {{ number_format($questions->total()) }} {{ \Illuminate\Support\Str::plural('question', $questions->total()) }} match · <span x-text="selected.length"></span> selected
+        <div class="flex items-center justify-between gap-3" style="margin-bottom: 12px; flex-wrap: wrap;">
+            <div style="font-size: 12.5px; color: var(--text-faint);">
+                {{ number_format($questions->total()) }} {{ \Illuminate\Support\Str::plural('question', $questions->total()) }} match · <span x-text="selected.length"></span> selected
+            </div>
+            <div class="view-seg">
+                <a href="{{ request()->fullUrlWithQuery(['view' => 'list']) }}" class="{{ $view === 'list' ? 'on' : '' }}"><x-icon name="list" size="14"/> List</a>
+                <a href="{{ request()->fullUrlWithQuery(['view' => 'gallery']) }}" class="{{ $view === 'gallery' ? 'on' : '' }}"><x-icon name="grid" size="14"/> Gallery</a>
+            </div>
         </div>
 
-        @foreach ($questions as $q)
-            <label class="pick-row" :style="has({{ $q->id }}) ? 'border-color:var(--accent); background:rgba(var(--accent-rgb,0,151,211),.05);' : ''">
-                <input type="checkbox" :checked="has({{ $q->id }})" @change="toggle({{ $q->id }})" style="width:17px;height:17px;margin-top:2px;flex:none;">
-                <div style="min-width:0; flex:1;">
-                    <div style="font-size:13.5px; line-height:1.45;">{{ \Illuminate\Support\Str::limit(preg_replace('/\s+/', ' ', (string) $q->question_text), 160) }}</div>
-                    <div class="flex items-center gap-2" style="margin-top:6px; flex-wrap:wrap;">
-                        @if ($q->topic)<span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ \Illuminate\Support\Str::limit($q->topic->title, 22) }}</span>@else<span class="badge badge-soft">Untagged</span>@endif
-                        <span style="font-size:11.5px; color:var(--text-faint);">{{ $q->source_paper }} · Q{{ $q->question_number }}</span>
-                        @if ($q->correct_answer)<span class="badge badge-pass" style="font-size:10px;">Ans {{ $q->correct_answer }}</span>@endif
-                        <span class="badge badge-soft" style="font-size:10px;">{{ str_replace('_', ' ', $q->layout_type) }}</span>
+        @if ($view === 'gallery')
+            <div class="gal-grid">
+                @foreach ($questions as $q)
+                    <div class="gal-card" :class="has({{ $q->id }}) ? 'is-sel' : ''">
+                        <label class="gal-pick">
+                            <input type="checkbox" :checked="has({{ $q->id }})" @change="toggle({{ $q->id }})">
+                            @if ($q->topic)<span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ \Illuminate\Support\Str::limit($q->topic->title, 22) }}</span>@else<span class="badge badge-soft">Untagged</span>@endif
+                            <span style="font-size:11.5px; color:var(--text-faint);">{{ $q->source_paper }} · Q{{ $q->question_number }}</span>
+                            <span style="flex:1;"></span>
+                            <button type="button" class="btn btn-ghost btn-sm" style="color:var(--text-soft);padding:3px 8px;"
+                                    @click.stop.prevent="$dispatch('flag-question', { action: '{{ route('v2.teacher.questions.flag', $q) }}', label: '{{ $q->source_paper }} · Q{{ $q->question_number }}' })">
+                                <x-icon name="flag" size="12"/> Report
+                            </button>
+                        </label>
+                        <div class="gal-body">
+                            @include('v2.partials.question_card', ['q' => $q])
+                        </div>
                     </div>
-                </div>
-            </label>
-        @endforeach
+                @endforeach
+            </div>
+        @else
+            @foreach ($questions as $q)
+                <label class="pick-row" :style="has({{ $q->id }}) ? 'border-color:var(--accent); background:rgba(var(--accent-rgb,0,151,211),.05);' : ''">
+                    <input type="checkbox" :checked="has({{ $q->id }})" @change="toggle({{ $q->id }})" style="width:17px;height:17px;margin-top:2px;flex:none;">
+                    <div style="min-width:0; flex:1;">
+                        <div style="font-size:13.5px; line-height:1.45;">{{ \Illuminate\Support\Str::limit(preg_replace('/\s+/', ' ', (string) $q->question_text), 160) }}</div>
+                        <div class="flex items-center gap-2" style="margin-top:6px; flex-wrap:wrap;">
+                            @if ($q->topic)<span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ \Illuminate\Support\Str::limit($q->topic->title, 22) }}</span>@else<span class="badge badge-soft">Untagged</span>@endif
+                            <span style="font-size:11.5px; color:var(--text-faint);">{{ $q->source_paper }} · Q{{ $q->question_number }}</span>
+                            @if ($q->correct_answer)<span class="badge badge-pass" style="font-size:10px;">Ans {{ $q->correct_answer }}</span>@endif
+                            <span class="badge badge-soft" style="font-size:10px;">{{ str_replace('_', ' ', $q->layout_type) }}</span>
+                        </div>
+                    </div>
+                </label>
+            @endforeach
+        @endif
 
         {{-- Pager --}}
         @if ($questions->hasPages())
@@ -137,11 +214,39 @@
         <input type="hidden" name="class_id" value="{{ $classId }}">
         <input type="hidden" name="question_ids" :value="selected.join(',')">
         <div style="font-size:14px; font-weight:700; white-space:nowrap;"><span x-text="selected.length"></span> selected <span style="font-weight:400; color:var(--text-faint);">(max 40)</span></div>
+        <button type="button" class="btn btn-ghost btn-sm" @click="openPanel()" x-show="selected.length"><x-icon name="eye" size="13"/> Review</button>
         <button type="button" class="btn btn-ghost btn-sm" @click="clear()" x-show="selected.length">Clear</button>
         <input type="text" name="title" value="{{ old('title', 'Custom Test') }}" required maxlength="120" placeholder="Test title" style="{{ $fld }} flex:1; min-width:180px;">
         <input type="number" name="duration_minutes" min="1" max="240" placeholder="Time (min)" style="{{ $fld }} width:120px;">
         <button type="submit" class="btn btn-primary" :disabled="selected.length === 0" :style="selected.length === 0 ? 'opacity:.5;cursor:not-allowed;' : ''"><x-icon name="check" size="14"/> Create test</button>
     </form>
+
+    {{-- Selected-questions drawer: always reachable so the teacher can review
+         everything they've picked across pages/filters, and remove any of them.
+         Teleported to <body> so the fixed drawer escapes the layout's transformed
+         .fade-in wrapper and anchors to the viewport edge. --}}
+    <template x-teleport="body">
+    <div class="sel-shell" :class="panel ? 'is-open' : ''" x-cloak @keydown.escape.window="panel = false">
+        <div class="sel-backdrop" @click="panel = false"></div>
+        <div class="sel-drawer">
+            <div class="sel-head">
+                <div style="font-size:14px; font-weight:700;">Selected questions <span x-text="'('+selected.length+')'"></span></div>
+                <button type="button" class="sel-x" @click="panel = false" aria-label="Close"><x-icon name="x" size="18"/></button>
+            </div>
+            <div class="sel-body" @click="onCardClick($event)">
+                <p x-show="!selected.length" style="font-size:13px; color:var(--text-faint); padding:20px 0; text-align:center;">No questions selected yet. Tick questions to build your test.</p>
+                <p x-show="loading" style="font-size:13px; color:var(--text-faint); padding:20px 0; text-align:center;">Loading selected questions…</p>
+                <div x-show="selected.length" x-html="cardsHtml"></div>
+            </div>
+            <div class="sel-foot">
+                <button type="button" class="btn btn-ghost btn-sm" @click="clear()" x-show="selected.length">Clear all</button>
+                <button type="button" class="btn btn-primary btn-sm" @click="panel = false">Done</button>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    @include('v2.partials.flag_modal')
 </div>
 @endif
 @endsection

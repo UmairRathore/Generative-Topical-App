@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\V2\Branch;
 use App\Models\V2\Grade;
 use App\Models\V2\School;
 use App\Services\V2\ExamService;
@@ -10,7 +11,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Grades (unscoped)
+| Super Admin: Grades (unscoped)
 |--------------------------------------------------------------------------
 | Grade-wide analytics within a school, plus a cross-school platform rollup.
 | Route-model binding is NOT school-scoped for the super admin guard, so each
@@ -18,29 +19,22 @@ use Illuminate\View\View;
 */
 class GradeController extends Controller
 {
-    /** Grade-wide list for one school. */
-    public function index(School $school, ExamService $service): View
+    /** Grade detail within a branch of a school. */
+    public function show(School $school, Branch $branch, Grade $grade, ExamService $service): View
     {
-        return view('v2.super_admin.grades.index', [
-            'school' => $school,
-            'rows'   => $service->gradeWideRows($school->id),
-        ]);
-    }
-
-    /** Grade detail within a school. */
-    public function show(School $school, Grade $grade, ExamService $service): View
-    {
+        abort_unless($branch->school_id === $school->id, 404);
         abort_unless($grade->school_id === $school->id, 404);
 
-        $summary = collect($service->gradeWideRows($school->id))->firstWhere('id', $grade->id);
-        $classes = collect($service->schoolClassRows($school->id))
+        $summary = collect($service->gradeWideRows($school->id, $branch->id))->firstWhere('id', $grade->id);
+        $classes = collect($service->schoolClassRows($school->id, $branch->id))
             ->where('grade', $grade->name)->values()->all();
 
         return view('v2.super_admin.grades.show', [
             'school'     => $school,
+            'branch'     => $branch,
             'grade'      => $grade,
             'summary'    => $summary,
-            'topicStats' => $service->gradeTopicStats($school->id, $grade->id),
+            'topicStats' => $service->gradeTopicStats($school->id, $grade->id, $branch->id),
             'classes'    => $classes,
         ]);
     }

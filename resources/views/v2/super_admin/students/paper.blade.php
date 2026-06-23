@@ -5,7 +5,7 @@
 
 @section('content')
 <div style="max-width: 760px; margin: 0 auto;">
-    <a href="{{ route('v2.super_admin.schools.students.show', [$school, $student]) }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
+    <a href="{{ route('v2.super_admin.schools.branches.students.show', [$school, $branch, $student]) }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
         <x-icon name="chev-l" size="14"/> Back to {{ $student->name }}
     </a>
 

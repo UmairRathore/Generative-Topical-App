@@ -17,7 +17,7 @@ use Illuminate\Validation\ValidationException;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Question Bank
+| Super Admin: Question Bank
 |--------------------------------------------------------------------------
 | Browse + full CRUD over the global question pool. Manually authored
 | questions attach to a per-subject "Custom" paper so the paper_id FK and the
@@ -30,7 +30,7 @@ use Illuminate\Validation\ValidationException;
 |            answer image (a table or graph) shown with selectable A/B/C/D
 |            circles beside it (the option_table layout).
 |
-| status (active | draft | under_review | archived) gates exam generation —
+| status (active | draft | under_review | archived) gates exam generation,
 | only `active` is drawn into a test. Active questions cannot be deleted.
 */
 class QuestionBankController extends Controller
@@ -50,6 +50,14 @@ class QuestionBankController extends Controller
 
     private const ANSWER_TYPES = ['table', 'graph'];
 
+    /** Image-content filters for QA: value => the image roles that satisfy it. */
+    private const IMAGE_FILTERS = [
+        'diagram'   => ['question_image_between_text', 'question_image_after_text'],
+        'option'    => ['option_image'],
+        'table'     => ['table'],
+        'reference' => ['reference'],
+    ];
+
     /** Manually uploaded images live here; only these are ever unlinked on delete. */
     private const UPLOAD_DIR = 'v2/questions/custom';
 
@@ -64,6 +72,7 @@ class QuestionBankController extends Controller
             'topic'   => $request->integer('topic') ?: null,
             'layout'  => $request->string('layout')->toString(),
             'answer'  => $request->string('answer')->toString(),
+            'image'   => $request->string('image')->toString(),
             'status'  => $request->string('status')->toString(),
             'q'       => trim($request->string('q')->toString()),
         ];
@@ -78,12 +87,25 @@ class QuestionBankController extends Controller
             ->when($filters['year'], fn ($q, $v) => $q->where('year', $v))
             ->when($filters['topic'], fn ($q, $v) => $q->where('topic_id', $v))
             ->when($filters['layout'], fn ($q, $v) => $q->where('layout_type', $v))
-            ->when($filters['status'], fn ($q, $v) => $q->where('status', $v))
+            // "Trash" is the soft-deleted set (orthogonal to the status column).
+            // "Untagged" filters by missing topic, not by the status column.
+            ->when($filters['status'] === 'trashed', fn ($q) => $q->onlyTrashed())
+            ->when($filters['status'] === 'untagged', fn ($q) => $q->whereNull('topic_id'))
+            ->when($filters['status'] && !in_array($filters['status'], ['trashed', 'untagged']), fn ($q) => $q->where('status', $filters['status']))
             ->when($filters['level'], fn ($q, $v) => $q->whereHas('subject', fn ($s) => $s->where('level', $v)))
             ->when($filters['session'], fn ($q, $v) => $q->whereHas('paper', fn ($p) => $p->where('session_code', $v)))
             ->when($filters['variant'], fn ($q, $v) => $q->whereHas('paper', fn ($p) => $p->where('variant', $v)))
             ->when($filters['answer'] === 'answered', fn ($q) => $q->whereNotNull('correct_answer'))
             ->when($filters['answer'] === 'unanswered', fn ($q) => $q->whereNull('correct_answer'))
+            ->when($filters['image'], function ($q, $v) {
+                if ($v === 'any') {
+                    $q->has('images');
+                } elseif ($v === 'none') {
+                    $q->doesntHave('images');
+                } elseif ($roles = self::IMAGE_FILTERS[$v] ?? null) {
+                    $q->whereHas('images', fn ($i) => $i->whereIn('role', $roles));
+                }
+            })
             ->when($filters['q'], function ($q, $v) {
                 $q->where(fn ($w) => $w
                     ->where('question_text', 'like', "%{$v}%")
@@ -130,6 +152,7 @@ class QuestionBankController extends Controller
                 'tagged'  => Question::whereNotNull('topic_id')->count(),
                 'papers'  => Paper::count(),
                 'matched' => $questions->total(),
+                'trashed' => Question::onlyTrashed()->count(),
             ],
         ]);
     }
@@ -210,21 +233,36 @@ class QuestionBankController extends Controller
             ->with('ok', 'Question updated.');
     }
 
+    /**
+     * Soft-delete only — a question is NEVER removed from the database. It moves to
+     * Trash (recoverable via restore); its options and images are kept intact so a
+     * restore is lossless, and frozen exams keep rendering it (ExamQuestion::question
+     * uses withTrashed). Active questions must be archived/drafted first.
+     */
     public function destroy(Question $question)
     {
         if (! in_array($question->status, self::DELETABLE, true)) {
-            return back()->with('err', 'Active questions can’t be deleted - move them to draft, under review, or archived first.');
+            return back()->with('err', 'Active questions can’t be moved to Trash - set them to draft, under review, or archived first.');
         }
 
-        DB::transaction(function () use ($question) {
-            $this->deleteImages($question->images);
-            $question->options()->delete();
-            $question->delete();
-        });
+        $question->delete(); // soft delete (sets deleted_at; row, options and images all kept)
 
         return redirect()
             ->route('v2.super_admin.question_bank.index')
-            ->with('ok', 'Question deleted.');
+            ->with('ok', 'Question moved to Trash. You can restore it any time from the Trash view.');
+    }
+
+    /**
+     * Bring a soft-deleted question back into the bank. Soft-deleted models don't
+     * route-bind (the SoftDeletes scope hides them), so we resolve the hashid by hand.
+     */
+    public function restore(string $question)
+    {
+        $id = unhid($question) ?? (ctype_digit($question) ? (int) $question : null);
+        $q = Question::onlyTrashed()->findOrFail($id);
+        $q->restore();
+
+        return back()->with('ok', 'Question restored.');
     }
 
     public function setStatus(Request $request, Question $question)
@@ -338,9 +376,9 @@ class QuestionBankController extends Controller
     /**
      * Apply all image changes, then recompute layout_type the way the importer
      * classifies the corpus:
-     *   option_table   — a single answer image (table/graph) with A–D circles
+     *   option_table   -> a single answer image (table/graph) with A–D circles
      *   question_diagram_and_option_images / option_images / question_diagram /
-     *   text_only      — derived from stem + per-option images.
+     *   text_only      -> derived from stem + per-option images.
      */
     private function syncImages(Question $question, Request $request, string $answerMode): void
     {

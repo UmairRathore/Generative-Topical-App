@@ -176,6 +176,19 @@
                 <option value="unanswered" @selected($filters['answer'] === 'unanswered')>No answer</option>
             </select>
         </div>
+        {{-- Image-content filter: each diagram/option/table image role gets its own QA filter. --}}
+        <div class="qb-image" style="width: 170px;">
+            <label style="{{ $labelStyle }}">Image</label>
+            <select name="image" style="{{ $selStyle }} width: 100%;">
+                <option value="">Any</option>
+                <option value="diagram" @selected($filters['image'] === 'diagram')>Question diagram</option>
+                <option value="option" @selected($filters['image'] === 'option')>Option images</option>
+                <option value="table" @selected($filters['image'] === 'table')>Answer table</option>
+                <option value="reference" @selected($filters['image'] === 'reference')>Reference sheet</option>
+                <option value="any" @selected($filters['image'] === 'any')>Has any image</option>
+                <option value="none" @selected($filters['image'] === 'none')>No images (text only)</option>
+            </select>
+        </div>
         {{-- Status is driven by the quick-filter pills below; carried through on Apply. --}}
         <input type="hidden" name="status" value="{{ $filters['status'] }}">
         <button type="submit" class="btn btn-primary qb-apply"><x-icon name="filter" size="14"/> Apply</button>
@@ -186,10 +199,15 @@
 {{-- Quick status filter - visible in both table + gallery views --}}
 <div class="flex items-center" style="gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
     <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-right: 2px;">Status</span>
-    @foreach (['' => 'All', 'active' => 'Active', 'draft' => 'Draft', 'under_review' => 'Under review', 'archived' => 'Archived'] as $val => $lbl)
+    @foreach (['' => 'All', 'active' => 'Active', 'draft' => 'Draft', 'under_review' => 'Under review', 'archived' => 'Archived', 'untagged' => 'Untagged'] as $val => $lbl)
         <a href="{{ request()->fullUrlWithQuery(['status' => $val, 'page' => 1]) }}"
            class="btn btn-sm {{ $filters['status'] === $val ? 'btn-primary' : 'btn-ghost' }}">{{ $lbl }}</a>
     @endforeach
+    {{-- Trash = soft-deleted questions (recoverable; never permanently removed). --}}
+    <a href="{{ request()->fullUrlWithQuery(['status' => 'trashed', 'page' => 1]) }}" style="margin-left: auto;"
+       class="btn btn-sm {{ $filters['status'] === 'trashed' ? 'btn-primary' : 'btn-ghost' }}">
+        <x-icon name="trash" size="13"/> Trash @if (($stats['trashed'] ?? 0) > 0)({{ number_format($stats['trashed']) }})@endif
+    </a>
 </div>
 
 {{-- View toggle --}}
@@ -261,14 +279,31 @@
                     <span class="badge badge-blocker" style="font-size: 10px;">No answer</span>
                 @endif
                 <span class="badge {{ $statusBadge($q->status) }}">{{ $statusLabel($q->status) }}</span>
-                <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
-                @if (in_array($q->status, $deletable, true))
-                    <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"
-                            data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
-                            data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
-                            @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
-                        <x-icon name="trash" size="12"/>
-                    </button>
+                @if ($q->trashed())
+                    <span class="badge badge-soft" style="font-size: 10px;">In Trash</span>
+                    <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--emerald-700);" title="Restore from Trash"><x-icon name="check" size="12"/> Restore</button>
+                    </form>
+                @else
+                    <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
+                    <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
+                        @csrf @method('PATCH')
+                        <select name="status" onchange="this.form.submit()" title="Change status"
+                                style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
+                            @foreach ($statuses as $st)
+                                <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
+                            @endforeach
+                        </select>
+                    </form>
+                    @if (in_array($q->status, $deletable, true))
+                        <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Move to Trash"
+                                data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                                data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                                @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                            <x-icon name="trash" size="12"/>
+                        </button>
+                    @endif
                 @endif
             </div>
             <div style="padding: 20px 22px; max-width: 760px;">
@@ -342,23 +377,31 @@
                     </td>
                     <td data-label="Actions" style="padding: var(--pad-cell); vertical-align: top; text-align: right; white-space: nowrap;">
                         <div class="flex items-center" style="gap: 6px; justify-content: flex-end; flex-wrap: wrap;">
-                            <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
-                            <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
-                                @csrf @method('PATCH')
-                                <select name="status" onchange="this.form.submit()" title="Change status"
-                                        style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
-                                    @foreach ($statuses as $st)
-                                        <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
-                                    @endforeach
-                                </select>
-                            </form>
-                            @if (in_array($q->status, $deletable, true))
-                                <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Delete"
-                                        data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
-                                        data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
-                                        @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
-                                    <x-icon name="trash" size="12"/>
-                                </button>
+                            @if ($q->trashed())
+                                <span class="badge badge-soft" style="font-size: 10px;">In Trash</span>
+                                <form method="POST" action="{{ route('v2.super_admin.question_bank.restore', $q) }}" style="display: inline;">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--emerald-700);" title="Restore from Trash"><x-icon name="check" size="12"/> Restore</button>
+                                </form>
+                            @else
+                                <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm"><x-icon name="edit" size="12"/> Edit</a>
+                                <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}" style="display: inline;">
+                                    @csrf @method('PATCH')
+                                    <select name="status" onchange="this.form.submit()" title="Change status"
+                                            style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
+                                        @foreach ($statuses as $st)
+                                            <option value="{{ $st }}" @selected($q->status === $st)>{{ $statusLabel($st) }}</option>
+                                        @endforeach
+                                    </select>
+                                </form>
+                                @if (in_array($q->status, $deletable, true))
+                                    <button type="button" class="btn btn-ghost btn-sm" style="color: var(--bad);" title="Move to Trash"
+                                            data-action="{{ route('v2.super_admin.question_bank.destroy', $q) }}"
+                                            data-label="{{ $q->source_paper }} · Q{{ $q->question_number }}"
+                                            @click="delAction = $el.dataset.action; delLabel = $el.dataset.label; delOpen = true">
+                                        <x-icon name="trash" size="12"/>
+                                    </button>
+                                @endif
                             @endif
                         </div>
                     </td>
@@ -406,16 +449,16 @@
          style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 430px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
         <div class="flex items-center gap-2" style="margin-bottom: 10px;">
             <span style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:99px; background: rgba(var(--bad-rgb,255,0,0),.12); color: var(--bad);"><x-icon name="trash" size="16"/></span>
-            <h3 class="serif" style="font-size: 18px; font-weight: 600;">Delete question?</h3>
+            <h3 class="serif" style="font-size: 18px; font-weight: 600;">Move to Trash?</h3>
         </div>
         <p style="font-size: 13.5px; color: var(--text-soft); line-height: 1.55; margin-bottom: 22px;">
-            You're about to permanently delete <strong x-text="delLabel" style="color: var(--text);"></strong> and its options. This cannot be undone.
+            <strong x-text="delLabel" style="color: var(--text);"></strong> will be moved to the Trash. It keeps its options and images and is <strong style="color: var(--text);">never permanently deleted</strong> — you can restore it any time from the Trash view.
         </p>
         <div class="flex items-center justify-end gap-2">
             <button type="button" class="btn btn-ghost" @click="delOpen = false">Cancel</button>
             <form method="POST" :action="delAction" style="display: inline;">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn" style="background: var(--bad); color: #fff; border-color: var(--bad);"><x-icon name="trash" size="13"/> Delete</button>
+                <button type="submit" class="btn" style="background: var(--bad); color: #fff; border-color: var(--bad);"><x-icon name="trash" size="13"/> Move to Trash</button>
             </form>
         </div>
     </div>

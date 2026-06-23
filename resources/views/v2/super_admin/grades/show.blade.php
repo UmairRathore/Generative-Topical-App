@@ -2,12 +2,12 @@
 @section('page_title', $grade->name)
 
 @section('content')
-<a href="{{ route('v2.super_admin.schools.grades.index', $school) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="12"/> Grades
+<a href="{{ route('v2.super_admin.schools.branches.show', [$school, $branch]) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="12"/> {{ $school->name }} · {{ $branch->name }}
 </a>
 
 <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $grade->name }}</h2>
-<p style="color: var(--text-soft); font-size: 13px; margin-top: 2px; margin-bottom: 20px;">{{ $school->name }}</p>
+<p style="color: var(--text-soft); font-size: 13px; margin-top: 2px; margin-bottom: 20px;">{{ $school->name }} · {{ $branch->name }}</p>
 
 {{-- KPIs --}}
 <div class="grid" style="grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 24px;">
@@ -45,7 +45,7 @@
             </thead>
             <tbody>
                 @forelse ($classes as $c)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, hid($c['id'])]) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.branches.classes.show', [$school, $branch, hid($c['id'])]) }}'">
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c['name'] }}</td>
                         <td data-label="Teacher" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c['teacher'] }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c['students'] }}</td>

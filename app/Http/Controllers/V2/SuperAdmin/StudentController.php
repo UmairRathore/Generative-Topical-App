@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2\SuperAdmin;
 
 use App\Http\Controllers\Controller;
+use App\Models\V2\Branch;
 use App\Models\V2\Exam;
 use App\Models\V2\School;
 use App\Models\V2\Student;
@@ -12,7 +13,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Student detail + individual graded paper (unscoped)
+| Super Admin: Student detail + individual graded paper (unscoped)
 |--------------------------------------------------------------------------
 | show() reuses ExamService::studentStats verbatim. paper() replicates the
 | Teacher\ExamController::studentPaper data-prep so the shared answer_review
@@ -20,21 +21,24 @@ use Illuminate\View\View;
 */
 class StudentController extends Controller
 {
-    public function show(School $school, Student $student, ExamService $service): View
+    public function show(School $school, Branch $branch, Student $student, ExamService $service): View
     {
-        abort_unless($student->school_id === $school->id, 404);
+        abort_unless($branch->school_id === $school->id, 404);
+        abort_unless($student->branch_id === $branch->id, 404);
 
         return view('v2.super_admin.students.show', [
             'school'  => $school,
+            'branch'  => $branch,
             'student' => $student,
             'stats'   => $service->studentStats($student),
         ]);
     }
 
-    public function paper(School $school, Exam $exam, Student $student, ExamService $service): View
+    public function paper(School $school, Branch $branch, Exam $exam, Student $student, ExamService $service): View
     {
+        abort_unless($branch->school_id === $school->id, 404);
         abort_unless($exam->school_id === $school->id, 404);
-        abort_unless($student->school_id === $school->id, 404);
+        abort_unless($student->branch_id === $branch->id, 404);
         abort_unless(
             StudentEnrollment::where('class_id', $exam->class_id)
                 ->where('student_id', $student->id)->exists(),
@@ -49,6 +53,7 @@ class StudentController extends Controller
 
         return view('v2.super_admin.students.paper', [
             'school'     => $school,
+            'branch'     => $branch,
             'exam'       => $exam,
             'student'    => $student,
             'attempt'    => $attempt,

@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Schools
+| Super Admin: Schools
 |--------------------------------------------------------------------------
 | Read-only listing + per-school detail across the whole platform. The School
 | model carries no global scope (root tenant table), and the ExamService stat
@@ -56,8 +56,7 @@ class SchoolController extends Controller
             'school'     => $school,
             'overview'   => $service->schoolOverview($school->id),
             'topicStats' => $service->schoolTopicStats($school->id),
-            'teachers'   => $service->schoolTeacherRows($school->id),
-            'classes'    => $service->schoolClassRows($school->id),
+            'branches'   => $service->schoolBranchRows($school->id),
         ]);
     }
 }

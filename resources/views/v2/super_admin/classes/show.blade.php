@@ -10,8 +10,8 @@
 @endphp
 
 @section('content')
-<a href="{{ route('v2.super_admin.schools.show', $school) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="12"/> {{ $school->name }}
+<a href="{{ route('v2.super_admin.schools.branches.show', [$school, $branch]) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="12"/> {{ $school->name }} · {{ $branch->name }}
 </a>
 
 <div class="flex items-center gap-2" style="margin-bottom: 4px; flex-wrap: wrap;">
@@ -58,6 +58,6 @@
 {{-- Per-student × per-topic matrix --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px;">
     <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Per-student, per-topic</div>
-    @include('v2.partials.student_matrix', ['matrix' => $matrix, 'studentRoute' => 'v2.super_admin.schools.students.show'])
+    @include('v2.partials.student_matrix', ['matrix' => $matrix, 'studentRoute' => 'v2.super_admin.schools.branches.students.show', 'studentRouteParams' => [$school, $branch]])
 </div>
 @endsection

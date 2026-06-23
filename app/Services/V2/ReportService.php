@@ -20,9 +20,9 @@ class ReportService
 {
     public function __construct(private ExamService $exams) {}
 
-    public function build(Student $student, Carbon $since, string $periodLabel): array
+    public function build(Student $student, Carbon $since, string $periodLabel, ?Carbon $until = null): array
     {
-        $stats = $this->exams->studentStats($student, $since);
+        $stats = $this->exams->studentStats($student, $since, $until);
 
         return [
             'stats'     => $stats,
@@ -54,17 +54,32 @@ class ReportService
     {
         $first = strtok($student->name, ' ');
         $compact = collect($stats['subjects'])->map(fn ($s) => [
-            'subject' => $s['subject'],
-            'average' => $s['avg'],
-            'tests'   => $s['tests_count'],
-            'topics'  => collect($s['topics'])->map(fn ($t) => ['topic' => $t['topic'], 'percent' => $t['percent']])->all(),
+            'subject'         => $s['subject'],
+            'average'         => $s['avg'],
+            'tests'           => $s['tests_count'],
+            'topics'          => collect($s['topics'])->map(fn ($t) => [
+                'topic'     => $t['topic'],
+                'percent'   => $t['percent'],
+                // Subtopic-level accuracy lets the model name precise focus areas.
+                'subtopics' => collect($t['subtopics'] ?? [])
+                    ->map(fn ($st) => ['subtopic' => $st['subtopic'], 'percent' => $st['percent']])->all(),
+            ])->all(),
+            // The complete list of real topics in this subject — the only pool the model
+            // may pick prerequisite recommendations from.
+            'syllabus_topics' => $s['all_topics'] ?? [],
         ])->all();
 
         $prompt = "Student: {$first}\nPeriod: {$periodLabel}\nOverall average: {$stats['overall']['avg']}%\n"
-            ."Subjects (with per-topic accuracy %):\n".json_encode($compact, JSON_PRETTY_PRINT)."\n\n"
-            ."Write a concise progress report. Return STRICT JSON with keys: "
-            ."\"summary\" (2-3 sentences, parent-friendly, encouraging but honest, mention overall standing and the biggest area to improve), "
-            ."and \"subjects\" (an object mapping each subject name to a 1-2 sentence comment naming its strongest and weakest topic with a concrete next step). Use the student's first name.";
+            ."Subjects (per-topic and per-subtopic accuracy %, plus the subject's full syllabus_topics list):\n"
+            .json_encode($compact, JSON_PRETTY_PRINT)."\n\n"
+            ."Write a concise, actionable progress report. Return STRICT JSON with keys: "
+            ."\"summary\" (2-3 sentences, parent-friendly, encouraging but honest; mention overall standing and the single biggest area to improve), "
+            ."and \"subjects\" (an object mapping each subject name to a 2-3 sentence comment). For each subject: "
+            ."(1) name the strongest topic; "
+            ."(2) identify the weakest topic and, using the per-subtopic accuracy, name the 1-3 specific subtopics to focus on first; "
+            ."(3) recommend 1-2 prerequisite/foundational topics to revisit to fix that weakness — chosen ONLY from that subject's "
+            ."\"syllabus_topics\" list, and never invent a topic that is not in that list. "
+            ."Use the student's first name and keep every recommendation concrete.";
 
         $resp = Http::withToken($key)->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
             'model'           => config('services.openai.model', 'gpt-4o-mini'),
@@ -110,7 +125,17 @@ class ReportService
                 $parts[] = "Strongest topic: {$best['topic']} ({$best['percent']}%).";
             }
             if ($weak && $weak['topic'] !== ($best['topic'] ?? null)) {
-                $parts[] = "Needs work on {$weak['topic']} ({$weak['percent']}%) — recommend focused practice there.";
+                // Drill into the weak topic's subtopics to name precise focus areas (from real data).
+                $weakSubs = collect($weak['subtopics'] ?? [])
+                    ->filter(fn ($st) => $st['total'] > 0)
+                    ->sortBy('percent')
+                    ->take(2)
+                    ->map(fn ($st) => "{$st['subtopic']} ({$st['percent']}%)")
+                    ->all();
+
+                $line = "Needs work on {$weak['topic']} ({$weak['percent']}%)";
+                $line .= $weakSubs ? ' — focus first on '.implode(' and ', $weakSubs).'.' : ' — recommend focused practice there.';
+                $parts[] = $line;
             }
             $subjects[$s['subject']] = implode(' ', $parts);
         }

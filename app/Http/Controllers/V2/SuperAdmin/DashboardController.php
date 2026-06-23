@@ -15,7 +15,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Dashboard
+| Super Admin: Dashboard
 |--------------------------------------------------------------------------
 | Platform-wide overview. Super Admin is NOT school-scoped: the v2 models'
 | `school` global scope only triggers for the school-admin/teacher/student

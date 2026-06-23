@@ -34,13 +34,40 @@ class ExamService
         $topicIds = array_values(array_filter(array_map('intval',
             (array) ($data['topic_ids'] ?? (! empty($data['topic_id']) ? [$data['topic_id']] : [])))));
 
+        $ids = $this->drawRandomIds(
+            $class->subject_id,
+            $topicIds,
+            $count,
+            [],
+            $data['year_from'] ?? null,
+            $data['year_to'] ?? null,
+        );
+
+        shuffle($ids);
+
+        return $this->freeze($teacher, $class, $data, $ids, count($topicIds) === 1 ? $topicIds[0] : null);
+    }
+
+    /**
+     * Draw up to $count random question ids from a subject across the given
+     * topics, excluding $exclude. Answerable questions (known correct_answer) are
+     * preferred so auto-marking works; the rest are filled from the same pool.
+     * Used by both one-shot generation and the live preview / per-question swap.
+     *
+     * @param  array<int,int>  $topicIds
+     * @param  array<int,int>  $exclude
+     * @return array<int,int>
+     */
+    public function drawRandomIds(int $subjectId, array $topicIds, int $count, array $exclude = [], ?int $yearFrom = null, ?int $yearTo = null): array
+    {
         $base = Question::query()
             ->active() // draft / archived questions are never drawn into a test
             ->has('options') // never draw a question with no answer choices (incomplete source data)
-            ->where('subject_id', $class->subject_id)
+            ->where('subject_id', $subjectId)
             ->when($topicIds, fn ($q, $t) => $q->whereIn('topic_id', $t))
-            ->when($data['year_from'] ?? null, fn ($q, $y) => $q->where('year', '>=', $y))
-            ->when($data['year_to'] ?? null, fn ($q, $y) => $q->where('year', '<=', $y));
+            ->when($exclude, fn ($q, $e) => $q->whereNotIn('id', $e))
+            ->when($yearFrom, fn ($q, $y) => $q->where('year', '>=', $y))
+            ->when($yearTo, fn ($q, $y) => $q->where('year', '<=', $y));
 
         // Prefer answerable questions; fill the remainder if there aren't enough.
         $ids = (clone $base)->whereNotNull('correct_answer')
@@ -53,9 +80,7 @@ class ExamService
             $ids = array_merge($ids, $fill);
         }
 
-        shuffle($ids);
-
-        return $this->freeze($teacher, $class, $data, $ids, count($topicIds) === 1 ? $topicIds[0] : null);
+        return $ids;
     }
 
     /**
@@ -203,11 +228,18 @@ class ExamService
      * Aggregate a student's performance: overall, then per subject, and within
      * each subject a per-topic breakdown and the list of tests taken.
      */
-    public function studentStats(Student $student, ?\Illuminate\Support\Carbon $since = null): array
+    public function studentStats(Student $student, ?\Illuminate\Support\Carbon $since = null, ?\Illuminate\Support\Carbon $until = null, ?array $subjectIds = null): array
     {
+        // When $subjectIds is given (e.g. a teacher who only teaches certain
+        // subjects), every aggregation below is scoped to those subjects so the
+        // overall figures match the subject cards shown.
+        $subjectScope = $subjectIds !== null ? array_values(array_unique($subjectIds)) : null;
+
         $attempts = ExamAttempt::where('student_id', $student->id)
             ->where('status', 'submitted')
             ->when($since, fn ($q) => $q->where('submitted_at', '>=', $since))
+            ->when($until, fn ($q) => $q->where('submitted_at', '<=', $until))
+            ->when($subjectScope !== null, fn ($q) => $q->whereHas('exam', fn ($e) => $e->whereIn('subject_id', $subjectScope)))
             ->with(['exam.subject', 'exam.topic'])
             ->orderByDesc('submitted_at')
             ->get();
@@ -219,24 +251,68 @@ class ExamService
             ->where('at.student_id', $student->id)
             ->where('at.status', 'submitted')
             ->when($since, fn ($q) => $q->where('at.submitted_at', '>=', $since))
-            ->selectRaw('q.subject_id, t.external_id, t.title as topic, count(*) as total, sum(a.is_correct) as correct')
-            ->groupBy('q.subject_id', 't.external_id', 't.title')
+            ->when($until, fn ($q) => $q->where('at.submitted_at', '<=', $until))
+            ->when($subjectScope !== null, fn ($q) => $q->whereIn('q.subject_id', $subjectScope))
+            ->selectRaw('q.subject_id, q.topic_id, t.external_id, t.title as topic, count(*) as total, sum(a.is_correct) as correct')
+            ->groupBy('q.subject_id', 'q.topic_id', 't.external_id', 't.title')
             ->orderByRaw('CAST(t.external_id AS UNSIGNED)')
             ->get()
+            ->groupBy('subject_id');
+
+        // Per-subtopic accuracy, keyed by topic_id so it nests under each topic.
+        $subtopicRows = DB::table('v2_exam_answers as a')
+            ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+            ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
+            ->leftJoin('v2_subtopics as st', 'st.id', '=', 'q.subtopic_id')
+            ->where('at.student_id', $student->id)
+            ->where('at.status', 'submitted')
+            ->when($since, fn ($q) => $q->where('at.submitted_at', '>=', $since))
+            ->when($until, fn ($q) => $q->where('at.submitted_at', '<=', $until))
+            ->when($subjectScope !== null, fn ($q) => $q->whereIn('q.subject_id', $subjectScope))
+            ->selectRaw('q.topic_id, st.external_id, st.title as subtopic, count(*) as total, sum(a.is_correct) as correct')
+            ->groupBy('q.topic_id', 'st.external_id', 'st.title')
+            ->orderByRaw('CAST(st.external_id AS UNSIGNED)')
+            ->get()
+            ->groupBy('topic_id');
+
+        // Full syllabus (every topic title) per subject, in syllabus order — lets the
+        // narrative recommend prerequisite topics chosen only from real, existing topics.
+        $subjectIds = $attempts->pluck('exam.subject_id')->filter()->unique()->all();
+        $syllabus = DB::table('v2_topics')
+            ->whereIn('subject_id', $subjectIds)
+            ->orderByRaw('CAST(external_id AS UNSIGNED)')
+            ->get(['subject_id', 'title'])
             ->groupBy('subject_id');
 
         $subjects = [];
         foreach ($attempts->groupBy(fn ($a) => $a->exam->subject_id) as $subjectId => $group) {
             $subjects[] = [
+                'subject_id'  => $subjectId,
                 'subject'     => $group->first()->exam->subject?->name ?? 'Subject',
                 'tests_count' => $group->count(),
                 'avg'         => (int) round($group->avg(fn ($a) => $a->percentage)),
-                'topics'      => collect($topicRows[$subjectId] ?? [])->map(fn ($r) => [
-                    'topic'   => $r->topic ?? 'Untagged',
-                    'correct' => (int) $r->correct,
-                    'total'   => (int) $r->total,
-                    'percent' => $r->total ? (int) round($r->correct / $r->total * 100) : 0,
-                ])->all(),
+                // Only topics that actually appeared in a test this period (total > 0) —
+                // a topic never asked is omitted, not shown as 0%.
+                'topics'      => collect($topicRows[$subjectId] ?? [])
+                    ->filter(fn ($r) => (int) $r->total > 0)
+                    ->map(fn ($r) => [
+                        'topic'     => $r->topic ?? 'Untagged',
+                        'correct'   => (int) $r->correct,
+                        'total'     => (int) $r->total,
+                        'percent'   => $r->total ? (int) round($r->correct / $r->total * 100) : 0,
+                        // Subtopics that appeared under this topic this period (total > 0).
+                        'subtopics' => collect($subtopicRows[$r->topic_id] ?? [])
+                            ->filter(fn ($s) => (int) $s->total > 0)
+                            ->map(fn ($s) => [
+                                'subtopic' => $s->subtopic ?? 'Untagged',
+                                'correct'  => (int) $s->correct,
+                                'total'    => (int) $s->total,
+                                'percent'  => $s->total ? (int) round($s->correct / $s->total * 100) : 0,
+                            ])->values()->all(),
+                    ])->values()->all(),
+                // Every topic in this subject's syllabus (not just tested ones) — the pool
+                // the narrative may draw prerequisite recommendations from.
+                'all_topics'  => collect($syllabus[$subjectId] ?? [])->pluck('title')->all(),
                 'tests'       => $group->map(fn ($a) => [
                     'exam_id' => $a->exam_id,
                     'title'   => $a->exam->title,
@@ -479,6 +555,15 @@ class ExamService
                 'submissions' => (int) ($perf[$t->id]->submissions ?? 0),
                 'avg'         => isset($perf[$t->id]) && $perf[$t->id]->avg_pct !== null ? (int) round($perf[$t->id]->avg_pct) : null,
             ])->all();
+    }
+
+    /** Per-branch summary rows for one school (students/teachers/classes/exams + avg). */
+    public function schoolBranchRows(int $schoolId): array
+    {
+        return DB::table('v2_branches')->where('school_id', $schoolId)->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($b) => ['id' => $b->id, 'name' => $b->name] + $this->schoolOverview($schoolId, $b->id))
+            ->all();
     }
 
     /** Per-class summary rows for the school (optionally narrowed to a branch). */
@@ -741,6 +826,80 @@ class ExamService
         }
 
         return $this->topicStats($base);
+    }
+
+    /**
+     * Same answer-weighted topic accuracy, but GROUPED BY SUBJECT — so the
+     * platform-wide rollup (which spans Physics, Chemistry, Biology, …) reads as
+     * one block per subject instead of a single mixed list. Each group carries the
+     * subject name/code/level, an overall accuracy, and its per-topic rows
+     * (untagged questions roll up as "Untagged" within their own subject). Groups
+     * are ordered by volume (most-answered subject first).
+     *
+     * @return array<int,array{subject:string,code:?string,level:?string,correct:int,total:int,percent:int,topics:array<int,array{topic:string,correct:int,total:int,percent:int}>}>
+     */
+    public function topicWideStatsBySubject(?int $schoolId = null): array
+    {
+        $base = DB::table('v2_exam_answers as a')
+            ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+            ->where('at.status', 'submitted');
+
+        if ($schoolId !== null) {
+            $base->join('v2_exams as e', 'e.id', '=', 'at.exam_id')->where('e.school_id', $schoolId);
+        }
+
+        return $this->topicStatsBySubject($base);
+    }
+
+    /** Subject-grouped topic accuracy for one school (optionally narrowed to a branch). */
+    public function schoolTopicStatsBySubject(int $schoolId, ?int $branchId = null): array
+    {
+        return $this->topicStatsBySubject($this->schoolAnswersBase($schoolId, $branchId));
+    }
+
+    /**
+     * Shared engine for the subject-grouped topic rollups: takes an answers base
+     * query (already scoped: platform / school / branch) and returns one block per
+     * subject — subject name/code/level, overall accuracy, and its per-topic rows
+     * (untagged questions roll up as "Untagged" within their own subject). Groups
+     * are ordered by volume (most-answered subject first).
+     *
+     * @return array<int,array{subject:string,code:?string,level:?string,correct:int,total:int,percent:int,topics:array<int,array{topic:string,correct:int,total:int,percent:int}>}>
+     */
+    private function topicStatsBySubject($query): array
+    {
+        $rows = $query
+            ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
+            ->join('v2_subjects as s', 's.id', '=', 'q.subject_id')
+            ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
+            ->selectRaw('s.id as subject_id, s.name as subject, s.code, s.level, t.external_id, t.title, count(*) as total, sum(a.is_correct) as correct')
+            ->groupBy('s.id', 's.name', 's.code', 's.level', 't.external_id', 't.title')
+            ->orderByRaw('t.external_id IS NULL, CAST(t.external_id AS UNSIGNED)') // tagged by syllabus number, untagged last
+            ->get();
+
+        $groups = [];
+        foreach ($rows as $r) {
+            $sid = (int) $r->subject_id;
+            $groups[$sid] ??= ['subject' => $r->subject, 'code' => $r->code, 'level' => $r->level, 'correct' => 0, 'total' => 0, 'topics' => []];
+            $groups[$sid]['topics'][] = [
+                'topic'   => $r->title ?? 'Untagged',
+                'correct' => (int) $r->correct,
+                'total'   => (int) $r->total,
+                'percent' => $r->total ? (int) round($r->correct / $r->total * 100) : 0,
+            ];
+            $groups[$sid]['correct'] += (int) $r->correct;
+            $groups[$sid]['total']   += (int) $r->total;
+        }
+
+        $out = array_map(function ($g) {
+            $g['percent'] = $g['total'] ? (int) round($g['correct'] / $g['total'] * 100) : 0;
+
+            return $g;
+        }, array_values($groups));
+
+        usort($out, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        return $out;
     }
 
     /**

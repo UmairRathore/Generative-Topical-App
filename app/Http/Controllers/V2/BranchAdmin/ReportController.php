@@ -25,9 +25,12 @@ class ReportController extends BaseController
     {
         abort_unless($student->branch_id === $this->branchId(), 403);
 
-        [$since, $label, $key] = $this->window($request->input('duration', 'monthly'));
+        [$since, $until, $label, $key] = $this->window($request);
 
-        $data = $reports->build($student, $since, $label);
+        $data = $reports->build($student, $since, $label, $until);
+
+        $tests = $data['stats']['overall']['tests'] ?? 0;
+        $avg = $data['stats']['overall']['avg'] ?? null;
 
         $report = Report::create([
             'school_id'    => $student->school_id,
@@ -37,15 +40,22 @@ class ReportController extends BaseController
             'period_key'   => $key,
             'period_label' => $label,
             'range_from'   => $key === 'all' ? null : $since,
-            'range_to'     => now(),
-            'overall_avg'  => $data['stats']['overall']['avg'] ?? null,
-            'tests_count'  => $data['stats']['overall']['tests'] ?? 0,
+            'range_to'     => $until,
+            'overall_avg'  => $avg,
+            'tests_count'  => $tests,
             'source'       => $data['narrative']['source'] ?? 'template',
             'payload'      => $data,
         ]);
 
+        // No data in the window is not an error — the report is still saved, but say so plainly.
+        if ($tests === 0) {
+            return redirect()->route('v2.branch.student', $student)
+                ->with('info', "No completed tests for {$student->name} in {$label} — an empty report was saved.")
+                ->with('report_ready', $report->id);
+        }
+
         return redirect()->route('v2.branch.student', $student)
-            ->with('success', "Report generated for {$student->name} ({$label}).")
+            ->with('success', "Report generated for {$student->name} — {$label}: {$tests} tests, {$avg}% average.")
             ->with('report_ready', $report->id);
     }
 
@@ -69,14 +79,37 @@ class ReportController extends BaseController
         return $pdf->download('report-'.Str::slug($student->name).'-'.$report->created_at->format('Y-m-d').'.pdf');
     }
 
-    /** Map a duration key to [since, label, key]. Default = monthly (last 31 days). */
-    private function window(string $duration): array
+    /**
+     * Resolve the report window into [since, until, label, key]. Supports preset
+     * rolling windows, all-time, and a custom from–to range (validated).
+     */
+    private function window(Request $request): array
     {
-        return match ($duration) {
-            'quarter' => [now()->subDays(92), 'the last 3 months', 'quarter'],
-            'year'    => [now()->startOfYear(), now()->year.' to date', 'year'],
-            'all'     => [Carbon::createFromTimestamp(0), 'all time', 'all'],
-            default   => [now()->subDays(31), 'the last month', 'monthly'],
+        $duration = (string) $request->input('duration', 'month');
+
+        if ($duration === 'custom') {
+            $v = $request->validate([
+                'from' => ['required', 'date', 'before_or_equal:today'],
+                'to'   => ['required', 'date', 'after_or_equal:from', 'before_or_equal:today'],
+            ]);
+            $from = Carbon::parse($v['from'])->startOfDay();
+            $to   = Carbon::parse($v['to'])->endOfDay();
+
+            return [$from, $to, $from->format('j M Y').' – '.$to->format('j M Y'), 'custom'];
+        }
+
+        [$days, $label] = match ($duration) {
+            'week'     => [7,   'the last week'],
+            '2weeks'   => [14,  'the last 2 weeks'],
+            '3weeks'   => [21,  'the last 3 weeks'],
+            '2months'  => [61,  'the last 2 months'],
+            '3months'  => [92,  'the last 3 months'],
+            'quarter'  => [120, 'the last quarter'],
+            '6months'  => [183, 'the last 6 months'],
+            '10months' => [305, 'the last 10 months'],
+            default    => [31,  'the last month'], // 'month'
         };
+
+        return [now()->subDays($days)->startOfDay(), now(), $label, $duration];
     }
 }

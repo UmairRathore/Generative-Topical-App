@@ -47,7 +47,13 @@ class ExamController extends Controller
 
         $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'subject']);
 
-        return view('v2.student.exams.take', compact('exam', 'attempt'));
+        // Chemistry exams get a Periodic Table reference panel (not question content).
+        $ptPath = config('v2.periodic_table');
+        $periodicTable = in_array($exam->subject?->code, config('v2.periodic_table_codes', []), true)
+            ? '/storage/'.$ptPath.'?v='.(@filemtime(public_path('storage/'.$ptPath)) ?: 1)
+            : null;
+
+        return view('v2.student.exams.take', compact('exam', 'attempt', 'periodicTable'));
     }
 
     public function submit(Exam $exam, Request $request, ExamService $service)

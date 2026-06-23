@@ -35,10 +35,78 @@
     @endforeach
 </div>
 
-{{-- School per-topic --}}
-<div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 22px;">
-    <div style="font-size: 13px; font-weight: 600; margin-bottom: 14px;">Performance by topic - this branch</div>
-    @include('v2.partials.topic_bars', ['stats' => $topicStats])
+{{-- By grade + by subject --}}
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; margin-bottom: 22px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
+        <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600;">By grade</div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: var(--soft-surface); border-bottom: 1px solid var(--border);">
+                @foreach (['Grade', 'Classes', 'Students', 'Exams', 'Avg', ''] as $h)
+                    <th style="padding: var(--pad-cell); text-align: {{ $loop->last ? 'right' : 'left' }}; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint);">{{ $h }}</th>
+                @endforeach
+            </tr></thead>
+            <tbody>
+                @forelse ($grades as $g)
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $g['grade'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $g['classes'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $g['students'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $g['exams'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $g['avg'] !== null ? $tone($g['avg']) : 'var(--text-faint)' }};">{{ $g['avg'] !== null ? $g['avg'].'%' : '-' }}</td>
+                        <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.branch.grade', hid($g['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No grades yet.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
+        <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600;">By subject</div>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: var(--soft-surface); border-bottom: 1px solid var(--border);">
+                @foreach (['Subject', 'Classes', 'Students', 'Exams', 'Avg', ''] as $h)
+                    <th style="padding: var(--pad-cell); text-align: {{ $loop->last ? 'right' : 'left' }}; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint);">{{ $h }}</th>
+                @endforeach
+            </tr></thead>
+            <tbody>
+                @forelse ($subjects as $s)
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $s['subject'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $s['classes'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $s['students'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px;">{{ $s['exams'] }}</td>
+                        <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 600; color: {{ $s['avg'] !== null ? $tone($s['avg']) : 'var(--text-faint)' }};">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</td>
+                        <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.branch.subject', hid($s['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
+                    </tr>
+                @empty
+                    <tr><td colspan="6" style="padding: 28px; text-align: center; color: var(--text-faint); font-size: 13px;">No subjects yet.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{-- Per-topic accuracy, separated by subject --}}
+<div style="margin-bottom: 22px;">
+    <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Performance by topic - by subject</div>
+    @forelse ($topicGroups as $tg)
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px;">
+            <div class="flex items-center justify-between" style="margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                <div class="flex items-center gap-2">
+                    <span class="serif" style="font-size: 16px; font-weight: 600;">{{ $tg['subject'] }}</span>
+                    @if ($tg['code'])<span class="badge badge-soft" style="font-size: 10px;">{{ $tg['code'] }}</span>@endif
+                    @if ($tg['level'])<span class="badge badge-soft" style="font-size: 10px;">{{ $tg['level'] }}</span>@endif
+                </div>
+                <span style="font-size: 12.5px; color: var(--text-soft);">{{ number_format($tg['correct']) }}/{{ number_format($tg['total']) }} · {{ $tg['percent'] }}% overall</span>
+            </div>
+            @include('v2.partials.topic_bars', ['stats' => $tg['topics'], 'empty' => 'No submissions yet.'])
+        </div>
+    @empty
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; color: var(--text-faint); font-size: 13px;">
+            No submissions yet - topic accuracy appears once students submit tests.
+        </div>
+    @endforelse
 </div>
 
 <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">

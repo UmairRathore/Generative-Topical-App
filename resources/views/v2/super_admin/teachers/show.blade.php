@@ -2,8 +2,8 @@
 @section('page_title', $teacher->name)
 
 @section('content')
-<a href="{{ route('v2.super_admin.schools.show', $school) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
-    <x-icon name="chev-l" size="12"/> {{ $school->name }}
+<a href="{{ route('v2.super_admin.schools.branches.show', [$school, $branch]) }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px;">
+    <x-icon name="chev-l" size="12"/> {{ $school->name }} · {{ $branch->name }}
 </a>
 
 <h2 class="serif" style="font-size: 26px; font-weight: 600;">{{ $teacher->name }}</h2>
@@ -30,7 +30,7 @@
             </thead>
             <tbody>
                 @forelse ($classes as $c)
-                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.classes.show', [$school, hid($c->id)]) }}'">
+                    <tr style="border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.location='{{ route('v2.super_admin.schools.branches.classes.show', [$school, $branch, hid($c->id)]) }}'">
                         <td data-label="Class" style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $c->name }}<div style="font-size: 11px; color: var(--text-faint);">{{ $c->subject?->name }}</div></td>
                         <td data-label="Grade" style="padding: var(--pad-cell); text-align: center; font-size: 12.5px; color: var(--text-soft);">{{ $c->grade?->name ?? '-' }}</td>
                         <td data-label="Students" style="padding: var(--pad-cell); text-align: center; font-size: 13px;">{{ $c->student_count }}</td>

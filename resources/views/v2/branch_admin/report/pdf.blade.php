@@ -95,10 +95,14 @@
         @endforeach
     @endif
 
+    @php $logoPath = public_path('images/topicaled-logo.svg'); @endphp
     <div class="foot">
-        Generated {{ $generatedAt->format('j M Y, g:i a') }} &middot;
-        {{ $narrative['source'] === 'openai' ? 'Narrative by AI (OpenAI)' : 'Narrative generated from performance data' }}
-        &middot; TopicalEd
+        @if (file_exists($logoPath))
+            <img src="{{ $logoPath }}" height="16" alt="TopicalEd" style="vertical-align: middle; margin-right: 7px;">
+        @endif
+        Generated {{ $generatedAt->format('j M Y, g:i a') }}
+        &middot; AI-assisted performance report
+        &middot; <a href="https://topicaled.com" style="color: #313D4B; text-decoration: none;">TopicalEd</a>
     </div>
 </div>
 </body>

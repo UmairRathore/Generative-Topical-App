@@ -10,6 +10,7 @@
     ];
     [$sbClass, $sbLabel] = $stateBadge[$exam->effectiveStatus()];
     $fieldStyle = 'padding: 8px 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 13px; color: var(--text);';
+    $sessionLabels = ['m' => 'Feb/Mar', 's' => 'May/Jun', 'w' => 'Oct/Nov'];
 @endphp
 
 @section('content')
@@ -18,7 +19,16 @@
     .seg button{padding:8px 18px;font-size:12.5px;font-weight:600;border:0;cursor:pointer;background:var(--bg);color:var(--text-soft);transition:background .12s,color .12s;}
     .seg button.on{background:var(--primary,#061C30);color:#fff;}
     .seg button + button{border-left:1px solid var(--border);}
+    [x-cloak]{display:none!important;}
+    .qprev-overlay{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.5);display:flex;justify-content:center;align-items:flex-start;padding:32px 16px;overflow-y:auto;}
+    .qprev-panel{background:var(--bg);border-radius:var(--r-lg);width:100%;max-width:780px;margin:auto;box-shadow:0 24px 60px rgba(0,0,0,.4);overflow:hidden;}
+    .qprev-head{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 22px;background:var(--surface);border-bottom:1px solid var(--border);z-index:1;}
+    .qprev-close{border:0;background:none;cursor:pointer;color:var(--text-soft);padding:5px;display:inline-flex;border-radius:7px;}
+    .qprev-close:hover{background:var(--soft-surface);}
+    .qprev-body{padding:18px 22px 26px;}
+    .qprev-q{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);padding:20px 22px;margin-bottom:14px;}
 </style>
+<div x-data="{ preview: false }" @keydown.escape.window="preview = false">
 <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
     <x-icon name="chev-l" size="14"/> Back to Exams
 </a>
@@ -38,10 +48,16 @@
             <span class="badge badge-soft">{{ $exam->question_count }} questions</span>
         </div>
     </div>
+    <button type="button" class="btn btn-ghost" @click="preview = true">
+        <x-icon name="eye" size="15"/> Preview questions
+    </button>
 </div>
 
 @if (session('success'))
     <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--ok-rgb,95,160,82),.12); border: 1px solid var(--ok); border-radius: 8px; font-size: 13px; color: var(--ok); font-weight: 600;">{{ session('success') }}</div>
+@endif
+@if (session('error'))
+    <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--bad-rgb,200,70,70),.12); border: 1px solid var(--bad); border-radius: 8px; font-size: 13px; color: var(--bad); font-weight: 600;">{{ session('error') }}</div>
 @endif
 
 {{-- ============ MANAGE: availability + results ============ --}}
@@ -226,5 +242,47 @@
             <p style="font-size: 13px; color: var(--text-faint);">No submissions yet - stats appear once students complete the test.</p>
         @endforelse
     </div>
+</div>
+
+{{-- ============ PREVIEW: the exact frozen paper (custom + random alike) ============ --}}
+{{-- Teleport past the layout's transformed .fade-in wrapper so the fixed overlay
+     anchors to the viewport, not the (scrollable) content column. --}}
+<template x-teleport="body">
+<div class="qprev-overlay" x-show="preview" x-cloak @click.self="preview = false" style="display:none;">
+    <div class="qprev-panel">
+        <div class="qprev-head">
+            <div>
+                <div style="font-size: 15px; font-weight: 700;">Preview · {{ $exam->title }}</div>
+                <div style="font-size: 12px; color: var(--text-faint); margin-top: 2px;">{{ $exam->question_count }} {{ \Illuminate\Support\Str::plural('question', $exam->question_count) }} · correct answers shown in green</div>
+            </div>
+            <button type="button" class="qprev-close" @click="preview = false" aria-label="Close"><x-icon name="x" size="18"/></button>
+        </div>
+        <div class="qprev-body">
+            @forelse ($exam->examQuestions as $eq)
+                @php $q = $eq->question; @endphp
+                @continue (! $q)
+                <div class="qprev-q">
+                    <div class="flex items-center" style="flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
+                        <span class="badge badge-emerald" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
+                        <span style="font-size: 13px; font-weight: 700;">{{ $q->source_paper }}</span>
+                        @if ($q->subject?->level)<span style="font-size: 12.5px; font-weight: 800; color: var(--ink);">{{ $q->subject->level }}</span>@endif
+                        <span style="font-size: 12px; color: var(--text-faint);">Q{{ $q->question_number }} · {{ $q->year }} · {{ $sessionLabels[$q->paper?->session_code] ?? $q->paper?->session_code }}</span>
+                        <span style="flex: 1;"></span>
+                        <button type="button" class="btn btn-ghost btn-sm" style="color: var(--text-soft);"
+                                @click="$dispatch('flag-question', { action: '{{ route('v2.teacher.questions.flag', $q) }}', label: '{{ $q->source_paper }} · Q{{ $q->question_number }}', id: {{ $q->id }} })">
+                            <x-icon name="flag" size="13"/> Report
+                        </button>
+                    </div>
+                    @include('v2.partials.question_card', ['q' => $q])
+                </div>
+            @empty
+                <p style="font-size: 13px; color: var(--text-faint); text-align: center; padding: 24px;">This test has no questions.</p>
+            @endforelse
+        </div>
+    </div>
+</div>
+</template>
+
+@include('v2.partials.flag_modal')
 </div>
 @endsection
