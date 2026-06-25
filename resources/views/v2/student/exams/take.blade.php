@@ -109,6 +109,8 @@
                             @endforeach
                         </div>
                         @endif
+
+                        @include('v2.partials.student_flag', ['exam' => $exam, 'q' => $q])
                     </div>
                 </div>
             </div>

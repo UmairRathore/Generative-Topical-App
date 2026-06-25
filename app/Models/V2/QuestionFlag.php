@@ -23,6 +23,10 @@ class QuestionFlag extends Model
         'question_id',
         'school_id',
         'flagged_by_teacher_id',
+        'level',
+        'flagged_by_student_id',
+        'exam_id',
+        'quality_review_id',
         'reason',
         'note',
         'screenshot_path',
@@ -49,6 +53,16 @@ class QuestionFlag extends Model
         return $this->belongsTo(Teacher::class, 'flagged_by_teacher_id');
     }
 
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class, 'flagged_by_student_id');
+    }
+
+    public function exam(): BelongsTo
+    {
+        return $this->belongsTo(Exam::class, 'exam_id');
+    }
+
     public function school(): BelongsTo
     {
         return $this->belongsTo(School::class, 'school_id');
@@ -57,6 +71,18 @@ class QuestionFlag extends Model
     public function scopeOpen(Builder $query): Builder
     {
         return $query->where('status', 'open');
+    }
+
+    /** Student-raised flags (pending a teacher's review; never auto-hide). */
+    public function scopeStudentLevel(Builder $query): Builder
+    {
+        return $query->where('level', 'student');
+    }
+
+    /** Teacher-raised flags (existing auto-hide + super-admin path). */
+    public function scopeTeacherLevel(Builder $query): Builder
+    {
+        return $query->where('level', 'teacher');
     }
 
     public function reasonLabel(): string

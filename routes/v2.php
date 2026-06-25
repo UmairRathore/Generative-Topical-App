@@ -3,6 +3,7 @@
 use App\Http\Controllers\V2\SchoolAdmin\AnalyticsController as SchoolAdminAnalytics;
 use App\Http\Controllers\V2\SchoolAdmin\AuthController as SchoolAdminAuth;
 use App\Http\Controllers\V2\SchoolAdmin\DashboardController as SchoolAdminDashboard;
+use App\Http\Controllers\V2\SchoolAdmin\FlaggedQuestionController as SchoolAdminFlaggedQuestion;
 use App\Http\Controllers\V2\SchoolAdmin\GradeController as SchoolAdminGrade;
 use App\Http\Controllers\V2\SchoolAdmin\SubjectController as SchoolAdminSubject;
 use App\Http\Controllers\V2\SchoolAdmin\ClassController as SchoolAdminClass;
@@ -10,10 +11,12 @@ use App\Http\Controllers\V2\SchoolAdmin\TeacherController as SchoolAdminTeacher;
 use App\Http\Controllers\V2\SchoolAdmin\StudentController as SchoolAdminStudent;
 use App\Http\Controllers\V2\BranchAdmin\AnalyticsController as BranchAnalytics;
 use App\Http\Controllers\V2\BranchAdmin\AuthController as BranchAuth;
+use App\Http\Controllers\V2\BranchAdmin\FlaggedQuestionController as BranchFlaggedQuestion;
 use App\Http\Controllers\V2\BranchAdmin\ReportController as BranchReport;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
+use App\Http\Controllers\V2\Student\QuestionFlagController as StudentQuestionFlag;
 use App\Http\Controllers\V2\Student\StatsController as StudentStats;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
 use App\Http\Controllers\V2\SuperAdmin\BranchController as SuperAdminBranch;
@@ -195,6 +198,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::post('students/{student}/reset-password', [SchoolAdminStudent::class, 'resetPassword'])->name('students.reset_password');
                 Route::post('students/{student}/enroll', [SchoolAdminStudent::class, 'enroll'])->name('students.enroll');
                 Route::delete('students/{student}/unenroll', [SchoolAdminStudent::class, 'unenroll'])->name('students.unenroll');
+
+                // Flagged questions — read-only audit (escalations + voided), no actions.
+                Route::get('flagged-questions', [SchoolAdminFlaggedQuestion::class, 'index'])->name('flagged_questions.index');
             });
         });
     });
@@ -229,6 +235,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::post('students/{student}/reports', [BranchReport::class, 'generate'])->name('report.generate');
                 Route::get('reports/{report}/pdf', [BranchReport::class, 'pdf'])->name('report.pdf');
                 Route::get('exams/{exam}/students/{student}/paper', [BranchAnalytics::class, 'studentPaper'])->name('student_paper');
+
+                // Flagged questions — read-only audit (escalations + voided), no actions.
+                Route::get('flagged-questions', [BranchFlaggedQuestion::class, 'index'])->name('flagged_questions.index');
             });
         });
     });
@@ -269,6 +278,10 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::post('exams', [TeacherExam::class, 'store'])->name('exams.store');
                 Route::patch('exams/{exam}/release', [TeacherExam::class, 'release'])->name('exams.release');
                 Route::patch('exams/{exam}/release-results', [TeacherExam::class, 'releaseResults'])->name('exams.release_results');
+                // Student-reported questions: dismiss the reports (keep the question), or
+                // send for quality review (auto-voids for this exam + queues a Support Team review).
+                Route::patch('exams/{exam}/questions/{question}/dismiss', [TeacherExam::class, 'dismissFlags'])->name('exams.dismiss_flags');
+                Route::patch('exams/{exam}/questions/{question}/review', [TeacherExam::class, 'sendForReview'])->name('exams.send_for_review');
                 Route::get('exams/{exam}', [TeacherExam::class, 'show'])->name('exams.show');
                 Route::get('exams/{exam}/students/{student}/paper', [TeacherExam::class, 'studentPaper'])->name('exams.student_paper');
 
@@ -311,6 +324,11 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::get('exams/{exam}/take', [StudentExam::class, 'take'])->name('exams.take');
             Route::post('exams/{exam}/submit', [StudentExam::class, 'submit'])->name('exams.submit');
             Route::get('exams/{exam}/result', [StudentExam::class, 'result'])->name('exams.result');
+            // Report a problem with a question (soft flag → routed to the exam's teacher).
+            Route::post('exams/{exam}/questions/{question}/flag', [StudentQuestionFlag::class, 'store'])->name('exams.flag');
+
+            // Notifications (bell links here; full paginated list)
+            Route::view('notifications', 'v2.student.notifications')->name('notifications.index');
         });
     });
 });

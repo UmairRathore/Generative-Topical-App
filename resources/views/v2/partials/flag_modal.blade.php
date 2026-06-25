@@ -38,12 +38,30 @@
                 }
             }
         },
-        onFile(e){ var f = e.target.files && e.target.files[0]; if (f) this.showPreview(f); else this.clearPreview(); },
-        setFile(blob){
-            var file = new File([blob], 'pasted-screenshot.png', { type: blob.type || 'image/png' });
-            var dt = new DataTransfer(); dt.items.add(file);
+        onFile(e){ var f = e.target.files && e.target.files[0]; if (f) this.accept(f); else this.clearPreview(); },
+        setFile(blob){ this.accept(new File([blob], 'pasted-screenshot.png', { type: blob.type || 'image/png' })); },
+        // One image, image-only, client-compressed, ≤3 MB — same limits as the student flag.
+        async accept(file){
+            this.error = '';
+            if (! file) return;
+            if (! file.type.startsWith('image/')) { this.error = 'Please choose an image file.'; this.clearShot(); return; }
+            var out = await this.compress(file);
+            if (out.size > 3 * 1024 * 1024) { this.error = 'Image is too large (max 3 MB).'; this.clearShot(); return; }
+            var dt = new DataTransfer(); dt.items.add(out);
             this.$refs.shot.files = dt.files;
-            this.showPreview(file);
+            this.showPreview(out);
+        },
+        async compress(file){
+            if (! /image\/(jpeg|png|webp)/.test(file.type) || file.size <= 1.5 * 1024 * 1024) return file;
+            try {
+                var img = await createImageBitmap(file);
+                var max = 1600, w = img.width, h = img.height;
+                if (w > max || h > max) { var s = Math.min(max / w, max / h); w = Math.round(w * s); h = Math.round(h * s); }
+                var c = document.createElement('canvas'); c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.82); });
+                return (blob && blob.size < file.size) ? new File([blob], (file.name || 'screenshot').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+            } catch (e) { return file; }
         },
         showPreview(f){ this.clearPreview(); this.previewUrl = URL.createObjectURL(f); },
         clearPreview(){ if (this.previewUrl){ URL.revokeObjectURL(this.previewUrl); } this.previewUrl = ''; },
@@ -107,7 +125,7 @@
                     </div>
 
                     <div>
-                        <label class="flag-lbl">Screenshot <span style="text-transform:none;letter-spacing:0;font-weight:400;">— optional</span></label>
+                        <label class="flag-lbl">Screenshot <span style="text-transform:none;letter-spacing:0;font-weight:400;">— optional · one image, max 3 MB</span></label>
                         <div class="flag-tip">
                             Capture, then paste it here with <kbd>Ctrl</kbd> + <kbd>V</kbd> (<kbd>⌘</kbd> + <kbd>V</kbd> on Mac).<br>
                             <strong>Windows:</strong> <kbd>⊞ Win</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> &nbsp;·&nbsp; <strong>Mac:</strong> <kbd>⌘</kbd> + <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>4</kbd>

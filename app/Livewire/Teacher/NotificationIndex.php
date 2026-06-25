@@ -29,6 +29,12 @@ class NotificationIndex extends Component
 
     public function mount(): void
     {
+        // Open on the tab the bell was showing when "View all" was clicked.
+        $t = request('tab');
+        if (in_array($t, ['attention', 'updates'], true)) {
+            $this->tab = $t;
+        }
+
         // Opening the full list counts as seeing everything to date — clear the bell.
         $this->base()->unread()->update(['read_at' => now()]);
     }

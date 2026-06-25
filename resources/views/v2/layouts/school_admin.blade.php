@@ -15,6 +15,9 @@
         ['section' => 'People'],
         ['id' => 'v2.school.teachers',  'icon' => 'user-check',   'label' => 'Teachers',   'href' => route('v2.school.teachers.index')],
         ['id' => 'v2.school.students',  'icon' => 'users',        'label' => 'Students',   'href' => route('v2.school.students.index')],
+
+        ['section' => 'Quality'],
+        ['id' => 'v2.school.flagged_questions', 'icon' => 'flag', 'label' => 'Flagged Questions', 'href' => route('v2.school.flagged_questions.index')],
     ];
 @endphp
 <!DOCTYPE html>
@@ -59,7 +62,10 @@
                        style="width: calc(100% - 16px); padding: 9px 14px; margin: 1px 8px; border-radius: 6px; font-size: 13.5px; text-decoration: none; transition: all .15s;
                               {{ $active ? 'background: rgba(var(--accent-rgb),0.13); color: var(--accent); font-weight: 600; border-left: 2px solid var(--accent);' : 'background: transparent; color: rgba(250,247,239,0.78); font-weight: 500; border-left: 2px solid transparent;' }}">
                         <x-icon :name="$item['icon']" size="17" />
-                        {{ $item['label'] }}
+                        <span style="flex: 1;">{{ $item['label'] }}</span>
+                        @if (! empty($item['badge']))
+                            <span style="flex: none; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $item['badge'] }}</span>
+                        @endif
                     </a>
                 @endif
             @endforeach

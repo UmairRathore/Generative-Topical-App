@@ -45,7 +45,14 @@
                 @php [$bClass, $bLabel] = $stateBadge[$exam->effectiveStatus()]; @endphp
                 <tr style="border-bottom: 1px solid var(--border);">
                     <td style="padding: var(--pad-cell);">
-                        <div style="font-size: 14px; font-weight: 600;">{{ $exam->title }}</div>
+                        <div class="flex items-center gap-2">
+                            <span style="font-size: 14px; font-weight: 600;">{{ $exam->title }}</span>
+                            @if ($exam->flagged_count > 0)
+                                <a href="{{ route('v2.teacher.exams.show', $exam) }}" class="badge badge-blocker" style="text-decoration: none;" title="Students reported one or more questions">
+                                    <x-icon name="flag" size="10"/> {{ $exam->flagged_count }} flagged
+                                </a>
+                            @endif
+                        </div>
                         <div style="font-size: 11.5px; color: var(--text-faint);">{{ $exam->created_at->diffForHumans() }}</div>
                     </td>
                     <td style="padding: var(--pad-cell); font-size: 13px;">{{ $exam->schoolClass?->name }}</td>

@@ -25,8 +25,10 @@ class QuestionFlagController extends Controller
         $status = $request->string('status')->toString() ?: 'open';
         $status = in_array($status, ['open', 'resolved', 'dismissed'], true) ? $status : 'open';
 
-        // Flags of the chosen status, newest first, grouped by question for display.
-        $flags = QuestionFlag::where('status', $status)
+        // Only teacher-level flags reach Super Admin — student reports are handled by
+        // their teacher; an escalated one only arrives here once an admin approves it
+        // (status becomes 'open'). Student-level rows never surface in this queue.
+        $flags = QuestionFlag::teacherLevel()->where('status', $status)
             ->with([
                 'teacher:id,name',
                 'school:id,name',
@@ -65,7 +67,8 @@ class QuestionFlagController extends Controller
 
         $admin = auth('v2_super_admin')->user();
 
-        $closed = QuestionFlag::where('question_id', $question->id)
+        $closed = QuestionFlag::teacherLevel()
+            ->where('question_id', $question->id)
             ->where('status', 'open')
             ->update([
                 'status'      => $data['outcome'],

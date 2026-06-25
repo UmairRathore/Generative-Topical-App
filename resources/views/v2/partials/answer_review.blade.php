@@ -11,10 +11,16 @@
         $correct = $ans?->correct_option;
         $selected = $ans?->selected_option;
     @endphp
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px;">
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px; {{ $eq->is_voided ? 'opacity: .72;' : '' }}">
         <div class="flex items-start gap-3">
-            <span class="badge {{ $ans && $ans->is_correct ? 'badge-pass' : 'badge-blocker' }}" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
+            <span class="badge {{ $eq->is_voided ? 'badge-soft' : ($ans && $ans->is_correct ? 'badge-pass' : 'badge-blocker') }}" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
             <div style="flex: 1; min-width: 0;">
+                @if ($eq->is_voided)
+                    <div class="flex items-center gap-2" style="margin-bottom: 10px; padding: 7px 11px; border: 1px dashed var(--border); border-radius: 8px; background: var(--soft-surface);">
+                        <x-icon name="flag" size="13" />
+                        <span style="font-size: 12px; color: var(--text-soft);"><strong style="color: var(--text);">Excluded from scoring</strong> — this question was removed after review and does not count towards your result.</span>
+                    </div>
+                @endif
                 @include('v2.partials.question_stem', ['q' => $q])
 
                 @include('v2.partials.options_divider', ['q' => $q])
@@ -97,6 +103,12 @@
                 @unless ($correct)
                     <p style="font-size: 12px; color: var(--text-faint); margin-top: 8px;">Answer key for this question is pending import.</p>
                 @endunless
+
+                {{-- Students may report an issue while reviewing (higher-quality signal,
+                     they can see the marked answer). Hidden on the teacher's paper view. --}}
+                @if (auth('v2_student')->check())
+                    @include('v2.partials.student_flag', ['exam' => $exam, 'q' => $q])
+                @endif
             </div>
         </div>
     </div>

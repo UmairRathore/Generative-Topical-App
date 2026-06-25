@@ -12,7 +12,7 @@ class DashboardController extends Controller
         $student = auth('v2_student')->user();
 
         return view('v2.student.dashboard.index', [
-            'stats' => $service->studentStats($student),
+            'stats' => $service->studentDashboard($student),
         ]);
     }
 }

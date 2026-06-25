@@ -22,6 +22,7 @@ class School extends Model
         'contact_phone',
         'monthly_fee',
         'license_tier',
+        'apply_retro_void',
         'max_teachers',
         'max_students',
         'status',
@@ -34,9 +35,10 @@ class School extends Model
     protected function casts(): array
     {
         return [
-            'monthly_fee'  => 'decimal:2',
-            'activated_at' => 'datetime',
-            'suspended_at' => 'datetime',
+            'monthly_fee'      => 'decimal:2',
+            'apply_retro_void' => 'boolean',
+            'activated_at'     => 'datetime',
+            'suspended_at'     => 'datetime',
         ];
     }
 

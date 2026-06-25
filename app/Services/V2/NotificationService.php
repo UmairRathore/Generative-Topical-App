@@ -2,7 +2,9 @@
 
 namespace App\Services\V2;
 
+use App\Models\V2\Exam;
 use App\Models\V2\Notification;
+use App\Models\V2\QuestionFlag;
 use App\Models\V2\Student;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,8 @@ class NotificationService
     public const TARGET = 50;
 
     private const TEACHER = \App\Models\V2\Teacher::class;
+
+    private const STUDENT = Student::class;
 
     /**
      * Teachers who should hear about a student's weakness in ONE subject: the
@@ -196,5 +200,166 @@ class NotificationService
             'dedupe_key'      => $dedupeKey,
             'data'            => $data,
         ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Student notifications (all "update" category — exam lifecycle alerts)
+    |--------------------------------------------------------------------------
+    | Students get operational updates only: a new/scheduled exam, an exam due
+    | today, results released, or a missed exam. Same idempotent dedupe model as
+    | the teacher updates above, addressed to the Student notifiable.
+    */
+
+    /** Active-enrolled students of a class, as {student_id, school_id} rows. */
+    public function studentsForClass(int $classId): Collection
+    {
+        return DB::table('v2_student_enrollments')
+            ->where('class_id', $classId)
+            ->where('status', 'active')
+            ->select('student_id', 'school_id')
+            ->get();
+    }
+
+    /** Create or refresh one student "update" notification (idempotent per dedupe key). */
+    public function notifyStudent(int $studentId, int $schoolId, string $type, string $dedupeKey, array $data, ?int $subjectId = null): void
+    {
+        $existing = Notification::where('notifiable_type', self::STUDENT)
+            ->where('notifiable_id', $studentId)
+            ->where('dedupe_key', $dedupeKey)
+            ->first();
+
+        if ($existing) {
+            $existing->update(['data' => $data]);
+
+            return;
+        }
+
+        Notification::create([
+            'school_id'       => $schoolId,
+            'notifiable_type' => self::STUDENT,
+            'notifiable_id'   => $studentId,
+            'category'        => 'update',
+            'type'            => $type,
+            'subject_id'      => $subjectId,
+            'dedupe_key'      => $dedupeKey,
+            'data'            => $data,
+        ]);
+    }
+
+    /**
+     * Fan one exam update out to its enrolled students (optionally only a subset,
+     * e.g. those who haven't submitted). Returns how many students were notified.
+     *
+     * @param  array<int>|null  $onlyStudentIds
+     */
+    public function notifyExamToStudents(Exam $exam, string $type, string $dedupeKey, string $body, ?array $onlyStudentIds = null, ?string $url = null): int
+    {
+        $exam->loadMissing(['creator', 'subject']);
+
+        $rows = $this->studentsForClass($exam->class_id);
+        if ($onlyStudentIds !== null) {
+            $set = array_map('intval', $onlyStudentIds);
+            $rows = $rows->whereIn('student_id', $set);
+        }
+
+        $data = [
+            'title'   => $exam->title,
+            'body'    => $body,
+            'teacher' => $exam->creator?->name,
+            'subject' => $exam->subject?->name,
+            'exam'    => $exam->title,
+            'url'     => $url,
+        ];
+
+        $n = 0;
+        foreach ($rows as $row) {
+            $this->notifyStudent($row->student_id, $row->school_id, $type, $dedupeKey, $data, $exam->subject_id);
+            $n++;
+        }
+
+        return $n;
+    }
+
+    /** Real-time: a teacher just released (now) or scheduled (future) an exam. */
+    public function announceExamRelease(Exam $exam): void
+    {
+        $url = route('v2.student.exams.index');
+
+        if ($exam->isScheduled()) {
+            $when = $exam->available_from?->format('j M Y, g:i A');
+            $this->notifyExamToStudents($exam, 'exam_scheduled', "exam_scheduled:{$exam->id}", "Scheduled to open {$when}", null, $url);
+        } else {
+            $due = $exam->available_until?->format('j M Y, g:i A');
+            $this->notifyExamToStudents($exam, 'exam_released', "exam_released:{$exam->id}", 'A new test is available now'.($due ? " · due {$due}" : ''), null, $url);
+        }
+    }
+
+    /** Real-time: a teacher released results — students can now see their score. */
+    public function announceResults(Exam $exam): void
+    {
+        $this->notifyExamToStudents(
+            $exam,
+            'results_released',
+            "results_released:{$exam->id}",
+            'Results have been released — view your score',
+            null,
+            route('v2.student.exams.result', hid($exam->id)),
+        );
+    }
+
+    /** A void changed students' visible marksheet — tell each affected student. */
+    public function announceScoreAdjusted(Exam $exam, array $studentIds): void
+    {
+        $this->notifyExamToStudents(
+            $exam,
+            'results_released',
+            "score_adjusted:{$exam->id}",
+            'A question was removed after review — your result has been updated',
+            array_values(array_unique(array_map('intval', $studentIds))),
+            route('v2.student.exams.result', hid($exam->id)),
+        );
+    }
+
+    /**
+     * A student flagged a question on an exam — tell that exam's teacher(s). One
+     * notification per (exam, question): it names the latest reporter (name + roll)
+     * and reason, and carries the running count so repeat reports bump, not spam.
+     */
+    public function notifyTeachersOfStudentFlag(Exam $exam, int $questionId, Student $student, string $reason, ?string $note = null): void
+    {
+        $exam->loadMissing('subject');
+
+        $pos = DB::table('v2_exam_questions')
+            ->where('exam_id', $exam->id)->where('question_id', $questionId)
+            ->value('sort_order');
+
+        $count = (int) QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)->where('question_id', $questionId)
+            ->where('status', 'open')
+            ->distinct()->count('flagged_by_student_id');
+
+        $label       = $pos ? "Q{$pos}" : 'a question';
+        $reasonLabel = QuestionFlag::REASONS[$reason] ?? ucfirst(str_replace('_', ' ', $reason));
+        $who         = $student->name.($student->roll_number ? " (Roll {$student->roll_number})" : '');
+        $others      = $count > 1 ? ' · +'.($count - 1).' other '.\Illuminate\Support\Str::plural('report', $count - 1) : '';
+        $noteSnippet = $note ? ' — “'.\Illuminate\Support\Str::limit($note, 80).'”' : '';
+
+        $data = [
+            'title'    => "Question reported in “{$exam->title}”",
+            'body'     => "{$who} reported {$label}: {$reasonLabel}{$others}{$noteSnippet}",
+            'student'  => $student->name,
+            'roll'     => $student->roll_number,
+            'reason'   => $reasonLabel,
+            'question' => $pos,
+            'subject'  => $exam->subject?->name,
+            'exam'     => $exam->title,
+            // Deep-link straight to the flagged question's row in the manage page.
+            'url'      => route('v2.teacher.exams.show', hid($exam->id)).($pos ? "#flag-q{$pos}" : ''),
+        ];
+
+        foreach (DB::table('v2_class_teachers')->where('class_id', $exam->class_id)->select('teacher_id', 'school_id')->get() as $t) {
+            $this->pushUpdate($t->teacher_id, $t->school_id, 'question_flag', "student_flag:{$exam->id}:{$questionId}", $data);
+        }
     }
 }

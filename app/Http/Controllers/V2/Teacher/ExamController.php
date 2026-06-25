@@ -5,12 +5,14 @@ namespace App\Http\Controllers\V2\Teacher;
 use App\Http\Controllers\Controller;
 use App\Models\V2\Exam;
 use App\Models\V2\Question;
+use App\Models\V2\QuestionFlag;
 use App\Models\V2\SchoolClass;
 use App\Models\V2\Student;
 use App\Models\V2\StudentEnrollment;
 use App\Models\V2\Topic;
 use App\Services\V2\AuditLogger;
 use App\Services\V2\ExamService;
+use App\Services\V2\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -31,6 +33,7 @@ class ExamController extends Controller
                 'topic',
             ])
             ->withCount(['attempts as submitted_count' => fn ($q) => $q->where('status', 'submitted')])
+            ->withCount(['studentFlags as flagged_count' => fn ($q) => $q->where('level', 'student')->where('status', 'open')])
             ->withAvg(['attempts as avg_score' => fn ($q) => $q->where('status', 'submitted')], 'score')
             ->latest()
             ->get();
@@ -304,7 +307,7 @@ class ExamController extends Controller
     }
 
     /** Release a draft test — immediately or at a scheduled time, with optional expiry. */
-    public function release(Exam $exam, Request $request)
+    public function release(Exam $exam, Request $request, NotificationService $notifications)
     {
         $teacher = $this->teacher();
         abort_unless($exam->created_by === $teacher->id, 403);
@@ -347,6 +350,9 @@ class ExamController extends Controller
             'results' => $request->boolean('release_results'),
         ]);
 
+        // Notify the class's students that a new (or scheduled) test is available.
+        $notifications->announceExamRelease($exam);
+
         $msg = $exam->isScheduled() ? 'Test scheduled to open '.$from->diffForHumans().'.' : 'Test released — students can take it now.';
         if ($request->boolean('release_results')) {
             $msg .= ' Results will be visible to students as they submit.';
@@ -356,13 +362,19 @@ class ExamController extends Controller
     }
 
     /** Release (or re-hide) results — the score + answer review — to students. */
-    public function releaseResults(Exam $exam, Request $request)
+    public function releaseResults(Exam $exam, Request $request, NotificationService $notifications)
     {
         $teacher = $this->teacher();
         abort_unless($exam->created_by === $teacher->id, 403);
 
         $release = $request->boolean('release', true);
+        $alreadyReleased = $exam->results_released_at !== null;
         $exam->update(['results_released_at' => $release ? ($exam->results_released_at ?? now()) : null]);
+
+        // Notify students only on the first release (not on re-hide or re-release).
+        if ($release && ! $alreadyReleased) {
+            $notifications->announceResults($exam);
+        }
 
         AuditLogger::record('exam.results_'.($release ? 'released' : 'hidden'), $exam);
 
@@ -396,6 +408,57 @@ class ExamController extends Controller
         $attempts   = $exam->attempts()->get()->keyBy('student_id');
         $submitted = $attempts->where('status', 'submitted');
 
+        // Every question in this exam that has a student report, OR was voided, OR
+        // was escalated — each carrying the actions still available. Void and
+        // escalate are INDEPENDENT, so a voided question can still be escalated and
+        // vice-versa. Purely-dismissed questions (resolved, nothing pending) drop off.
+        $allStudentFlags = QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)
+            ->with('student:id,name,roll_number')->orderBy('created_at')
+            ->get()->groupBy('question_id');
+
+        $escalatedQids = QuestionFlag::teacherLevel()
+            ->where('exam_id', $exam->id)->where('status', 'open')
+            ->pluck('question_id')->map(fn ($id) => (int) $id)->all();
+
+        $qids = collect($allStudentFlags->keys())
+            ->merge($exam->examQuestions->where('is_voided', true)->pluck('question_id'))
+            ->merge($escalatedQids)
+            ->map(fn ($id) => (int) $id)->unique();
+
+        $studentFlags = $qids->map(function ($qid) use ($exam, $allStudentFlags, $escalatedQids) {
+            $eq        = $exam->examQuestions->firstWhere('question_id', $qid);
+            $flags     = $allStudentFlags->get($qid) ?? collect();
+            $openFlags = $flags->where('status', 'open');
+
+            $isVoided    = (bool) $eq?->is_voided;
+            $isEscalated = in_array($qid, $escalatedQids, true);
+            $hasOpen     = $openFlags->isNotEmpty();
+
+            if (! $hasOpen && ! $isVoided && ! $isEscalated) {
+                return null; // resolved/dismissed only — nothing to show or do
+            }
+
+            return [
+                'question_id'  => $qid,
+                'sort_order'   => $eq?->sort_order,
+                'is_voided'    => $isVoided,
+                'is_escalated' => $isEscalated,
+                'has_open'     => $hasOpen,
+                'count'        => $flags->count(),
+                'top_reason'   => ($openFlags->isNotEmpty() ? $openFlags : $flags)
+                    ->groupBy('reason')->sortByDesc->count()->keys()->first(),
+                'flags'        => $flags->map(fn ($f) => [
+                    'student' => $f->student?->name,
+                    'roll'    => $f->student?->roll_number,
+                    'reason'  => $f->reasonLabel(),
+                    'note'    => $f->note,
+                    'shot'    => $f->screenshot_path,
+                    'when'    => $f->created_at,
+                ])->all(),
+            ];
+        })->filter()->sortByDesc('count')->values();
+
         return view('v2.teacher.exams.show', [
             'exam'       => $exam,
             'students'   => $students,
@@ -403,7 +466,78 @@ class ExamController extends Controller
             'topicStats' => $service->topicStatsForExam($exam),
             'avg'        => $submitted->count() ? (int) round($submitted->avg(fn ($a) => $a->percentage)) : null,
             'submittedCount' => $submitted->count(),
+            'studentFlags'    => $studentFlags,
         ]);
+    }
+
+    /** Dismiss the open student reports on a question (the question stays as-is). */
+    public function dismissFlags(Exam $exam, Question $question)
+    {
+        $teacher = $this->teacher();
+        $this->assertOwnsExam($exam, $teacher);
+
+        QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)->where('question_id', $question->id)->where('status', 'open')
+            ->update(['status' => 'dismissed', 'resolved_by' => $teacher->id, 'resolved_at' => now()]);
+
+        return back()->with('success', 'Reports dismissed — the question stays as it is.');
+    }
+
+    /**
+     * Send a flagged question for quality review — the single "questionable"
+     * action. It atomically (1) VOIDS the question for THIS exam (students are
+     * never graded on it; marks/analytics recompute via the pivot), (2) locks the
+     * student reports as "escalated", (3) creates the Support Team queue item, and
+     * (4) pulls the bank question to under_review so it's hidden from new exams.
+     * Student answers and historical records are preserved; the exam-level void is
+     * permanent regardless of the later QA outcome.
+     */
+    public function sendForReview(Exam $exam, Question $question, Request $request, ExamService $service, NotificationService $notifications)
+    {
+        $teacher = $this->teacher();
+        $this->assertOwnsExam($exam, $teacher);
+        abort_unless($exam->examQuestions()->where('question_id', $question->id)->exists(), 404);
+
+        $note = trim((string) $request->input('note')) ?: null;
+
+        $topReason = QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)->where('question_id', $question->id)->where('status', 'open')
+            ->selectRaw('reason, count(*) c')->groupBy('reason')->orderByDesc('c')->value('reason') ?? 'wrong_answer';
+
+        // 1. Void for this exam + recompute marksheets; notify any student whose visible score changed.
+        $changed = $service->voidExamQuestion($exam, $question->id, $teacher->id, $topReason);
+        if ($changed) {
+            $notifications->announceScoreAdjusted($exam, $changed);
+        }
+
+        // 2. Lock the student reports on this question as escalated (no re-report).
+        QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)->where('question_id', $question->id)->where('status', 'open')
+            ->update(['status' => 'escalated']);
+
+        // 3. A teacher-level flag with status 'open' = an item in the Support Team review queue.
+        QuestionFlag::updateOrCreate(
+            ['level' => 'teacher', 'exam_id' => $exam->id, 'question_id' => $question->id, 'status' => 'open'],
+            ['school_id' => $exam->school_id, 'flagged_by_teacher_id' => $teacher->id, 'reason' => $topReason, 'note' => $note],
+        );
+
+        // 4. Pull the bank question from the pool until review completes.
+        if ($question->status === 'active') {
+            $question->update(['status' => 'under_review']);
+        }
+
+        AuditLogger::record('exam.question_sent_for_review', $exam, ['question_id' => $question->id, 'students_adjusted' => count($changed)]);
+
+        return back()->with('success', 'Sent for quality review — voided for this exam and hidden from new exams pending review.');
+    }
+
+    private function assertOwnsExam(Exam $exam, $teacher): void
+    {
+        abort_unless(
+            $exam->created_by === $teacher->id
+                || $teacher->classes()->where('v2_classes.id', $exam->class_id)->exists(),
+            403
+        );
     }
 
     /** One student's full submitted paper — the same per-question review the student sees. */

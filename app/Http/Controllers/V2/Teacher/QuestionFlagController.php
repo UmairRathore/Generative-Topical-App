@@ -35,7 +35,7 @@ class QuestionFlagController extends Controller
         $data = $request->validate([
             'reason'     => ['required', Rule::in(array_keys(QuestionFlag::REASONS))],
             'note'       => ['nullable', 'string', 'max:1000'],
-            'screenshot' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp,gif', 'max:4096'],
+            'screenshot' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:3072'],
         ]);
 
         $path = $request->hasFile('screenshot')

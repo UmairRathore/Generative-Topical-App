@@ -131,6 +131,10 @@ class PlatformStatsService
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
             ->leftJoin('v2_subjects as s', 's.id', '=', 'q.subject_id')
+            // Exclude voided exam-questions so a voided item can't pollute the "hardest" list.
+            ->join('v2_exam_attempts as veat', 'veat.id', '=', 'a.attempt_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'veat.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->groupBy('q.id', 'q.source_paper', 'q.question_number', 't.title', 's.name')
             ->havingRaw('count(*) >= ?', [$minAttempts])
             ->orderByRaw('avg(a.is_correct) asc')

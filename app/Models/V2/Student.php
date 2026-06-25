@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -85,5 +86,30 @@ class Student extends Authenticatable
         return $this->belongsToMany(SchoolClass::class, 'v2_student_enrollments', 'student_id', 'class_id')
             ->withPivot('status')
             ->withTimestamps();
+    }
+
+    /** In-app notifications addressed to this student (bell + page). */
+    public function v2Notifications(): MorphMany
+    {
+        return $this->morphMany(Notification::class, 'notifiable')->latest();
+    }
+
+    /**
+     * The student's single "primary" grade — taken from their active enrollments'
+     * classes, lowest grade sort_order first. Falls back to the denormalised
+     * `grade` column when the student has no active enrollment yet.
+     */
+    public function primaryGrade(): ?string
+    {
+        $grade = $this->classes()
+            ->wherePivot('status', 'active')
+            ->with('grade')
+            ->get()
+            ->pluck('grade')
+            ->filter()
+            ->sortBy('sort_order')
+            ->first();
+
+        return $grade?->name ?: ($this->grade ?: null);
     }
 }

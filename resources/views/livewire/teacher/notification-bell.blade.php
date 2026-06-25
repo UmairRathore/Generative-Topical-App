@@ -49,13 +49,15 @@
             {{-- Updates --}}
             <div x-show="tab === 'updates'">
                 @forelse ($this->updates as $n)
-                    <div @if (! $n->read_at) wire:click="markRead({{ $n->id }})" @endif class="flex" style="gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: {{ $n->read_at ? 'default' : 'pointer' }}; {{ $n->read_at ? '' : 'background: rgba(var(--accent-rgb),0.05);' }}">
-                        <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $n->type === 'results_due' ? 'check' : 'calendar' }}" size="17"/></span>
+                    @php $url = $n->data['url'] ?? null; $icon = $n->type === 'question_flag' ? 'flag' : ($n->type === 'results_due' ? 'check' : 'calendar'); @endphp
+                    <a @if ($url) href="{{ $url }}" @elseif (! $n->read_at) wire:click="markRead({{ $n->id }})" @endif
+                       class="flex" style="gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; cursor: {{ $url || ! $n->read_at ? 'pointer' : 'default' }}; {{ $n->read_at ? '' : 'background: rgba(var(--accent-rgb),0.05);' }}">
+                        <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $icon }}" size="17"/></span>
                         <div style="min-width: 0;">
                             <div style="font-size: 13px; line-height: 1.45;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> — {{ $n->data['body'] ?? '' }}</div>
-                            <div style="font-size: 11px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}</div>
+                            <div style="font-size: 11px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}@if ($url) · <span style="color: var(--accent);">Open →</span>@endif</div>
                         </div>
-                    </div>
+                    </a>
                 @empty
                     <div style="padding: 26px 14px; text-align: center; color: var(--text-faint); font-size: 13px;">No updates.</div>
                 @endforelse
@@ -143,7 +145,7 @@
         </div>
 
         <div style="border-top: 1px solid var(--border); text-align: center; padding: 9px;">
-            <a href="{{ route('v2.teacher.notifications.index') }}" style="font-size: 12px; color: var(--accent); text-decoration: none;">View all ({{ $this->attentionCount + $this->updateCount }}) →</a>
+            <a :href="'{{ route('v2.teacher.notifications.index') }}?tab=' + tab" wire:navigate style="font-size: 12px; color: var(--accent); text-decoration: none;">View all ({{ $this->attentionCount + $this->updateCount }}) →</a>
         </div>
     </div>
 </div>

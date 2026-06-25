@@ -4,11 +4,14 @@ namespace App\Services\V2;
 
 use App\Models\V2\Exam;
 use App\Models\V2\ExamAttempt;
+use App\Models\V2\ExamQuestion;
 use App\Models\V2\Question;
+use App\Models\V2\QuestionFlag;
 use App\Models\V2\SchoolClass;
 use App\Models\V2\Student;
 use App\Models\V2\StudentEnrollment;
 use App\Models\V2\Teacher;
+use App\Models\V2\Topic;
 use Illuminate\Support\Facades\DB;
 
 class ExamService
@@ -205,6 +208,84 @@ class ExamService
         });
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Question voiding (marksheet engine)
+    |--------------------------------------------------------------------------
+    | The v2_exam_questions pivot is the single source of truth: is_voided removes
+    | a question from every score, percentage and topic stat. Answers are never
+    | touched. recomputeExamScores() re-derives each attempt's score/total from the
+    | live (non-voided) questions, honouring the results-released line.
+    */
+
+    /**
+     * Void one question on one exam (idempotent): flip the pivot flag, then
+     * recompute the exam's marksheets. Student answers are untouched, and the
+     * student/teacher QuestionFlag lifecycle is owned by the caller (the
+     * "Send for Quality Review" action sets the reports to 'escalated').
+     *
+     * @return array<int,int> student ids whose VISIBLE score changed (post-release retro only)
+     */
+    public function voidExamQuestion(Exam $exam, int $questionId, int $teacherId, string $reason): array
+    {
+        $eq = ExamQuestion::where('exam_id', $exam->id)->where('question_id', $questionId)->first();
+        if (! $eq || $eq->is_voided) {
+            return [];
+        }
+
+        $eq->update([
+            'is_voided'   => true,
+            'void_reason' => $reason,
+            'voided_by'   => $teacherId,
+            'voided_at'   => now(),
+        ]);
+
+        $exam->loadMissing('school');
+
+        return $this->recomputeExamScores($exam);
+    }
+
+    /**
+     * Re-derive every submitted attempt's score/total for an exam from its live
+     * (non-voided) questions, and ALWAYS write the visible marksheet. A void is a
+     * deliberate, visible decision; the stored score/total feed every downstream
+     * percentage, ranking, distribution and rollup, so they must reflect it. When
+     * results were already released and a visible score moved, that student id is
+     * returned so the caller can notify them (the change is never silent). Student
+     * answers are never touched.
+     *
+     * @return array<int,int> student ids whose visible score changed on an already-released exam
+     */
+    public function recomputeExamScores(Exam $exam): array
+    {
+        $voidedIds = ExamQuestion::where('exam_id', $exam->id)->where('is_voided', true)->pluck('question_id')->all();
+        $liveTotal = ExamQuestion::where('exam_id', $exam->id)->where('is_voided', false)->count();
+
+        $released = $exam->resultsReleased();
+        $changed  = [];
+
+        $attempts = ExamAttempt::withoutGlobalScopes()
+            ->where('exam_id', $exam->id)->where('status', 'submitted')->get();
+
+        foreach ($attempts as $att) {
+            $liveCorrect = (int) DB::table('v2_exam_answers')
+                ->where('attempt_id', $att->id)->where('is_correct', 1)
+                ->when($voidedIds, fn ($q) => $q->whereNotIn('question_id', $voidedIds))
+                ->count();
+
+            $scoreChanged = $att->score !== $liveCorrect || $att->total_questions !== $liveTotal;
+            $att->score = $liveCorrect;
+            $att->total_questions = $liveTotal;
+            $att->save();
+
+            if ($released && $scoreChanged) {
+                $changed[] = (int) $att->student_id;
+            }
+        }
+
+        return $changed;
+    }
+
     /** Per-topic breakdown for one attempt: [{topic, correct, total}]. */
     public function topicStatsForAttempt(ExamAttempt $attempt): array
     {
@@ -248,6 +329,8 @@ class ExamService
             ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'at.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->where('at.student_id', $student->id)
             ->where('at.status', 'submitted')
             ->when($since, fn ($q) => $q->where('at.submitted_at', '>=', $since))
@@ -264,6 +347,8 @@ class ExamService
             ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->leftJoin('v2_subtopics as st', 'st.id', '=', 'q.subtopic_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'at.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->where('at.student_id', $student->id)
             ->where('at.status', 'submitted')
             ->when($since, fn ($q) => $q->where('at.submitted_at', '>=', $since))
@@ -331,6 +416,198 @@ class ExamService
                 'avg'   => $attempts->count() ? (int) round($attempts->avg(fn ($a) => $a->percentage)) : 0,
             ],
             'subjects' => $subjects,
+        ];
+    }
+
+    /**
+     * Everything the student dashboard needs in one shot:
+     *   - overall: completed + missed tests, overall average, subject count
+     *   - per subject: teacher, average, attempted/missed test counts, full topic
+     *     coverage (every syllabus topic — examined / attempted / untouched), and
+     *     the list of tests taken
+     *   - upcoming: live + scheduled exams the student hasn't taken yet
+     *
+     * "Missed" = a released exam in the student's class whose window has closed
+     * (available_until in the past) that the student never submitted. Kept separate
+     * from studentStats() so the teacher attention generator is unaffected.
+     */
+    public function studentDashboard(Student $student): array
+    {
+        $empty = ['overall' => ['completed' => 0, 'missed' => 0, 'total' => 0, 'avg' => 0, 'subjects' => 0], 'subjects' => [], 'upcoming' => []];
+
+        $classes = $student->classes()
+            ->wherePivot('status', 'active')
+            ->with(['subject', 'grade'])
+            ->get();
+
+        $classIds   = $classes->pluck('id')->all();
+        $subjectIds = $classes->pluck('subject_id')->filter()->unique()->values()->all();
+
+        if (empty($classIds)) {
+            return $empty;
+        }
+
+        // Teacher name(s) per subject, primary first (via the student's class for that subject).
+        $teacherBySubject = DB::table('v2_class_teachers as ct')
+            ->join('v2_classes as c', 'c.id', '=', 'ct.class_id')
+            ->join('v2_teachers as t', 't.id', '=', 'ct.teacher_id')
+            ->whereIn('ct.class_id', $classIds)
+            ->orderByDesc('ct.is_primary')
+            ->select('c.subject_id', 't.name')
+            ->get()
+            ->groupBy('subject_id')
+            ->map(fn ($rows) => $rows->pluck('name')->unique()->implode(', '));
+
+        // Full syllabus topics per subject, in syllabus order — the coverage reference length.
+        $syllabus = Topic::whereIn('subject_id', $subjectIds)
+            ->orderBy('sort_order')->orderByRaw('CAST(external_id AS UNSIGNED)')
+            ->get(['id', 'title', 'subject_id'])
+            ->groupBy('subject_id');
+
+        // Released exams in the student's classes (the universe of what's been set).
+        $exams = Exam::published()
+            ->whereIn('class_id', $classIds)
+            ->with(['subject', 'creator'])
+            ->get();
+
+        // The student's submitted attempts for those exams, keyed by exam_id.
+        $attempts = ExamAttempt::where('student_id', $student->id)
+            ->where('status', 'submitted')
+            ->whereIn('exam_id', $exams->pluck('id'))
+            ->get()
+            ->keyBy('exam_id');
+
+        // Per (subject, topic) accuracy from the student's answers.
+        $topicRows = DB::table('v2_exam_answers as a')
+            ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+            ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'at.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
+            ->where('at.student_id', $student->id)
+            ->where('at.status', 'submitted')
+            ->whereIn('q.subject_id', $subjectIds)
+            ->selectRaw('q.subject_id, q.topic_id, count(*) total, sum(a.is_correct) correct')
+            ->groupBy('q.subject_id', 'q.topic_id')
+            ->get()
+            ->groupBy('subject_id')
+            ->map(fn ($rows) => $rows->keyBy('topic_id'));
+
+        // Topics that have appeared in any released exam (examined), per subject.
+        $examinedBySubject = DB::table('v2_exam_questions as eq')
+            ->join('v2_exams as e', 'e.id', '=', 'eq.exam_id')
+            ->join('v2_questions as q', 'q.id', '=', 'eq.question_id')
+            ->whereIn('e.class_id', $classIds)
+            ->where('e.status', 'released')
+            ->select('e.subject_id', 'q.topic_id')
+            ->distinct()
+            ->get()
+            ->groupBy('subject_id')
+            ->map(fn ($rows) => $rows->pluck('topic_id')->filter()->map(fn ($id) => (int) $id)->all());
+
+        $completed = $missedTotal = 0;
+        $subjects = $upcoming = [];
+
+        foreach ($classes->groupBy('subject_id') as $subjectId => $subjectClasses) {
+            $subjectId   = (int) $subjectId;
+            $subjectName = $subjectClasses->first()->subject?->name ?? 'Subject';
+            $subjectExams = $exams->where('subject_id', $subjectId);
+
+            $attemptedTests = [];
+            $missedCount = 0;
+
+            foreach ($subjectExams as $exam) {
+                $attempt = $attempts->get($exam->id);
+                if ($attempt) {
+                    $attemptedTests[] = [
+                        'exam_id' => $exam->id,
+                        'title'   => $exam->title,
+                        'score'   => $attempt->score,
+                        'total'   => $attempt->total_questions,
+                        'percent' => $attempt->percentage,
+                        'date'    => $attempt->submitted_at,
+                        'results' => $exam->resultsReleased(),
+                    ];
+                } elseif ($exam->isExpired()) {
+                    $missedCount++;
+                } elseif ($exam->isLive() || $exam->isScheduled()) {
+                    $upcoming[] = [
+                        'exam_id'        => $exam->id,
+                        'title'          => $exam->title,
+                        'subject'        => $subjectName,
+                        'teacher'        => $exam->creator?->name,
+                        'status'         => $exam->isLive() ? 'live' : 'scheduled',
+                        'available_from' => $exam->available_from,
+                        'due'            => $exam->available_until,
+                    ];
+                }
+            }
+
+            usort($attemptedTests, fn ($a, $b) => $b['date'] <=> $a['date']);
+
+            $completed   += count($attemptedTests);
+            $missedTotal += $missedCount;
+
+            $examinedSet = $examinedBySubject[$subjectId] ?? [];
+            $topicStat   = $topicRows[$subjectId] ?? collect();
+            $syl         = $syllabus[$subjectId] ?? collect();
+
+            $topics = [];
+            $attemptedTopics = 0;
+            foreach ($syl as $t) {
+                $row       = $topicStat->get($t->id);
+                $attempted = $row && (int) $row->total > 0;
+                if ($attempted) {
+                    $attemptedTopics++;
+                }
+                $topics[] = [
+                    'topic'     => $t->title,
+                    'examined'  => in_array((int) $t->id, $examinedSet, true),
+                    'attempted' => (bool) $attempted,
+                    'correct'   => $attempted ? (int) $row->correct : 0,
+                    'total'     => $attempted ? (int) $row->total : 0,
+                    'percent'   => $attempted && $row->total ? (int) round($row->correct / $row->total * 100) : 0,
+                ];
+            }
+
+            $subjects[] = [
+                'subject_id'       => $subjectId,
+                'subject'          => $subjectName,
+                'teacher'          => $teacherBySubject[$subjectId] ?? null,
+                'avg'              => count($attemptedTests) ? (int) round(collect($attemptedTests)->avg('percent')) : 0,
+                'tests_count'      => count($attemptedTests),
+                'missed_count'     => $missedCount,
+                'total_topics'     => $syl->count(),
+                'examined_topics'  => count($examinedSet),
+                'attempted_topics' => $attemptedTopics,
+                'topics'           => $topics,
+                'tests'            => $attemptedTests,
+            ];
+        }
+
+        usort($subjects, fn ($a, $b) => strcmp($a['subject'], $b['subject']));
+
+        // Soonest first: live before scheduled, then by the next relevant date.
+        $far = now()->addCentury();
+        usort($upcoming, function ($a, $b) use ($far) {
+            $rank = fn ($x) => $x['status'] === 'live' ? 0 : 1;
+            if ($rank($a) !== $rank($b)) {
+                return $rank($a) <=> $rank($b);
+            }
+            $key = fn ($x) => $x['status'] === 'live' ? ($x['due'] ?? $far) : ($x['available_from'] ?? $far);
+
+            return $key($a) <=> $key($b);
+        });
+
+        return [
+            'overall' => [
+                'completed' => $completed,
+                'missed'    => $missedTotal,
+                'total'     => $completed + $missedTotal,
+                'avg'       => $attempts->count() ? (int) round($attempts->avg(fn ($a) => $a->percentage)) : 0,
+                'subjects'  => count($subjects),
+            ],
+            'subjects' => $subjects,
+            'upcoming' => $upcoming,
         ];
     }
 
@@ -637,6 +914,8 @@ class ExamService
             ->join('v2_exams as e', 'e.id', '=', 'at.exam_id')
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'at.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->where('e.class_id', $class->id)
             ->where('at.status', 'submitted')
             ->selectRaw('at.student_id, t.external_id, COALESCE(t.title, "Untagged") as topic, count(*) total, sum(a.is_correct) correct')
@@ -872,6 +1151,10 @@ class ExamService
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->join('v2_subjects as s', 's.id', '=', 'q.subject_id')
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
+            // Voided exam-questions are excluded from the subject-grouped topic rollups too.
+            ->join('v2_exam_attempts as veat', 'veat.id', '=', 'a.attempt_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'veat.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->selectRaw('s.id as subject_id, s.name as subject, s.code, s.level, t.external_id, t.title, count(*) as total, sum(a.is_correct) as correct')
             ->groupBy('s.id', 's.name', 's.code', 's.level', 't.external_id', 't.title')
             ->orderByRaw('t.external_id IS NULL, CAST(t.external_id AS UNSIGNED)') // tagged by syllabus number, untagged last
@@ -1008,6 +1291,11 @@ class ExamService
         return $query
             ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
             ->leftJoin('v2_topics as t', 't.id', '=', 'q.topic_id')
+            // Exclude voided exam-questions from every topic stat (single source of
+            // truth = the v2_exam_questions pivot). veat resolves the answer's exam.
+            ->join('v2_exam_attempts as veat', 'veat.id', '=', 'a.attempt_id')
+            ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'veat.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+            ->where('veq.is_voided', false)
             ->selectRaw('t.external_id, t.title, count(*) as total, sum(a.is_correct) as correct')
             ->groupBy('t.external_id', 't.title')
             ->orderByRaw('CAST(t.external_id AS UNSIGNED)')

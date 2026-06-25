@@ -2,11 +2,20 @@
     $user = auth('v2_student')->user();
     $currentRouteName = request()->route()?->getName() ?? '';
 
+    // Identity shown across every student screen.
+    $identity = [
+        'school' => $user?->school?->name,
+        'branch' => $user?->branch?->name,
+        'grade'  => $user?->primaryGrade(),
+        'roll'   => $user?->roll_number,
+    ];
+
     $nav = [
         ['section' => 'Learn'],
         ['id' => 'v2.student.dashboard', 'icon' => 'home', 'label' => 'Dashboard', 'href' => route('v2.student.dashboard')],
         ['id' => 'v2.student.exams', 'icon' => 'clipboard', 'label' => 'My Exams', 'href' => route('v2.student.exams.index')],
         ['id' => 'v2.student.stats', 'icon' => 'chart', 'label' => 'My Performance', 'href' => route('v2.student.stats')],
+        ['id' => 'v2.student.notifications', 'icon' => 'bell', 'label' => 'Notifications', 'href' => route('v2.student.notifications.index')],
     ];
 @endphp
 <!DOCTYPE html>
@@ -86,8 +95,26 @@
             </button>
             @hasSection('page_title')<h1 class="serif" style="font-size: 20px; font-weight: 600; color: var(--text);">@yield('page_title')</h1>@endif
             <div class="flex-1"></div>
+            <livewire:student.notification-bell />
             <x-theme-toggle />
         </header>
+
+        {{-- Identity strip — school · branch · grade · roll, on every student screen --}}
+        @php $idParts = array_filter([
+            $identity['school'],
+            $identity['branch'] ? 'Branch: '.$identity['branch'] : null,
+            $identity['grade'] ? 'Grade: '.$identity['grade'] : null,
+            $identity['roll'] ? 'Roll No. '.$identity['roll'] : null,
+        ]); @endphp
+        @if (! empty($idParts))
+            <div class="flex items-center" style="gap: 10px; flex-wrap: wrap; padding: 9px 28px; background: var(--surface); border-bottom: 1px solid var(--border); font-size: 12.5px; color: var(--text-soft);">
+                <x-icon name="school" size="14" />
+                @foreach ($idParts as $part)
+                    @if (! $loop->first)<span style="color: var(--text-faint);">·</span>@endif
+                    <span @if ($loop->first) style="font-weight: 600; color: var(--text);" @endif>{{ $part }}</span>
+                @endforeach
+            </div>
+        @endif
 
         <div class="fade-in" style="padding: 28px; flex: 1;">@yield('content')</div>
     </main>

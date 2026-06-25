@@ -14,6 +14,7 @@ class ExamAttempt extends Model
     protected $fillable = [
         'exam_id', 'student_id', 'school_id', 'status',
         'score', 'total_questions', 'started_at', 'submitted_at',
+        'adjusted_score', 'adjusted_total', 'adjusted_at',
     ];
 
     protected function casts(): array
@@ -21,6 +22,9 @@ class ExamAttempt extends Model
         return [
             'score'           => 'integer',
             'total_questions' => 'integer',
+            'adjusted_score'  => 'integer',
+            'adjusted_total'  => 'integer',
+            'adjusted_at'     => 'datetime',
             'started_at'      => 'datetime',
             'submitted_at'    => 'datetime',
         ];

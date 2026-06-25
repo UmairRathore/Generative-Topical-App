@@ -96,15 +96,21 @@
                     </div>
                 </div>
             @else
-                <div class="flex" style="gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; {{ $n->read_at ? '' : 'border-left: 3px solid var(--accent);' }}">
-                    <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $n->type === 'results_due' ? 'check' : 'calendar' }}" size="18"/></span>
+                @php $url = $n->data['url'] ?? null; $icon = $n->type === 'question_flag' ? 'flag' : ($n->type === 'results_due' ? 'check' : 'calendar'); @endphp
+                <div class="flex items-center" style="gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; {{ $n->read_at ? '' : 'border-left: 3px solid var(--accent);' }}">
+                    <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $icon }}" size="18"/></span>
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-size: 13.5px;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> — {{ $n->data['body'] ?? '' }}</div>
                         <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}</div>
                     </div>
-                    @unless ($n->read_at)
-                        <button type="button" wire:click="markRead({{ $n->id }})" class="btn btn-ghost btn-sm" style="flex: none;">Mark read</button>
-                    @endunless
+                    <div class="flex items-center" style="gap: 8px; flex: none;">
+                        @if ($url)
+                            <a href="{{ $url }}" class="btn btn-ghost btn-sm"><x-icon name="eye" size="13"/> Open</a>
+                        @endif
+                        @unless ($n->read_at)
+                            <button type="button" wire:click="markRead({{ $n->id }})" class="btn btn-ghost btn-sm">Mark read</button>
+                        @endunless
+                    </div>
                 </div>
             @endif
         @empty

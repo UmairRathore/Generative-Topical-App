@@ -71,6 +71,12 @@ class Exam extends Model
         return $this->hasMany(ExamAttempt::class, 'exam_id');
     }
 
+    /** Student-raised flags against questions in this exam (see QuestionFlag). */
+    public function studentFlags(): HasMany
+    {
+        return $this->hasMany(QuestionFlag::class, 'exam_id');
+    }
+
     public function scopePublished(Builder $q): Builder
     {
         return $q->where('status', 'released');
