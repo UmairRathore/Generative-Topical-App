@@ -17,13 +17,17 @@
     $__sid = auth('v2_student')->id();
     $__key = 'student_flag_state_'.$exam->id;
     if (app()->bound($__key)) {
-        $__map = app($__key);
+        [$__map, $__review] = app($__key);
     } else {
         $__map = [];
+        $__reviewIds = [];
         foreach (\App\Models\V2\QuestionFlag::studentLevel()
             ->where('exam_id', $exam->id)->where('flagged_by_student_id', $__sid)
-            ->get(['question_id', 'status']) as $fl) {
+            ->get(['question_id', 'status', 'quality_review_id']) as $fl) {
             $__map[(int) $fl->question_id] = $fl->status;
+            if ($fl->quality_review_id) {
+                $__reviewIds[(int) $fl->question_id] = $fl->quality_review_id;
+            }
         }
         // A voided question is locked for everyone, regardless of who reported it —
         // but don't overwrite a more specific status the reporter already has (e.g.
@@ -32,7 +36,19 @@
             ->where('exam_id', $exam->id)->where('is_voided', true)->pluck('question_id') as $vq) {
             $__map[(int) $vq] ??= 'voided';
         }
-        app()->instance($__key, $__map);
+        // Phase 4.1: the DECIDED Support quality-review outcome linked to this
+        // student's report, so a resolved report shows the real outcome (read-only).
+        $__review = [];
+        if ($__reviewIds) {
+            $__decided = \App\Models\V2\QualityReview::whereIn('id', array_values($__reviewIds))
+                ->where('status', 'decided')->get()->keyBy('id');
+            foreach ($__reviewIds as $__qid => $__rid) {
+                if ($__r = $__decided->get($__rid)) {
+                    $__review[$__qid] = ['outcome' => $__r->outcome, 'prop' => $__r->propagation_status];
+                }
+            }
+        }
+        app()->instance($__key, [$__map, $__review]);
     }
 
     $lockState = $__map[(int) $q->id] ?? null;
@@ -43,10 +59,28 @@
         'voided'    => 'This question is under review and has been excluded from scoring for this exam.',
     ];
     $lockMessage = $lockState ? ($lockMessages[$lockState] ?? "You've already reported this question.") : null;
+
+    // Phase 4.1: tailored Quality Review outcome message — shown as a SEPARATE
+    // status line once Support has decided the review. The exclusion badge above
+    // (in answer_review) stays provenance-based and is untouched.
+    $qr = $__review[(int) $q->id] ?? null;
+    $qrMsg = $qr ? match (true) {
+        $qr['outcome'] === 'correct'  => 'Quality Review Outcome: Correct — Matches Source. This question was reviewed and confirmed to accurately match the official Cambridge source.',
+        $qr['outcome'] === 'cosmetic' => 'Quality Review Outcome: Non-material Improvement. This question was reviewed and improved for future exams. Your score was not changed because the issue did not affect the meaning of the question.',
+        $qr['outcome'] === 'material' && $qr['prop'] === 'propagated' => 'Quality Review Outcome: Material Representation Error Confirmed. This question was reviewed and corrected because its digital version did not accurately match the official Cambridge paper and mark scheme. Historical affected exams were updated where required.',
+        $qr['outcome'] === 'material' => 'Quality Review Outcome: Material Representation Error Confirmed. This question has been corrected. Historical propagation is pending.',
+        default => null,
+    } : null;
 @endphp
 
 <div x-data="studentFlag('{{ route('v2.student.exams.flag', [$exam, $q]) }}')" style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px;">
-@if (in_array($lockState, ['dismissed', 'escalated'], true))
+@if ($qrMsg)
+    {{-- Support has decided the quality review — show the outcome to the reporter. --}}
+    <div style="display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: var(--text-soft); line-height: 1.55; background: var(--soft-surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;">
+        <x-icon name="check" size="13" style="flex: none; margin-top: 1px; color: var(--ok);"/>
+        <span>{{ $qrMsg }}</span>
+    </div>
+@elseif (in_array($lockState, ['dismissed', 'escalated'], true))
     {{-- Locked for this student; the escalation path is via the teacher/admin, not a re-report. --}}
     <div style="display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: var(--text-soft); line-height: 1.55; background: var(--soft-surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;">
         <x-icon name="check" size="13" style="flex: none; margin-top: 1px; color: var(--ok);"/>

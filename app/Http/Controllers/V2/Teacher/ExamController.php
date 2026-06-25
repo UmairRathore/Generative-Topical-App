@@ -460,6 +460,22 @@ class ExamController extends Controller
             ];
         })->filter()->sortByDesc('count')->values();
 
+        // Phase 4.1: surface the Support quality-review outcome (read-only) on each
+        // reported question — the teacher sees the decision, not just "Voided".
+        $qrReviews = QualityReview::whereIn('question_id', $studentFlags->pluck('question_id'))
+            ->where('status', 'decided')
+            ->orderByDesc('reviewed_at')->orderByDesc('id')
+            ->get()->groupBy('question_id')->map->first();
+        $studentFlags = $studentFlags->map(function ($f) use ($qrReviews) {
+            $rev = $qrReviews->get($f['question_id']);
+            $f['qr_outcome'] = $rev?->outcome;
+            $f['qr_propagation'] = ($rev && $rev->outcome === 'material')
+                ? ($rev->propagation_status === 'propagated' ? 'completed' : 'pending')
+                : null;
+
+            return $f;
+        })->values();
+
         return view('v2.teacher.exams.show', [
             'exam'       => $exam,
             'students'   => $students,

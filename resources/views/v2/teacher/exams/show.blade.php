@@ -96,6 +96,19 @@
                         @if ($f['is_escalated'])<span class="badge badge-review">Under Quality Review</span>
                         @elseif ($f['is_voided'])<span class="badge badge-blocker">Voided</span>
                         @elseif ($f['has_open'])<span class="badge badge-soft">Open</span>@endif
+                        @if (! empty($f['qr_outcome']))
+                            @php
+                                [$qrCls, $qrTxt] = [
+                                    'correct'  => ['badge-pass', 'Correct — Matches Source'],
+                                    'cosmetic' => ['badge-emerald', 'Cosmetic Improvement'],
+                                    'material' => ['badge-blocker', 'Material Error Confirmed'],
+                                ][$f['qr_outcome']] ?? ['badge-soft', ucfirst($f['qr_outcome'])];
+                            @endphp
+                            <span class="badge {{ $qrCls }}">Quality Review: {{ $qrTxt }}</span>
+                            @if (! empty($f['qr_propagation']))
+                                <span class="badge {{ $f['qr_propagation'] === 'completed' ? 'badge-soft' : 'badge-review' }}">Propagation: {{ ucfirst($f['qr_propagation']) }}</span>
+                            @endif
+                        @endif
                         @if ($reporters->isNotEmpty())
                             <span style="font-size: 12.5px; color: var(--text-soft);">
                                 Reported by <span style="font-weight: 600; color: var(--text);">{{ $reporters->take(2)->implode(', ') }}</span>@if ($reporters->count() > 2) <span style="color: var(--text-faint);">+{{ $reporters->count() - 2 }} more</span>@endif
