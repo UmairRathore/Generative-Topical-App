@@ -26,6 +26,7 @@ use App\Http\Controllers\V2\SuperAdmin\StatsController as SuperAdminStats;
 use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
 use App\Http\Controllers\V2\SuperAdmin\QuestionFlagController as SuperAdminQuestionFlag;
+use App\Http\Controllers\V2\SuperAdmin\QuestionPropagationController as SuperAdminQuestionPropagation;
 use App\Http\Controllers\V2\SuperAdmin\SchoolController as SuperAdminSchool;
 use App\Http\Controllers\V2\SuperAdmin\StudentController as SuperAdminStudent;
 use App\Http\Controllers\V2\SuperAdmin\SubjectController as SuperAdminSubject;
@@ -110,6 +111,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 // Quality Review queue — reported questions grouped into one review each.
                 Route::get('question-flags', [SuperAdminQuestionFlag::class, 'index'])->name('question_flags.index');
                 Route::patch('question-flags/{review}/correct', [SuperAdminQuestionFlag::class, 'markCorrect'])->name('question_flags.correct');
+                // Material-error global propagation (Phase 3): preview → confirm.
+                Route::get('question-flags/{review}/propagate', [SuperAdminQuestionPropagation::class, 'preview'])->name('question_flags.propagate');
+                Route::post('question-flags/{review}/propagate', [SuperAdminQuestionPropagation::class, 'confirm'])->name('question_flags.propagate.confirm');
 
                 Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
             });

@@ -295,6 +295,49 @@ class ExamService
         return $changed;
     }
 
+    /**
+     * Read-only sibling of recomputeExamScores: given a set of question ids that
+     * WOULD additionally be voided (on top of any already voided), return each
+     * submitted attempt's before/after score & total without saving anything. Used
+     * by the Phase 3 propagation preview and to capture audit before/after.
+     *
+     * @param  array<int>  $extraVoidedQuestionIds
+     * @return array<int,array{attempt_id:int,student_id:int,score_before:int,total_before:int,score_after:int,total_after:int,released:bool,changed:bool}>
+     */
+    public function simulateRecompute(Exam $exam, array $extraVoidedQuestionIds): array
+    {
+        $voidedAfter = ExamQuestion::withoutGlobalScopes()
+            ->where('exam_id', $exam->id)->where('is_voided', true)->pluck('question_id')
+            ->merge($extraVoidedQuestionIds)->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+        $totalAfter = ExamQuestion::withoutGlobalScopes()
+            ->where('exam_id', $exam->id)
+            ->when($voidedAfter, fn ($q) => $q->whereNotIn('question_id', $voidedAfter))
+            ->count();
+
+        $released = $exam->resultsReleased();
+
+        return ExamAttempt::withoutGlobalScopes()
+            ->where('exam_id', $exam->id)->where('status', 'submitted')->get()
+            ->map(function ($att) use ($voidedAfter, $totalAfter, $released) {
+                $correctAfter = (int) DB::table('v2_exam_answers')
+                    ->where('attempt_id', $att->id)->where('is_correct', 1)
+                    ->when($voidedAfter, fn ($q) => $q->whereNotIn('question_id', $voidedAfter))
+                    ->count();
+
+                return [
+                    'attempt_id'   => (int) $att->id,
+                    'student_id'   => (int) $att->student_id,
+                    'score_before' => (int) $att->score,
+                    'total_before' => (int) $att->total_questions,
+                    'score_after'  => $correctAfter,
+                    'total_after'  => $totalAfter,
+                    'released'     => $released,
+                    'changed'      => ($att->score !== $correctAfter || $att->total_questions !== $totalAfter),
+                ];
+            })->all();
+    }
+
     /** Per-topic breakdown for one attempt: [{topic, correct, total}]. */
     public function topicStatsForAttempt(ExamAttempt $attempt): array
     {

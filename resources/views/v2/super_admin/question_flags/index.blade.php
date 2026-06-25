@@ -128,8 +128,14 @@
                         Corrected to <a href="{{ route('v2.super_admin.question_bank.versions', $q) }}" style="color:var(--accent);">v{{ $review->resultingVersion->version_number }}</a>.
                     @endif
                     @if ($review->reviewed_at) Reviewed {{ $review->reviewed_at->diffForHumans() }}.@endif
-                    @if ($review->propagation_status === 'propagation_pending')
-                        <div style="margin-top:6px;color:var(--text-faint);">Affected historical exams will be updated when propagation runs.</div>
+
+                    @if ($review->outcome === 'material' && $review->propagation_status === 'propagation_pending')
+                        <a href="{{ route('v2.super_admin.question_flags.propagate', $review) }}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:10px;">
+                            <x-icon name="zap" size="13"/> Run propagation…
+                        </a>
+                        <div style="margin-top:6px;color:var(--text-faint);">Preview the blast radius and confirm before any historical exam is changed.</div>
+                    @elseif ($review->propagation_status === 'propagated')
+                        <div style="margin-top:6px;"><span class="badge badge-pass">Propagated</span> Historical exams were updated.</div>
                     @endif
                 </div>
             @endif

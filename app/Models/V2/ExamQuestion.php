@@ -9,7 +9,7 @@ class ExamQuestion extends Model
 {
     protected $table = 'v2_exam_questions';
 
-    protected $fillable = ['exam_id', 'question_id', 'question_version_id', 'sort_order', 'marks', 'is_voided', 'void_reason', 'voided_by', 'voided_at'];
+    protected $fillable = ['exam_id', 'question_id', 'question_version_id', 'sort_order', 'marks', 'is_voided', 'void_reason', 'voided_by', 'voided_at', 'void_source', 'void_quality_review_id'];
 
     protected function casts(): array
     {
