@@ -88,10 +88,11 @@
                                         <span class="badge {{ $qc }}" style="font-size: 10px;">{{ $ql }}</span>
                                         <span style="color: var(--text-faint);">· Completed</span>
                                         @if (! empty($r['qrPropagated']) && ! empty($r['propScope']))
+                                            @php $brSuffix = ($showBranch && $r['propScope']['branches']) ? ' across '.$r['propScope']['branches'].' branch(es)' : ''; @endphp
                                             <div style="color: var(--text-soft); margin-top: 6px;">
                                                 Confirmed material error — propagated across history. In your {{ $scopeLabel }}:
                                                 <strong>{{ $r['propScope']['exams'] }}</strong> exam(s) and
-                                                <strong>{{ $r['propScope']['attempts'] }}</strong> attempt(s) were excluded &amp; recalculated@if ($showBranch && $r['propScope']['branches']) across {{ $r['propScope']['branches'] }} branch(es)@endif.
+                                                <strong>{{ $r['propScope']['attempts'] }}</strong> attempt(s) were excluded &amp; recalculated{{ $brSuffix }}.
                                             </div>
                                         @endif
                                     </div>

@@ -27,7 +27,10 @@ trait ReviewsEscalations
      */
     protected function reportedQuestions(?int $schoolId, ?int $branchId)
     {
-        $rows = $this->examReports($schoolId, $branchId)
+        // collect() coerces to a base collection — examReports() is an Eloquent
+        // collection of plain arrays, and Eloquent\Collection::merge() would call
+        // getKey() on each array. Base merge just appends the two row lists.
+        $rows = collect($this->examReports($schoolId, $branchId))
             ->merge($this->bankReports($schoolId, $branchId))
             ->sortByDesc('sortTime')->values();
 
