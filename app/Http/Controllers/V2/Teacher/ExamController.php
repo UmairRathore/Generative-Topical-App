@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V2\Teacher;
 
 use App\Http\Controllers\Controller;
 use App\Models\V2\Exam;
+use App\Models\V2\QualityReview;
 use App\Models\V2\Question;
 use App\Models\V2\QuestionFlag;
 use App\Models\V2\SchoolClass;
@@ -525,6 +526,10 @@ class ExamController extends Controller
         if ($question->status === 'active') {
             $question->update(['status' => 'under_review']);
         }
+
+        // 5. Ensure one open Support quality review and attach this exam's reports
+        //    (the teacher flag above + the just-escalated student flags) to it.
+        QualityReview::openFor($question->id);
 
         AuditLogger::record('exam.question_sent_for_review', $exam, ['question_id' => $question->id, 'students_adjusted' => count($changed)]);
 

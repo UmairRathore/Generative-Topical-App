@@ -1,22 +1,26 @@
 @extends('v2.layouts.super_admin')
-@section('page_title', 'Question Flags')
+@section('page_title', 'Quality Reviews')
 
 @php
-    $sessionLabels = ['m' => 'Feb/Mar', 's' => 'May/Jun', 'w' => 'Oct/Nov'];
     $statusBadge = [
         'active'       => ['badge-pass', 'Active'],
         'draft'        => ['badge-soft', 'Draft'],
         'under_review' => ['badge-review', 'Under review'],
         'archived'     => ['badge-blocker', 'Archived'],
     ];
-    $tabs = ['open' => 'Open', 'resolved' => 'Fixed', 'dismissed' => 'Dismissed'];
+    $outcomeBadge = [
+        'correct'  => ['badge-pass', 'Correct — matches source'],
+        'cosmetic' => ['badge-emerald', 'Cosmetic fix'],
+        'material' => ['badge-blocker', 'Material error'],
+    ];
+    $tabs = ['open' => 'Open', 'decided' => 'Decided'];
 @endphp
 
 @section('content')
 <style>
     .flagq{display:flex;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;margin-bottom:18px;}
     .flagq-main{flex:1;min-width:0;padding:20px 22px;border-right:1px solid var(--border);}
-    .flagq-side{width:320px;flex:none;padding:18px 20px;background:var(--soft-surface);display:flex;flex-direction:column;gap:12px;}
+    .flagq-side{width:340px;flex:none;padding:18px 20px;background:var(--soft-surface);display:flex;flex-direction:column;gap:12px;}
     .flag-item{border:1px solid var(--border);border-radius:10px;background:var(--bg);padding:11px 13px;}
     .ftab{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px;}
     .ftab a{padding:8px 16px;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--text-soft);background:var(--bg);}
@@ -27,11 +31,12 @@
 
 <div class="flex items-start justify-between" style="margin-bottom:6px;gap:16px;flex-wrap:wrap;">
     <div>
-        <h2 class="serif" style="font-size:24px;font-weight:600;">Question Flags</h2>
-        <p style="color:var(--text-soft);font-size:13px;margin-top:4px;max-width:620px;">
-            Teacher-reported questions. A flagged question is pulled from the live pool automatically. Fix it in the
+        <h2 class="serif" style="font-size:24px;font-weight:600;">Quality Reviews</h2>
+        <p style="color:var(--text-soft);font-size:13px;margin-top:4px;max-width:660px;">
+            Reported questions, grouped into one review each. <strong>Mark correct</strong> if our digital copy already
+            matches the official Cambridge source. To change a question, use <strong>Correct question</strong> — it opens the
             <a href="{{ route('v2.super_admin.question_bank.index') }}" style="color:var(--accent);">Question Bank</a>
-            and set its status back to <strong>active</strong>, then close the flag here.
+            editor where you classify the fix as cosmetic or material on save.
         </p>
     </div>
 </div>
@@ -44,9 +49,9 @@
     @endforeach
 </div>
 
-@forelse ($groups as $group)
+@forelse ($reviews as $review)
     @php
-        $q = $group->first()->question;
+        $q = $review->question;
         [$sbClass, $sbLabel] = $statusBadge[$q->status] ?? ['badge-soft', ucfirst(str_replace('_', ' ', $q->status))];
     @endphp
     <div class="flagq">
@@ -57,18 +62,28 @@
                 @if ($q->subject?->level)<span style="font-size:12px;font-weight:800;color:var(--ink);">{{ $q->subject->level }}</span>@endif
                 <span style="font-size:12px;color:var(--text-faint);">{{ $q->source_paper }} · Q{{ $q->question_number }} · {{ $q->year }}</span>
                 @if ($q->topic)<span class="badge badge-emerald">{{ $q->topic->external_id }}. {{ $q->topic->title }}</span>@endif
+                @if ($review->status === 'decided' && $review->outcome)
+                    @php [$ocClass, $ocLabel] = $outcomeBadge[$review->outcome] ?? ['badge-soft', ucfirst($review->outcome)]; @endphp
+                    <span class="badge {{ $ocClass }}">{{ $ocLabel }}</span>
+                    @if ($review->propagation_status === 'propagation_pending')
+                        <span class="badge badge-review">Propagation pending</span>
+                    @endif
+                @endif
             </div>
             @include('v2.partials.question_card', ['q' => $q])
         </div>
 
         <div class="flagq-side">
             <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);">
-                {{ $group->count() }} {{ \Illuminate\Support\Str::plural('report', $group->count()) }}
+                {{ $review->reports->count() }} {{ \Illuminate\Support\Str::plural('report', $review->reports->count()) }}
             </div>
 
-            @foreach ($group as $flag)
+            @forelse ($review->reports as $flag)
                 <div class="flag-item">
-                    <div style="font-size:13px;font-weight:700;">{{ $flag->reasonLabel() }}</div>
+                    <div class="flex items-center" style="justify-content:space-between;gap:8px;">
+                        <span style="font-size:13px;font-weight:700;">{{ $flag->reasonLabel() }}</span>
+                        <span class="badge {{ $flag->level === 'teacher' ? 'badge-review' : 'badge-soft' }}" style="font-size:10px;">{{ ucfirst($flag->level) }}</span>
+                    </div>
                     @if ($flag->note)
                         <div style="font-size:12.5px;color:var(--text-soft);margin-top:5px;line-height:1.5;">{{ $flag->note }}</div>
                     @endif
@@ -80,39 +95,42 @@
                         </a>
                     @endif
                     <div style="font-size:11.5px;color:var(--text-faint);margin-top:8px;">
-                        {{ $flag->teacher?->name ?? 'Teacher' }}@if ($flag->school) · {{ $flag->school->name }}@endif · {{ $flag->created_at?->diffForHumans() }}
+                        @if ($flag->level === 'teacher')
+                            {{ $flag->teacher?->name ?? 'Teacher' }}
+                        @else
+                            {{ $flag->student?->name ?? 'Student' }}@if ($flag->student?->roll_number) (Roll {{ $flag->student->roll_number }})@endif
+                        @endif
+                        @if ($flag->school) · {{ $flag->school->name }}@endif · {{ $flag->created_at?->diffForHumans() }}
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <div style="font-size:12.5px;color:var(--text-faint);">No individual reports are linked to this review.</div>
+            @endforelse
 
             @if ($status === 'open')
                 <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-                    <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm" style="justify-content:center;">
-                        <x-icon name="edit" size="13"/> Fix in Question Bank
+                    <a href="{{ route('v2.super_admin.question_bank.edit', [$q, 'quality_review_id' => $review->id]) }}" class="btn btn-ghost btn-sm" style="justify-content:center;">
+                        <x-icon name="edit" size="13"/> Correct question (new version)…
                     </a>
-
-                    @if ($q->status !== 'active')
-                        <form method="POST" action="{{ route('v2.super_admin.question_bank.status', $q) }}">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="status" value="active">
-                            <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;color:var(--ok);">
-                                <x-icon name="check" size="13"/> Restore to pool (set active)
-                            </button>
-                        </form>
+                    <form method="POST" action="{{ route('v2.super_admin.question_flags.correct', $review) }}">
+                        @csrf @method('PATCH')
+                        <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;">
+                            <x-icon name="check" size="13"/> Mark correct (matches source)
+                        </button>
+                    </form>
+                    <p style="font-size:11px;color:var(--text-faint);margin:2px 0 0;line-height:1.5;">
+                        “Mark correct” keeps the question unchanged and returns it to the pool. “Correct question” lets you edit it and choose a cosmetic or material outcome.
+                    </p>
+                </div>
+            @else
+                <div style="font-size:12px;color:var(--text-soft);border-top:1px solid var(--border);padding-top:10px;line-height:1.6;">
+                    @if ($review->resultingVersion)
+                        Corrected to <a href="{{ route('v2.super_admin.question_bank.versions', $q) }}" style="color:var(--accent);">v{{ $review->resultingVersion->version_number }}</a>.
                     @endif
-
-                    <div class="flex items-center gap-2">
-                        <form method="POST" action="{{ route('v2.super_admin.question_flags.resolve', $q) }}" style="flex:1;">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="outcome" value="resolved">
-                            <button type="submit" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;"><x-icon name="check" size="13"/> Mark fixed</button>
-                        </form>
-                        <form method="POST" action="{{ route('v2.super_admin.question_flags.resolve', $q) }}" style="flex:1;">
-                            @csrf @method('PATCH')
-                            <input type="hidden" name="outcome" value="dismissed">
-                            <button type="submit" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">Dismiss</button>
-                        </form>
-                    </div>
+                    @if ($review->reviewed_at) Reviewed {{ $review->reviewed_at->diffForHumans() }}.@endif
+                    @if ($review->propagation_status === 'propagation_pending')
+                        <div style="margin-top:6px;color:var(--text-faint);">Affected historical exams will be updated when propagation runs.</div>
+                    @endif
                 </div>
             @endif
         </div>
@@ -120,9 +138,9 @@
 @empty
     <div style="padding:48px;text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);color:var(--text-faint);font-size:14px;">
         @if ($status === 'open')
-            No open flags. Teachers haven't reported any questions — or you've cleared them all. 🎉
+            No open reviews. Nothing is waiting on Support right now. 🎉
         @else
-            Nothing here.
+            Nothing decided yet.
         @endif
     </div>
 @endforelse

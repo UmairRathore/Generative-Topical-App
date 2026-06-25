@@ -107,9 +107,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');
                 Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
 
-                // Teacher-submitted question flags — triage queue + close.
+                // Quality Review queue — reported questions grouped into one review each.
                 Route::get('question-flags', [SuperAdminQuestionFlag::class, 'index'])->name('question_flags.index');
-                Route::patch('question-flags/{question}/resolve', [SuperAdminQuestionFlag::class, 'resolve'])->name('question_flags.resolve');
+                Route::patch('question-flags/{review}/correct', [SuperAdminQuestionFlag::class, 'markCorrect'])->name('question_flags.correct');
 
                 Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
             });

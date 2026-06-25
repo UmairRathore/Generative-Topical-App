@@ -2,8 +2,8 @@
     $user = auth('v2_super_admin')->user();
     $currentRouteName = request()->route()?->getName() ?? '';
 
-    // Distinct questions with at least one open flag — shown as a nav badge.
-    $openFlagCount = \App\Models\V2\QuestionFlag::where('status', 'open')->distinct('question_id')->count('question_id');
+    // Open quality reviews awaiting a Support decision — shown as a nav badge.
+    $openFlagCount = \App\Models\V2\QualityReview::where('status', 'open')->count();
 
     $nav = [
         ['section' => 'Platform'],
@@ -16,7 +16,7 @@
         ['id' => 'v2.super_admin.topics',    'icon' => 'target', 'label' => 'Topics',    'href' => route('v2.super_admin.topics.index')],
         ['section' => 'Content'],
         ['id' => 'v2.super_admin.question_bank',  'icon' => 'book', 'label' => 'Question Bank', 'href' => route('v2.super_admin.question_bank.index')],
-        ['id' => 'v2.super_admin.question_flags', 'icon' => 'flag', 'label' => 'Question Flags', 'href' => route('v2.super_admin.question_flags.index'), 'badge' => $openFlagCount],
+        ['id' => 'v2.super_admin.question_flags', 'icon' => 'flag', 'label' => 'Quality Reviews', 'href' => route('v2.super_admin.question_flags.index'), 'badge' => $openFlagCount],
         ['section' => 'System'],
         ['id' => 'v2.super_admin.audit.index',  'icon' => 'eye',    'label' => 'Audit Log',    'href' => route('v2.super_admin.audit.index')],
     ];

@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\V2\Paper;
 use App\Models\V2\QualityReview;
 use App\Models\V2\Question;
+use App\Models\V2\QuestionFlag;
 use App\Models\V2\QuestionImage;
 use App\Models\V2\QuestionVersion;
 use App\Models\V2\Subject;
 use App\Models\V2\Topic;
+use App\Services\V2\AuditLogger;
+use App\Services\V2\NotificationService;
 use App\Services\V2\QuestionSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -266,11 +269,20 @@ class QuestionBankController extends Controller
         return $rows;
     }
 
-    public function update(Request $request, Question $question)
+    public function update(Request $request, Question $question, NotificationService $notifications)
     {
         $data = $this->validateQuestion($request, $question);
 
-        DB::transaction(function () use ($request, $data, $question) {
+        // Opened from a Quality Review ("Correct question"): the admin must classify
+        // the correction as Cosmetic or Material — that closes the review on save.
+        $reviewId = $request->integer('quality_review_id') ?: null;
+        $outcome  = $reviewId
+            ? $request->validate(['outcome' => ['required', Rule::in(['cosmetic', 'material'])]])['outcome']
+            : null;
+
+        $decided = null;
+
+        DB::transaction(function () use ($request, $data, $question, $reviewId, $outcome, &$decided) {
             $question->update([
                 'subject_id'     => $data['subject_id'],
                 'topic_id'       => $data['topic_id'] ?? null,
@@ -286,13 +298,66 @@ class QuestionBankController extends Controller
 
             $this->syncOptions($question, $data['options']);
             $this->syncImages($question, $request, $data['answer_mode']);
-            $this->recordVersion($question, $request);
+            $version = $this->recordVersion($question, $request);
+            $decided = $this->finalizeReview($reviewId, $outcome, $version->id, $question);
         });
+
+        // Notify the reporting teacher(s) only after the decision has committed.
+        if ($decided) {
+            $notifications->notifyReviewDecision($decided, $outcome);
+            AuditLogger::record('quality_review.'.$outcome, $question, ['review_id' => $decided->id]);
+        }
 
         // Return to the filtered/paged list the editor came from, so the admin
         // keeps their place instead of being dropped at an unfiltered page 1.
         return redirect($this->safeReturn($request) ?? route('v2.super_admin.question_bank.index'))
-            ->with('ok', 'Question updated — saved as a new version.');
+            ->with('ok', $decided
+                ? 'Saved as a new version — quality review closed and the reporting teacher notified.'
+                : 'Question updated — saved as a new version.');
+    }
+
+    /**
+     * Apply a Support decision made by editing the question (Cosmetic / Material).
+     * Runs inside the save transaction after the new version exists: records the
+     * outcome on the review, links the resulting version, restores the question to
+     * the active pool and closes the attached reports. A material error is marked
+     * propagation_pending for the Phase 3 historical-propagation job — no past exams
+     * are voided or recomputed here. Returns the decided review (so the caller can
+     * notify after commit), or null when there is nothing to decide.
+     */
+    private function finalizeReview(?int $reviewId, ?string $outcome, int $versionId, Question $question): ?QualityReview
+    {
+        if (! $reviewId || ! in_array($outcome, ['cosmetic', 'material'], true)) {
+            return null;
+        }
+
+        $review = QualityReview::find($reviewId);
+        if (! $review || $review->status === 'decided') {
+            return null;
+        }
+
+        $adminId = auth('v2_super_admin')->id();
+
+        $review->update([
+            'outcome'              => $outcome,
+            'status'               => 'decided',
+            'reviewed_by'          => $adminId,
+            'reviewed_at'          => now(),
+            'resulting_version_id' => $versionId,
+            'propagation_status'   => $outcome === 'material' ? 'propagation_pending' : null,
+        ]);
+
+        // The corrected question returns to the active pool.
+        if ($question->status === 'under_review') {
+            $question->update(['status' => 'active']);
+        }
+
+        // Close the reports this review resolved.
+        QuestionFlag::where('quality_review_id', $review->id)
+            ->whereIn('status', ['open', 'escalated'])
+            ->update(['status' => 'resolved', 'resolved_by' => $adminId, 'resolved_at' => now()]);
+
+        return $review;
     }
 
     /**
@@ -579,7 +644,7 @@ class QuestionBankController extends Controller
      * (?quality_review_id), the version is linked to it and the review records the
      * resulting version. Old image files are retained, so prior snapshots still render.
      */
-    private function recordVersion(Question $question, Request $request): void
+    private function recordVersion(Question $question, Request $request): QuestionVersion
     {
         // Capture from a clean DB read so json/boolean casts round-trip as raw values.
         $fresh = Question::withTrashed()->with(['options', 'images'])->findOrFail($question->id);
@@ -602,6 +667,8 @@ class QuestionBankController extends Controller
         if ($reviewId) {
             QualityReview::where('id', $reviewId)->update(['resulting_version_id' => $version->id]);
         }
+
+        return $version;
     }
 
     private function customPaperFor(Subject $subject): Paper

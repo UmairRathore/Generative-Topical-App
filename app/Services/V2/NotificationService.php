@@ -4,6 +4,7 @@ namespace App\Services\V2;
 
 use App\Models\V2\Exam;
 use App\Models\V2\Notification;
+use App\Models\V2\QualityReview;
 use App\Models\V2\QuestionFlag;
 use App\Models\V2\Student;
 use Illuminate\Support\Collection;
@@ -360,6 +361,60 @@ class NotificationService
 
         foreach (DB::table('v2_class_teachers')->where('class_id', $exam->class_id)->select('teacher_id', 'school_id')->get() as $t) {
             $this->pushUpdate($t->teacher_id, $t->school_id, 'question_flag', "student_flag:{$exam->id}:{$questionId}", $data);
+        }
+    }
+
+    /**
+     * A Support quality review was decided — tell only the teacher(s) who reported
+     * it. The broader affected-teacher fan-out for a material error is sent later by
+     * the Phase 3 propagation job, so this stays scoped to the reporters. One
+     * notification per (review, teacher).
+     */
+    public function notifyReviewDecision(QualityReview $review, string $outcome): void
+    {
+        $review->loadMissing(['question.subject', 'reports']);
+        $q = $review->question;
+
+        $label = $q
+            ? trim(($q->source_paper ? $q->source_paper.' · ' : '').'Q'.$q->question_number)
+            : 'A question';
+
+        $titles = [
+            'correct'  => 'Quality review complete — no change needed',
+            'cosmetic' => 'Quality review complete — question improved',
+            'material' => 'Quality review complete — question corrected',
+        ];
+        $bodies = [
+            'correct'  => "“{$label}” you reported was reviewed: it accurately matches the official Cambridge paper and mark scheme, so no change was needed.",
+            'cosmetic' => "“{$label}” you reported was reviewed and improved (a presentation fix). The updated version is now in use for new exams.",
+            'material' => "“{$label}” you reported was confirmed to have a material error and has been corrected in the question bank.",
+        ];
+
+        if (! isset($bodies[$outcome])) {
+            return;
+        }
+
+        $byTeacher = $review->reports
+            ->where('level', 'teacher')
+            ->filter(fn ($f) => $f->flagged_by_teacher_id)
+            ->groupBy('flagged_by_teacher_id');
+
+        foreach ($byTeacher as $teacherId => $group) {
+            $first   = $group->first();
+            $examHid = $first->exam_id ? hid($first->exam_id) : null;
+
+            $this->pushUpdate(
+                (int) $teacherId,
+                (int) ($first->school_id ?? $q?->school_id ?? 0),
+                'quality_review',
+                "quality_review:{$review->id}",
+                [
+                    'title'   => $titles[$outcome],
+                    'body'    => $bodies[$outcome],
+                    'subject' => $q?->subject?->name,
+                    'url'     => $examHid ? route('v2.teacher.exams.show', $examHid) : null,
+                ],
+            );
         }
     }
 }

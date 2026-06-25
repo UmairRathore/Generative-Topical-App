@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V2\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\V2\QualityReview;
 use App\Models\V2\Question;
 use App\Models\V2\QuestionFlag;
 use App\Services\V2\AuditLogger;
@@ -63,6 +64,9 @@ class QuestionFlagController extends Controller
         if ($question->status === 'active') {
             $question->update(['status' => 'under_review']);
         }
+
+        // Ensure one open Support quality review exists and attach this report to it.
+        QualityReview::openFor($question->id);
 
         AuditLogger::record('question.flagged', $question, [
             'reason'     => $data['reason'],
