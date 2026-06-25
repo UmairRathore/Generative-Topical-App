@@ -119,7 +119,7 @@
                         @endif
                     </div>
                     <div class="flex items-center gap-2" style="flex: none;">
-                        @unless ($f['is_escalated'])
+                        @unless ($f['is_escalated'] || $f['is_voided'])
                             @if ($f['has_open'])
                                 <form method="POST" action="{{ route('v2.teacher.exams.dismiss_flags', [$exam, hid($f['question_id'])]) }}">
                                     @csrf @method('PATCH')
@@ -132,7 +132,7 @@
                 </div>
 
                 {{-- Send for quality review: voids for this exam + queues a Support Team review --}}
-                @unless ($f['is_escalated'])
+                @unless ($f['is_escalated'] || $f['is_voided'])
                     <div x-show="esc" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
                         <form method="POST" action="{{ route('v2.teacher.exams.send_for_review', [$exam, hid($f['question_id'])]) }}">
                             @csrf @method('PATCH')
