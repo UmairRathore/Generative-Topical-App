@@ -101,6 +101,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::get('question-bank/create', [SuperAdminQuestionBank::class, 'create'])->name('question_bank.create');
                 Route::post('question-bank', [SuperAdminQuestionBank::class, 'store'])->name('question_bank.store');
                 Route::get('question-bank/{question}/edit', [SuperAdminQuestionBank::class, 'edit'])->name('question_bank.edit');
+                Route::get('question-bank/{question}/versions', [SuperAdminQuestionBank::class, 'versions'])->name('question_bank.versions');
                 Route::put('question-bank/{question}', [SuperAdminQuestionBank::class, 'update'])->name('question_bank.update');
                 Route::delete('question-bank/{question}', [SuperAdminQuestionBank::class, 'destroy'])->name('question_bank.destroy');
                 Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');

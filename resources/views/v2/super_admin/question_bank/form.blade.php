@@ -75,6 +75,18 @@
     {{-- Carries the filtered/paged list URL the editor was opened from, so saving
          returns there instead of an unfiltered page 1. --}}
     <input type="hidden" name="return" value="{{ request('return') }}">
+    {{-- Set when opened from a Quality Review ("Correct Question") — links the saved version to it. --}}
+    <input type="hidden" name="quality_review_id" value="{{ $quality_review_id ?? '' }}">
+
+    @if ($editing)
+        <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="text" name="change_summary" maxlength="500" placeholder="What changed? (optional — saved with this version)"
+                   style="{{ $fieldStyle }} flex:1;min-width:240px;">
+            <a href="{{ route('v2.super_admin.question_bank.versions', $question) }}" class="btn btn-ghost btn-sm">
+                <x-icon name="clock" size="13"/> Version history
+            </a>
+        </div>
+    @endif
     @if (request('return'))
         <a href="{{ request('return') }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft);text-decoration:none;margin-bottom:14px;">
             <x-icon name="chev-l" size="14"/> Back to list

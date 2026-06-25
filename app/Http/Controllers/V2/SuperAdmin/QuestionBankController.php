@@ -4,10 +4,13 @@ namespace App\Http\Controllers\V2\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\V2\Paper;
+use App\Models\V2\QualityReview;
 use App\Models\V2\Question;
 use App\Models\V2\QuestionImage;
+use App\Models\V2\QuestionVersion;
 use App\Models\V2\Subject;
 use App\Models\V2\Topic;
+use App\Services\V2\QuestionSnapshot;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -192,6 +195,7 @@ class QuestionBankController extends Controller
 
             $this->syncOptions($question, $data['options']);
             $this->syncImages($question, $request, $data['answer_mode']);
+            $this->recordVersion($question, $request);
         });
 
         return redirect()
@@ -203,7 +207,63 @@ class QuestionBankController extends Controller
     {
         $question->load('options', 'images');
 
-        return view('v2.super_admin.question_bank.form', $this->formData($question));
+        // Carried through when the editor is opened from a Quality Review ("Correct
+        // Question"), so the saved version links back to that review.
+        return view('v2.super_admin.question_bank.form', $this->formData($question) + [
+            'quality_review_id' => request('quality_review_id') ?: null,
+        ]);
+    }
+
+    /** Read-only content history: every immutable version, rendered, with a diff vs current. */
+    public function versions(Question $question)
+    {
+        $question->load('currentVersion');
+
+        $versions = QuestionVersion::where('question_id', $question->id)
+            ->orderByDesc('version_number')->get();
+
+        $current = $question->currentVersion?->snapshot ?? [];
+
+        $rows = $versions->map(fn ($v) => [
+            'version'    => $v,
+            'rendered'   => $v->toRenderableQuestion(),
+            'is_current' => $v->id === $question->current_version_id,
+            'diff'       => $v->id === $question->current_version_id ? [] : $this->diffSnapshots($v->snapshot ?? [], $current),
+        ]);
+
+        return view('v2.super_admin.question_bank.versions', compact('question', 'rows'));
+    }
+
+    /** Field-level changes from snapshot $a to the current snapshot $b. */
+    private function diffSnapshots(array $a, array $b): array
+    {
+        $rows = [];
+
+        foreach (['question_text', 'text_before', 'text_after', 'correct_answer', 'layout_type'] as $f) {
+            $av = $a['question'][$f] ?? null;
+            $bv = $b['question'][$f] ?? null;
+            if ($av !== $bv) {
+                $rows[] = ['field' => $f, 'old' => $av, 'new' => $bv];
+            }
+        }
+
+        $optA = collect($a['options'] ?? [])->keyBy('label');
+        $optB = collect($b['options'] ?? [])->keyBy('label');
+        foreach (self::OPTION_LABELS as $l) {
+            $av = $optA[$l]['text'] ?? null;
+            $bv = $optB[$l]['text'] ?? null;
+            if ($av !== $bv) {
+                $rows[] = ['field' => "option {$l}", 'old' => $av, 'new' => $bv];
+            }
+        }
+
+        $imgA = collect($a['images'] ?? [])->pluck('image_path')->sort()->values()->all();
+        $imgB = collect($b['images'] ?? [])->pluck('image_path')->sort()->values()->all();
+        if ($imgA !== $imgB) {
+            $rows[] = ['field' => 'images', 'old' => count($imgA).' image(s)', 'new' => count($imgB).' image(s)'];
+        }
+
+        return $rows;
     }
 
     public function update(Request $request, Question $question)
@@ -226,12 +286,13 @@ class QuestionBankController extends Controller
 
             $this->syncOptions($question, $data['options']);
             $this->syncImages($question, $request, $data['answer_mode']);
+            $this->recordVersion($question, $request);
         });
 
         // Return to the filtered/paged list the editor came from, so the admin
         // keeps their place instead of being dropped at an unfiltered page 1.
         return redirect($this->safeReturn($request) ?? route('v2.super_admin.question_bank.index'))
-            ->with('ok', 'Question updated.');
+            ->with('ok', 'Question updated — saved as a new version.');
     }
 
     /**
@@ -499,14 +560,47 @@ class QuestionBankController extends Controller
         ]);
     }
 
-    /** Delete image rows and, for manually uploaded files only, the file too. */
+    /**
+     * Remove image ROWS from the current question, but NEVER unlink the files —
+     * older immutable version snapshots reference them by path and must keep
+     * rendering faithfully. (Orphaned files can be GC'd later against the snapshots.)
+     */
     private function deleteImages(\Illuminate\Support\Collection $images): void
     {
         foreach ($images as $image) {
-            if (str_starts_with((string) $image->image_path, self::UPLOAD_DIR.'/')) {
-                Storage::disk('public')->delete($image->image_path);
-            }
             $image->delete();
+        }
+    }
+
+    /**
+     * Record an immutable new version of the question's current content and advance
+     * its current_version_id. Called inside the save transaction, AFTER options +
+     * images are synced. If the edit was opened from a Quality Review
+     * (?quality_review_id), the version is linked to it and the review records the
+     * resulting version. Old image files are retained, so prior snapshots still render.
+     */
+    private function recordVersion(Question $question, Request $request): void
+    {
+        // Capture from a clean DB read so json/boolean casts round-trip as raw values.
+        $fresh = Question::withTrashed()->with(['options', 'images'])->findOrFail($question->id);
+
+        $next = (int) QuestionVersion::where('question_id', $question->id)->max('version_number') + 1;
+        $reviewId = $request->integer('quality_review_id') ?: null;
+
+        $version = QuestionVersion::create([
+            'question_id'       => $question->id,
+            'version_number'    => $next,
+            'snapshot'          => QuestionSnapshot::capture($fresh),
+            'correct_answer'    => $fresh->correct_answer,
+            'change_summary'    => trim((string) $request->input('change_summary')) ?: ($next === 1 ? 'Created.' : 'Edited.'),
+            'quality_review_id' => $reviewId,
+            'created_by'        => auth('v2_super_admin')->id(),
+        ]);
+
+        DB::table('v2_questions')->where('id', $question->id)->update(['current_version_id' => $version->id]);
+
+        if ($reviewId) {
+            QualityReview::where('id', $reviewId)->update(['resulting_version_id' => $version->id]);
         }
     }
 
