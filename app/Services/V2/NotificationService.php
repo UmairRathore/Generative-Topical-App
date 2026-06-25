@@ -417,4 +417,39 @@ class NotificationService
             );
         }
     }
+
+    /**
+     * Phase 4 fan-out: a material-error propagation excluded a question from ONE
+     * exam — tell that exam's teacher(s) (creator + class co-teachers), in exam-local
+     * wording with no internal IDs. The dedupe key carries the propagation id so a
+     * later propagation for a different question in the same exam is never
+     * suppressed, while a retry of the same run stays a no-op. Returns how many
+     * teachers were notified.
+     */
+    public function notifyTeachersOfPropagation(Exam $exam, int $questionPos, int $propagationId): int
+    {
+        $exam->loadMissing('subject');
+
+        $data = [
+            'title'   => 'Quality review completed',
+            'body'    => "Question Q{$questionPos} in “{$exam->title}” was confirmed to not accurately match the official Cambridge paper and mark scheme. It has been excluded from scoring; marks, rankings and analytics were recalculated automatically.",
+            'subject' => $exam->subject?->name,
+            'exam'    => $exam->title,
+            'url'     => route('v2.teacher.exams.show', hid($exam->id)),
+        ];
+
+        $n = 0;
+        foreach (DB::table('v2_class_teachers')->where('class_id', $exam->class_id)->select('teacher_id', 'school_id')->get() as $t) {
+            $this->pushUpdate(
+                $t->teacher_id,
+                $t->school_id,
+                'quality_propagation',
+                "quality_propagation:{$propagationId}:{$exam->id}:{$t->teacher_id}",
+                $data,
+            );
+            $n++;
+        }
+
+        return $n;
+    }
 }

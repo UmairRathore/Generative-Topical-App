@@ -184,6 +184,7 @@ class PropagationService
     {
         DB::transaction(function () use ($prop, $exam, $faultyPivots) {
             $newlyVoided = [];
+            $voidedPos = null;
 
             foreach ($faultyPivots as $eq) {
                 // Per-exam tx is atomic, so a recorded pivot means this exam is fully done.
@@ -203,6 +204,7 @@ class PropagationService
                         'void_quality_review_id' => $prop->quality_review_id,
                     ]);
                     $newlyVoided[] = (int) $eq->question_id;
+                    $voidedPos ??= (int) $eq->sort_order;
                     $action = 'voided';
                 }
 
@@ -256,6 +258,10 @@ class PropagationService
                 $this->notifications->announceScoreAdjusted($exam, $changed);
                 $prop->increment('notifications_sent', count(array_unique($changed)));
             }
+
+            // Phase 4: tell this exam's teacher(s) the question was excluded (exam-local).
+            // Fires for released AND unreleased affected exams; deduped per propagation.
+            $this->notifications->notifyTeachersOfPropagation($exam, $voidedPos ?? 0, $prop->id);
         });
     }
 }

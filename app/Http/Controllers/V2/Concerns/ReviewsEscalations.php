@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\V2\Concerns;
 
 use App\Models\V2\ExamQuestion;
+use App\Models\V2\QualityPropagation;
+use App\Models\V2\QualityReview;
 use App\Models\V2\QuestionFlag;
 use App\Models\V2\Teacher;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,9 +27,73 @@ trait ReviewsEscalations
      */
     protected function reportedQuestions(?int $schoolId, ?int $branchId)
     {
-        return $this->examReports($schoolId, $branchId)
+        $rows = $this->examReports($schoolId, $branchId)
             ->merge($this->bankReports($schoolId, $branchId))
             ->sortByDesc('sortTime')->values();
+
+        return $this->attachQualityReview($rows, $schoolId, $branchId);
+    }
+
+    /**
+     * Phase 4 (read-only): attach the Support quality-review outcome + admin-scoped
+     * propagation scope to each row. Resolves the review by the row's own
+     * quality_review_id first, falling back to the latest DECIDED review for that
+     * question. Observers only — nothing here is actionable.
+     */
+    private function attachQualityReview($rows, ?int $schoolId, ?int $branchId)
+    {
+        if ($rows->isEmpty()) {
+            return $rows;
+        }
+
+        $byId = QualityReview::whereIn('id', $rows->pluck('quality_review_id')->filter()->unique()->all())
+            ->get()->keyBy('id');
+
+        $latestByQuestion = QualityReview::whereIn('question_id', $rows->pluck('question_id')->filter()->unique()->all())
+            ->where('status', 'decided')
+            ->orderByDesc('reviewed_at')->orderByDesc('id')
+            ->get()->groupBy('question_id')->map->first();
+
+        $resolve = fn ($r) => ($r['quality_review_id'] && $byId->has($r['quality_review_id']))
+            ? $byId->get($r['quality_review_id'])
+            : ($latestByQuestion->get($r['question_id']) ?? null);
+
+        $propByReview = QualityPropagation::whereIn(
+            'quality_review_id',
+            $rows->map($resolve)->filter()->unique('id')->pluck('id')->all() ?: [-1]
+        )->where('status', 'completed')->get()->keyBy('quality_review_id');
+
+        return $rows->map(function ($r) use ($resolve, $propByReview, $schoolId, $branchId) {
+            $rev = $resolve($r);
+            $r['qrOutcome'] = $rev?->outcome;                       // correct | cosmetic | material | null
+            $r['qrCompleted'] = (bool) ($rev && $rev->status === 'decided');
+            $r['qrPropagated'] = (bool) ($rev && $rev->outcome === 'material' && $rev->propagation_status === 'propagated');
+            $r['propScope'] = ($r['qrPropagated'] && ($prop = $propByReview->get($rev->id)))
+                ? $this->scopedPropagation($prop->id, $schoolId, $branchId)
+                : null;
+
+            return $r;
+        });
+    }
+
+    /** Propagation effect within the admin's own scope (branch- or school-limited). */
+    private function scopedPropagation(int $propagationId, ?int $schoolId, ?int $branchId): array
+    {
+        $base = fn () => DB::table('v2_quality_propagation_pivots')
+            ->where('propagation_id', $propagationId)->where('action', 'voided')
+            ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
+            ->when($schoolId, fn ($q) => $q->where('school_id', $schoolId));
+
+        $examIds = $base()->distinct()->pluck('exam_id');
+
+        return [
+            'exams'    => $examIds->count(),
+            'attempts' => DB::table('v2_quality_propagation_attempts')
+                ->where('propagation_id', $propagationId)
+                ->whereIn('exam_id', $examIds->all() ?: [-1])->count(),
+            'schools'  => (int) $base()->distinct()->count('school_id'),
+            'branches' => (int) $base()->distinct()->count('branch_id'),
+        ];
     }
 
     /** Exam-linked reports (student-originated), grouped per (exam, question). */
@@ -98,7 +165,9 @@ trait ReviewsEscalations
             }
 
             return [
-                'kind'     => 'exam',
+                'kind'        => 'exam',
+                'question_id' => (int) $first->question_id,
+                'quality_review_id' => $group->pluck('quality_review_id')->filter()->first(),
                 'exam'     => $exam?->title ?? 'Exam',
                 'subject'  => $exam?->subject?->name,
                 'qno'      => $eq?->sort_order,
@@ -139,7 +208,9 @@ trait ReviewsEscalations
                 }
 
                 return [
-                    'kind'     => 'bank',
+                    'kind'        => 'bank',
+                    'question_id' => (int) $f->question_id,
+                    'quality_review_id' => $f->quality_review_id,
                     'exam'     => 'Question bank'.($f->question?->source_paper ? ' · '.$f->question->source_paper : ''),
                     'subject'  => $f->question?->subject?->name,
                     'qno'      => null,

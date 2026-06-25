@@ -1,6 +1,15 @@
 @extends($layout)
 @section('page_title', 'Reported Questions')
 
+@php
+    // Read-only Support quality-review outcome → badge class + label.
+    $qrBadge = [
+        'correct'  => ['badge-pass', 'Correct'],
+        'cosmetic' => ['badge-emerald', 'Cosmetic'],
+        'material' => ['badge-blocker', 'Material'],
+    ];
+@endphp
+
 @section('content')
 <div style="max-width: 960px;">
     <div style="margin-bottom: 18px;">
@@ -47,6 +56,10 @@
                             @endif
                             <td style="padding: var(--pad-cell);">
                                 <span class="badge {{ $r['badge'] }}" style="white-space: nowrap;">{{ $r['status'] }}</span>
+                                @if (! empty($r['qrCompleted']) && ! empty($r['qrOutcome']))
+                                    @php [$qc, $ql] = $qrBadge[$r['qrOutcome']] ?? ['badge-soft', ucfirst($r['qrOutcome'])]; @endphp
+                                    <div style="margin-top: 5px;"><span class="badge {{ $qc }}" style="font-size: 10px; white-space: nowrap;">Quality review: {{ $ql }}</span></div>
+                                @endif
                             </td>
                             <td style="padding: var(--pad-cell); text-align: right; white-space: nowrap;">
                                 <button type="button" @click="open = !open" style="font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer;" x-text="open ? 'Hide' : 'Details'"></button>
@@ -68,6 +81,21 @@
                                         <span style="color: var(--text-soft);">Not voided</span>
                                     @endif
                                 </div>
+                                @if (! empty($r['qrCompleted']))
+                                    @php [$qc, $ql] = $qrBadge[$r['qrOutcome']] ?? ['badge-soft', ucfirst((string) $r['qrOutcome'])]; @endphp
+                                    <div style="font-size: 12.5px; margin-bottom: 12px;">
+                                        <span style="font-weight: 600; color: var(--text);">Quality review:</span>
+                                        <span class="badge {{ $qc }}" style="font-size: 10px;">{{ $ql }}</span>
+                                        <span style="color: var(--text-faint);">· Completed</span>
+                                        @if (! empty($r['qrPropagated']) && ! empty($r['propScope']))
+                                            <div style="color: var(--text-soft); margin-top: 6px;">
+                                                Confirmed material error — propagated across history. In your {{ $scopeLabel }}:
+                                                <strong>{{ $r['propScope']['exams'] }}</strong> exam(s) and
+                                                <strong>{{ $r['propScope']['attempts'] }}</strong> attempt(s) were excluded &amp; recalculated@if ($showBranch && $r['propScope']['branches']) across {{ $r['propScope']['branches'] }} branch(es)@endif.
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
                                 <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 8px;">Timeline</div>
                                 <div style="border-left: 2px solid var(--border); padding-left: 14px;">
                                     @foreach ($r['timeline'] as $ev)
