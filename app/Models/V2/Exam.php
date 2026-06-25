@@ -59,6 +59,19 @@ class Exam extends Model
         return $this->hasMany(ExamQuestion::class, 'exam_id')->orderBy('sort_order');
     }
 
+    /**
+     * Swap each frozen exam-question's `question` relation for the EXACT version the
+     * student saw (rendered from its snapshot), so take/result/paper views show the
+     * historical content even after the bank question was later corrected. Call
+     * after loading `examQuestions.questionVersion` (+ `.question` as fallback).
+     */
+    public function renderFrozenQuestions(): static
+    {
+        $this->examQuestions->each(fn ($eq) => $eq->setRelation('question', $eq->resolvedQuestion()));
+
+        return $this;
+    }
+
     public function questions(): BelongsToMany
     {
         return $this->belongsToMany(Question::class, 'v2_exam_questions', 'exam_id', 'question_id')

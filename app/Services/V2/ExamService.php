@@ -134,15 +134,20 @@ class ExamService
                 'published_at'     => now(),
             ]);
 
+            // Freeze the EXACT current content version of each question so the exam
+            // always renders what the student saw, even after later corrections.
+            $versionMap = DB::table('v2_questions')->whereIn('id', $ids)->pluck('current_version_id', 'id');
+
             $rows = [];
             foreach ($ids as $i => $qid) {
                 $rows[] = [
-                    'exam_id'     => $exam->id,
-                    'question_id' => $qid,
-                    'sort_order'  => $i + 1,
-                    'marks'       => 1,
-                    'created_at'  => now(),
-                    'updated_at'  => now(),
+                    'exam_id'             => $exam->id,
+                    'question_id'         => $qid,
+                    'question_version_id' => $versionMap[$qid] ?? null,
+                    'sort_order'          => $i + 1,
+                    'marks'               => 1,
+                    'created_at'          => now(),
+                    'updated_at'          => now(),
                 ];
             }
             if ($rows) {
@@ -172,13 +177,17 @@ class ExamService
      */
     public function submit(ExamAttempt $attempt, array $responses): ExamAttempt
     {
-        $exam = $attempt->exam()->with('examQuestions.question:id,correct_answer')->firstOrFail();
+        $exam = $attempt->exam()
+            ->with(['examQuestions.question:id,correct_answer', 'examQuestions.questionVersion:id,correct_answer'])
+            ->firstOrFail();
 
         return DB::transaction(function () use ($attempt, $exam, $responses) {
             $score = 0;
 
             foreach ($exam->examQuestions as $eq) {
-                $correct  = $eq->question?->correct_answer;
+                // Mark against the answer key of the EXACT version the student saw
+                // (frozen at exam-build), not a later-corrected live answer.
+                $correct  = $eq->questionVersion?->correct_answer ?? $eq->question?->correct_answer;
                 $selected = $responses[$eq->question_id] ?? null;
                 $selected = $selected ? strtoupper(substr($selected, 0, 1)) : null;
                 $isCorrect = $selected !== null && $correct !== null && $selected === $correct;

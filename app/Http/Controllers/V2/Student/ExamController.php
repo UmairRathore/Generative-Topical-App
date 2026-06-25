@@ -45,7 +45,8 @@ class ExamController extends Controller
             return redirect()->route('v2.student.exams.result', $exam);
         }
 
-        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'subject']);
+        $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic', 'subject']);
+        $exam->renderFrozenQuestions();
 
         // Chemistry exams get a Periodic Table reference panel (not question content).
         $ptPath = config('v2.periodic_table');
@@ -90,7 +91,8 @@ class ExamController extends Controller
             return view('v2.student.exams.result_pending', ['exam' => $exam, 'attempt' => $attempt]);
         }
 
-        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic']);
+        $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic']);
+        $exam->renderFrozenQuestions();
         $answers = $attempt->answers()->get()->keyBy('question_id');
 
         return view('v2.student.exams.result', [

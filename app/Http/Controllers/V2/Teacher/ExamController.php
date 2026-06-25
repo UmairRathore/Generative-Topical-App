@@ -561,7 +561,8 @@ class ExamController extends Controller
             ->where('status', 'submitted')
             ->firstOrFail();
 
-        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+        $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+        $exam->renderFrozenQuestions(); // show exactly what the student saw
         $answers = $attempt->answers()->get()->keyBy('question_id');
 
         return view('v2.teacher.exams.student_paper', [
