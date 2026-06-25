@@ -38,6 +38,7 @@ class Question extends Model
         'warnings',
         'source_paper',
         'status',
+        'current_version_id',
     ];
 
     protected function casts(): array
@@ -88,6 +89,18 @@ class Question extends Model
     public function flags(): HasMany
     {
         return $this->hasMany(QuestionFlag::class, 'question_id');
+    }
+
+    /** Full immutable content history (newest first). */
+    public function versions(): HasMany
+    {
+        return $this->hasMany(QuestionVersion::class, 'question_id')->orderByDesc('version_number');
+    }
+
+    /** The live/active content version (what new exams freeze + what the editor shows). */
+    public function currentVersion(): BelongsTo
+    {
+        return $this->belongsTo(QuestionVersion::class, 'current_version_id');
     }
 
     public function openFlags(): HasMany
