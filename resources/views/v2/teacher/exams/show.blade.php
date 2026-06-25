@@ -27,6 +27,8 @@
     .qprev-close:hover{background:var(--soft-surface);}
     .qprev-body{padding:18px 22px 26px;}
     .qprev-q{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);padding:20px 22px;margin-bottom:14px;}
+    .flag-highlight{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)!important;transition:box-shadow .3s;}
+    .shot-thumb{width:46px;height:46px;flex:none;border-radius:7px;border:1px solid var(--border);object-fit:cover;cursor:zoom-in;background:var(--soft-surface);}
 </style>
 <div x-data="{ preview: false }" @keydown.escape.window="preview = false">
 <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
@@ -46,6 +48,12 @@
             <span class="badge badge-soft">{{ $exam->schoolClass?->name }}</span>
             <span class="badge badge-emerald">{{ $exam->topic?->title ?? 'Mixed topics' }}</span>
             <span class="badge badge-soft">{{ $exam->question_count }} questions</span>
+            @php $toReview = $studentFlags->where('has_open', true)->count(); @endphp
+            @if ($studentFlags->isNotEmpty())
+                <a href="#reported-questions" class="badge {{ $toReview > 0 ? 'badge-review' : 'badge-soft' }}" style="text-decoration: none;">
+                    <x-icon name="flag" size="11"/> {{ $studentFlags->count() }} reported{{ $toReview > 0 ? ' · '.$toReview.' to review' : '' }}
+                </a>
+            @endif
         </div>
     </div>
     <button type="button" class="btn btn-ghost" @click="preview = true">
@@ -58,120 +66,6 @@
 @endif
 @if (session('error'))
     <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--bad-rgb,200,70,70),.12); border: 1px solid var(--bad); border-radius: 8px; font-size: 13px; color: var(--bad); font-weight: 600;">{{ session('error') }}</div>
-@endif
-
-{{-- ============ STUDENT-REPORTED ISSUES ============ --}}
-@if ($studentFlags->isNotEmpty())
-    <style>
-        .flag-highlight{box-shadow:0 0 0 2px var(--accent);border-color:var(--accent)!important;transition:box-shadow .3s;}
-        .shot-thumb{width:46px;height:46px;flex:none;border-radius:7px;border:1px solid var(--border);object-fit:cover;cursor:zoom-in;background:var(--soft-surface);}
-    </style>
-    <div x-data="{ lightbox: null }" @keydown.escape.window="lightbox = null"
-         style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 24px;">
-        <div class="flex items-center gap-2" style="margin-bottom: 6px;">
-            <x-icon name="flag" size="15"/>
-            <span style="font-size: 14px; font-weight: 700;">Reported questions</span>
-            @php $toReview = $studentFlags->where('has_open', true)->count(); @endphp
-            @if ($toReview > 0)<span class="badge badge-review">{{ $toReview }} to review</span>@endif
-        </div>
-        <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 16px; line-height: 1.5;">
-            <strong>Dismiss</strong> if the question is valid — it stays in the exam and keeps counting. Or
-            <strong>Send for Quality Review</strong> if it may have an issue: this voids it for this exam (so no student is
-            graded on it), recomputes marks, rankings &amp; analytics{{ $exam->resultsReleased() ? ' and notifies affected students' : '' }},
-            and sends the bank question to the Support Team. Each action applies to <strong>all</strong> reports on that question.
-        </p>
-
-        @foreach ($studentFlags as $f)
-            @php
-                $reporters = collect($f['flags'])
-                    ->map(fn ($x) => trim(($x['student'] ?? 'A student').($x['roll'] ? ' (Roll '.$x['roll'].')' : '')))
-                    ->filter()->unique()->values();
-            @endphp
-            <div x-data="{ show: false, esc: false }" id="flag-q{{ $f['sort_order'] }}"
-                 x-init="if (window.location.hash === '#flag-q{{ $f['sort_order'] }}') { show = true; $el.scrollIntoView({behavior:'smooth', block:'center'}); $el.classList.add('flag-highlight'); }"
-                 style="border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; margin-bottom: 10px;">
-                <div class="flex items-center justify-between" style="gap: 12px; flex-wrap: wrap;">
-                    <div class="flex items-center gap-2" style="min-width: 0; flex-wrap: wrap;">
-                        <span class="badge badge-emerald" style="font-weight: 700;">Q{{ $f['sort_order'] }}</span>
-                        @if ($f['is_escalated'])<span class="badge badge-review">Under Quality Review</span>
-                        @elseif ($f['is_voided'])<span class="badge badge-blocker">Voided</span>
-                        @elseif ($f['has_open'])<span class="badge badge-soft">Open</span>@endif
-                        @if (! empty($f['qr_outcome']))
-                            @php
-                                [$qrCls, $qrTxt] = [
-                                    'correct'  => ['badge-pass', 'Correct — Matches Source'],
-                                    'cosmetic' => ['badge-emerald', 'Cosmetic Improvement'],
-                                    'material' => ['badge-blocker', 'Material Error Confirmed'],
-                                ][$f['qr_outcome']] ?? ['badge-soft', ucfirst($f['qr_outcome'])];
-                            @endphp
-                            <span class="badge {{ $qrCls }}">Quality Review: {{ $qrTxt }}</span>
-                            @if (! empty($f['qr_propagation']))
-                                <span class="badge {{ $f['qr_propagation'] === 'completed' ? 'badge-soft' : 'badge-review' }}">Propagation: {{ ucfirst($f['qr_propagation']) }}</span>
-                            @endif
-                        @endif
-                        @if ($reporters->isNotEmpty())
-                            <span style="font-size: 12.5px; color: var(--text-soft);">
-                                Reported by <span style="font-weight: 600; color: var(--text);">{{ $reporters->take(2)->implode(', ') }}</span>@if ($reporters->count() > 2) <span style="color: var(--text-faint);">+{{ $reporters->count() - 2 }} more</span>@endif
-                            </span>
-                        @endif
-                        @if (! empty($f['flags']))
-                            <button type="button" @click="show = !show" style="font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer;" x-text="show ? 'Hide detail' : 'View detail'"></button>
-                        @endif
-                    </div>
-                    <div class="flex items-center gap-2" style="flex: none;">
-                        @unless ($f['is_escalated'] || $f['is_voided'])
-                            @if ($f['has_open'])
-                                <form method="POST" action="{{ route('v2.teacher.exams.dismiss_flags', [$exam, hid($f['question_id'])]) }}">
-                                    @csrf @method('PATCH')
-                                    <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
-                                </form>
-                            @endif
-                            <button type="button" @click="esc = !esc" class="btn btn-primary btn-sm"><x-icon name="send" size="12"/> Send for Quality Review</button>
-                        @endunless
-                    </div>
-                </div>
-
-                {{-- Send for quality review: voids for this exam + queues a Support Team review --}}
-                @unless ($f['is_escalated'] || $f['is_voided'])
-                    <div x-show="esc" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-                        <form method="POST" action="{{ route('v2.teacher.exams.send_for_review', [$exam, hid($f['question_id'])]) }}">
-                            @csrf @method('PATCH')
-                            <label style="display: block; font-size: 11.5px; font-weight: 600; color: var(--text-faint); margin-bottom: 5px;">What's the concern? (optional — the Support Team sees this)</label>
-                            <textarea name="note" rows="2" maxlength="1000" placeholder="e.g. I've confirmed the answer key is wrong against the mark scheme."
-                                      style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 8px;"></textarea>
-                            <button type="submit" class="btn btn-primary btn-sm"><x-icon name="send" size="12"/> Send for Quality Review</button>
-                            <span style="font-size: 11px; color: var(--text-faint); margin-left: 8px;">Voids this question for this exam and hides the bank question from new exams until review completes (existing exams &amp; scores are unaffected).</span>
-                        </form>
-                    </div>
-                @endunless
-
-                {{-- Per-report detail with screenshot thumbnails (lightbox, not a new tab) --}}
-                <div x-show="show" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
-                    @foreach ($f['flags'] as $fl)
-                        <div class="flex" style="gap: 10px; margin-bottom: 10px;">
-                            @if ($fl['shot'])
-                                <img src="{{ asset('storage/'.$fl['shot']) }}" alt="screenshot" class="shot-thumb" @click="lightbox = '{{ asset('storage/'.$fl['shot']) }}'" onerror="this.style.display='none'">
-                            @endif
-                            <div style="font-size: 12.5px; min-width: 0;">
-                                <span style="font-weight: 600;">{{ $fl['reason'] }}</span>
-                                <span style="color: var(--text-faint);">· {{ $fl['student'] ?? 'A student' }}@if ($fl['roll']) (Roll {{ $fl['roll'] }})@endif · {{ $fl['when']?->diffForHumans() }}</span>
-                                @if ($fl['note'])<div style="color: var(--text-soft); margin-top: 2px;">“{{ $fl['note'] }}”</div>@endif
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        @endforeach
-
-        {{-- Screenshot lightbox (teleported past the layout's transformed wrapper) --}}
-        <template x-teleport="body">
-            <div x-show="lightbox" x-cloak @click.self="lightbox = null"
-                 style="position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; padding: 28px;">
-                <img :src="lightbox" alt="screenshot" style="max-width: 92vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 24px 70px rgba(0,0,0,.5);">
-                <button type="button" @click="lightbox = null" aria-label="Close" style="position: absolute; top: 18px; right: 22px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.15); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;"><x-icon name="x" size="20"/></button>
-            </div>
-        </template>
-    </div>
 @endif
 
 {{-- ============ MANAGE: availability + results ============ --}}
@@ -282,8 +176,9 @@
 
 <div class="grid" style="grid-template-columns: 1.4fr 1fr; gap: 20px; align-items: start;">
 
-    {{-- Student results --}}
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
+    {{-- Student results (paginated, 5 per page) --}}
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;"
+         x-data="{ page: 1, perPage: 5, total: {{ $students->count() }}, get pages() { return Math.max(1, Math.ceil(this.total / this.perPage)); } }">
         <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600;">Student results</div>
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
@@ -296,7 +191,8 @@
             <tbody>
                 @forelse ($students as $student)
                     @php $a = $attempts[$student->id] ?? null; $done = $a && $a->status === 'submitted'; @endphp
-                    <tr style="border-bottom: 1px solid var(--border);">
+                    <tr x-show="{{ $loop->index }} >= (page - 1) * perPage && {{ $loop->index }} < page * perPage"
+                        style="border-bottom: 1px solid var(--border);{{ $loop->index >= 5 ? 'display:none;' : '' }}">
                         <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">
                             @if ($done)
                                 <a href="{{ route('v2.teacher.exams.student_paper', [$exam, $student]) }}"
@@ -337,6 +233,18 @@
                 @endforelse
             </tbody>
         </table>
+        @if ($students->count() > 5)
+            <div class="flex items-center justify-between" style="padding: 11px 18px; border-top: 1px solid var(--border); font-size: 12px;">
+                <span style="color: var(--text-soft);">
+                    Showing <span x-text="(page - 1) * perPage + 1"></span>–<span x-text="Math.min(page * perPage, total)"></span> of {{ $students->count() }}
+                </span>
+                <div class="flex items-center gap-2">
+                    <button type="button" class="btn btn-ghost btn-sm" :disabled="page === 1" @click="if (page > 1) page--">Prev</button>
+                    <span style="color: var(--text-soft);">Page <span x-text="page"></span> / <span x-text="pages"></span></span>
+                    <button type="button" class="btn btn-ghost btn-sm" :disabled="page >= pages" @click="if (page < pages) page++">Next</button>
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- Per-topic stats --}}
@@ -357,6 +265,116 @@
         @endforelse
     </div>
 </div>
+
+{{-- ============ STUDENT-REPORTED ISSUES (at end of page) ============ --}}
+@if ($studentFlags->isNotEmpty())
+    <div id="reported-questions" x-data="{ lightbox: null }" @keydown.escape.window="lightbox = null"
+         style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-top: 24px;">
+        <div class="flex items-center gap-2" style="margin-bottom: 6px;">
+            <x-icon name="flag" size="15"/>
+            <span style="font-size: 14px; font-weight: 700;">Reported questions</span>
+            @php $toReview = $studentFlags->where('has_open', true)->count(); @endphp
+            @if ($toReview > 0)<span class="badge badge-review">{{ $toReview }} to review</span>@endif
+        </div>
+        <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 16px; line-height: 1.5;">
+            <strong>Dismiss</strong> if the question is valid — it stays in the exam and keeps counting. Or
+            <strong>Send for Quality Review</strong> if it may have an issue: this voids it for this exam (so no student is
+            graded on it), recomputes marks, rankings &amp; analytics{{ $exam->resultsReleased() ? ' and notifies affected students' : '' }},
+            and sends the bank question to the Support Team. Each action applies to <strong>all</strong> reports on that question.
+        </p>
+
+        @foreach ($studentFlags as $f)
+            @php
+                $reporters = collect($f['flags'])
+                    ->map(fn ($x) => trim(($x['student'] ?? 'A student').($x['roll'] ? ' (Roll '.$x['roll'].')' : '')))
+                    ->filter()->unique()->values();
+            @endphp
+            <div x-data="{ show: false, esc: false }" id="flag-q{{ $f['sort_order'] }}"
+                 x-init="if (window.location.hash === '#flag-q{{ $f['sort_order'] }}') { show = true; $el.scrollIntoView({behavior:'smooth', block:'center'}); $el.classList.add('flag-highlight'); }"
+                 style="border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; margin-bottom: 10px;">
+                <div class="flex items-center justify-between" style="gap: 12px; flex-wrap: wrap;">
+                    <div class="flex items-center gap-2" style="min-width: 0; flex-wrap: wrap;">
+                        <span class="badge badge-emerald" style="font-weight: 700;">Q{{ $f['sort_order'] }}</span>
+                        @if ($f['is_escalated'])<span class="badge badge-review">Under Quality Review</span>
+                        @elseif ($f['is_voided'])<span class="badge badge-blocker">Voided</span>
+                        @elseif ($f['has_open'])<span class="badge badge-soft">Open</span>@endif
+                        @if (! empty($f['qr_outcome']))
+                            @php
+                                [$qrCls, $qrTxt] = [
+                                    'correct'  => ['badge-pass', 'Correct — Matches Source'],
+                                    'cosmetic' => ['badge-emerald', 'Cosmetic Improvement'],
+                                    'material' => ['badge-blocker', 'Material Error Confirmed'],
+                                ][$f['qr_outcome']] ?? ['badge-soft', ucfirst($f['qr_outcome'])];
+                            @endphp
+                            <span class="badge {{ $qrCls }}">Quality Review: {{ $qrTxt }}</span>
+                            @if (! empty($f['qr_propagation']))
+                                <span class="badge {{ $f['qr_propagation'] === 'completed' ? 'badge-soft' : 'badge-review' }}">Propagation: {{ ucfirst($f['qr_propagation']) }}</span>
+                            @endif
+                        @endif
+                        @if ($reporters->isNotEmpty())
+                            <span style="font-size: 12.5px; color: var(--text-soft);">
+                                Reported by <span style="font-weight: 600; color: var(--text);">{{ $reporters->take(2)->implode(', ') }}</span>@if ($reporters->count() > 2) <span style="color: var(--text-faint);">+{{ $reporters->count() - 2 }} more</span>@endif
+                            </span>
+                        @endif
+                        @if (! empty($f['flags']))
+                            <button type="button" @click="show = !show" style="font-size: 12px; background: none; border: 0; color: var(--accent); cursor: pointer;" x-text="show ? 'Hide detail' : 'View detail'"></button>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2" style="flex: none;">
+                        @unless ($f['is_escalated'] || $f['is_voided'])
+                            @if ($f['has_open'])
+                                <form method="POST" action="{{ route('v2.teacher.exams.dismiss_flags', [$exam, hid($f['question_id'])]) }}">
+                                    @csrf @method('PATCH')
+                                    <button type="submit" class="btn btn-ghost btn-sm">Dismiss</button>
+                                </form>
+                            @endif
+                            <button type="button" @click="esc = !esc" class="btn btn-primary btn-sm"><x-icon name="send" size="12"/> Send for Quality Review</button>
+                        @endunless
+                    </div>
+                </div>
+
+                {{-- Send for quality review: voids for this exam + queues a Support Team review --}}
+                @unless ($f['is_escalated'] || $f['is_voided'])
+                    <div x-show="esc" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                        <form method="POST" action="{{ route('v2.teacher.exams.send_for_review', [$exam, hid($f['question_id'])]) }}">
+                            @csrf @method('PATCH')
+                            <label style="display: block; font-size: 11.5px; font-weight: 600; color: var(--text-faint); margin-bottom: 5px;">What's the concern? (optional — the Support Team sees this)</label>
+                            <textarea name="note" rows="2" maxlength="1000" placeholder="e.g. I've confirmed the answer key is wrong against the mark scheme."
+                                      style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 8px;"></textarea>
+                            <button type="submit" class="btn btn-primary btn-sm"><x-icon name="send" size="12"/> Send for Quality Review</button>
+                            <span style="font-size: 11px; color: var(--text-faint); margin-left: 8px;">Voids this question for this exam and hides the bank question from new exams until review completes (existing exams &amp; scores are unaffected).</span>
+                        </form>
+                    </div>
+                @endunless
+
+                {{-- Per-report detail with screenshot thumbnails (lightbox, not a new tab) --}}
+                <div x-show="show" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                    @foreach ($f['flags'] as $fl)
+                        <div class="flex" style="gap: 10px; margin-bottom: 10px;">
+                            @if ($fl['shot'])
+                                <img src="{{ asset('storage/'.$fl['shot']) }}" alt="screenshot" class="shot-thumb" @click="lightbox = '{{ asset('storage/'.$fl['shot']) }}'" onerror="this.style.display='none'">
+                            @endif
+                            <div style="font-size: 12.5px; min-width: 0;">
+                                <span style="font-weight: 600;">{{ $fl['reason'] }}</span>
+                                <span style="color: var(--text-faint);">· {{ $fl['student'] ?? 'A student' }}@if ($fl['roll']) (Roll {{ $fl['roll'] }})@endif · {{ $fl['when']?->diffForHumans() }}</span>
+                                @if ($fl['note'])<div style="color: var(--text-soft); margin-top: 2px;">“{{ $fl['note'] }}”</div>@endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endforeach
+
+        {{-- Screenshot lightbox (teleported past the layout's transformed wrapper) --}}
+        <template x-teleport="body">
+            <div x-show="lightbox" x-cloak @click.self="lightbox = null"
+                 style="position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; padding: 28px;">
+                <img :src="lightbox" alt="screenshot" style="max-width: 92vw; max-height: 90vh; border-radius: 8px; box-shadow: 0 24px 70px rgba(0,0,0,.5);">
+                <button type="button" @click="lightbox = null" aria-label="Close" style="position: absolute; top: 18px; right: 22px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(255,255,255,.15); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;"><x-icon name="x" size="20"/></button>
+            </div>
+        </template>
+    </div>
+@endif
 
 {{-- ============ PREVIEW: the exact frozen paper (custom + random alike) ============ --}}
 {{-- Teleport past the layout's transformed .fade-in wrapper so the fixed overlay
