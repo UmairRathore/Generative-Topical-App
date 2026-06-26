@@ -139,8 +139,7 @@
             </div>
         @endforeach
 
-        <div class="flex items-center justify-between" style="margin: 22px 0 40px;">
-            <button type="button" @click="showExit = true" class="btn btn-ghost"><x-icon name="chev-l" size="13"/> Exit</button>
+        <div class="flex items-center justify-end" style="margin: 22px 0 40px;">
             <button type="submit" class="btn btn-primary btn-lg"><x-icon name="check" size="15"/> Submit Test</button>
         </div>
     </form>
@@ -192,21 +191,6 @@
     </div>
     </template>
 
-    {{-- Exit confirmation: leaving does NOT save answers (they only persist on Submit). --}}
-    <template x-teleport="body">
-    <div x-show="showExit" x-cloak class="tx-modal" style="display:none;" @keydown.escape.window="showExit = false">
-        <div @click="showExit = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.55);"></div>
-        <div x-show="showExit" x-transition
-             style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
-            <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Leave the test?</h3>
-            <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 22px;">Leaving will <strong style="color: var(--text);">submit your test as it is</strong> and count as your attempt - you can't redo it. Anything unanswered stays blank.</p>
-            <div class="flex items-center justify-end gap-2">
-                <button type="button" class="btn btn-ghost" @click="showExit = false">Keep working</button>
-                <button type="button" class="btn btn-primary" @click="confirming = true; $refs.form.submit()"><x-icon name="check" size="14"/> Submit &amp; leave</button>
-            </div>
-        </div>
-    </div>
-    </template>
 </div>
 
 @if ($periodicTable)
@@ -252,7 +236,7 @@
 window.__takeQids = @json($exam->examQuestions->map(fn ($eq) => $eq->question->id)->values());
 function examTaker(total, hasLimit, remaining, elapsed) {
     return {
-        total, answers: {}, confirming: false, showConfirm: false, showExit: false, hasLimit, remaining, elapsed, clock: '',
+        total, answers: {}, confirming: false, showConfirm: false, hasLimit, remaining, elapsed, clock: '',
         qids: [], activeIdx: 0,
         init() {
             this.qids = window.__takeQids || [];
