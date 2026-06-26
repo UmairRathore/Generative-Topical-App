@@ -4,18 +4,20 @@
      Aspect ALWAYS preserved - never stretched, distorted, or recropped.
      Prop: $q (a V2 Question with `images` loaded). --}}
 @php
-    $txtStyle = 'font-size:15px; line-height:1.55; color:var(--text); margin-top:10px;';
+    // No top margin on the first block, so it lines up with the question-number
+    // badge (which sits at the top via items-start). Spacing only goes between blocks.
+    $txtStyle = 'font-size:15px; line-height:1.55; color:var(--text);';
 @endphp
 
 @foreach ($q->stemBlocks() as $block)
     @if ($block['type'] === 'text')
-        <div style="{{ $txtStyle }}">{!! sci($block['text']) !!}</div>
+        <div style="{{ $txtStyle }}{{ $loop->first ? '' : ' margin-top:10px;' }}">{!! sci($block['text']) !!}</div>
     @elseif ($block['type'] === 'figure')
         {{-- centered, borderless figure. Width is uniform-scaled from the crop's
              own point size (see QuestionImage::displayWidth) so label text stays
              one consistent size across diagrams; max-width:100% keeps it in-column. --}}
         @php $fw = $block['image']->displayWidth(); @endphp
-        <div class="v2-figure-wrap">
+        <div class="v2-figure-wrap" @if ($loop->first) style="margin-top:0;" @endif>
             <img src="{{ simg($block['image']->image_path) }}" alt="diagram" loading="lazy" onerror="this.style.display='none'"
                  @if ($fw) style="width:{{ $fw }}px;" @endif>
         </div>
