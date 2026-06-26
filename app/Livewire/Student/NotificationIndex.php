@@ -11,7 +11,7 @@ use Livewire\WithPagination;
 
 /*
 |--------------------------------------------------------------------------
-| Student notifications — full page (overflow destination for the bell)
+| Student notifications - full page (overflow destination for the bell)
 |--------------------------------------------------------------------------
 | One paginated stream of "update" notifications with an all/unread filter.
 | Unread rows stay highlighted until the student reads them (no auto mark-all on
@@ -61,6 +61,12 @@ class NotificationIndex extends Component
     public function markRead(int $id): void
     {
         $this->base()->where('id', $id)->unread()->update(['read_at' => now()]);
+        unset($this->unreadCount);
+    }
+
+    public function markUnread(int $id): void
+    {
+        $this->base()->where('id', $id)->whereNotNull('read_at')->update(['read_at' => null]);
         unset($this->unreadCount);
     }
 

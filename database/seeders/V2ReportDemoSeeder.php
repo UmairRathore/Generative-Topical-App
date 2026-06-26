@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 
 /*
 |--------------------------------------------------------------------------
-| V2ReportDemoSeeder — one O-Level student with a full cross-subject history
+| V2ReportDemoSeeder - one O-Level student with a full cross-subject history
 |--------------------------------------------------------------------------
 | Builds the missing O-Level Physics class, then a single "report demo" student
 | (Hira Bukhari) enrolled in O-Level Chemistry + Physics + Biology, and gives
@@ -159,7 +159,7 @@ class V2ReportDemoSeeder extends Seeder
         }
 
         $tests = \App\Models\V2\ExamAttempt::where('student_id', $student->id)->where('status', 'submitted')->count();
-        $this->command->info("V2ReportDemoSeeder complete. Report student: Hira Bukhari (hira.bukhari@thesage.edu.pk, password: password) — {$tests} submitted tests across O-Level Chemistry, Physics, Biology.");
+        $this->command->info("V2ReportDemoSeeder complete. Report student: Hira Bukhari (hira.bukhari@thesage.edu.pk, password: password) - {$tests} submitted tests across O-Level Chemistry, Physics, Biology.");
     }
 
     private function teacherFor(SchoolClass $class): Teacher

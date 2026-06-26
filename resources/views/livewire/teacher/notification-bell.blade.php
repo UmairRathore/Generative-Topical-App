@@ -18,7 +18,7 @@
     </button>
 
     <div x-show="open" x-cloak x-transition.origin.top.right @click.outside="open = false"
-         style="position: absolute; top: 42px; right: 0; width: 380px; max-width: 92vw; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 18px 50px rgba(0,0,0,.28); z-index: 50; overflow: hidden;">
+         style="position: fixed; top: 58px; right: 12px; left: auto; width: 380px; max-width: calc(100vw - 24px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 18px 50px rgba(0,0,0,.28); z-index: 50; overflow: hidden;">
 
         <div class="flex items-center justify-between" style="padding: 12px 14px;">
             <span style="font-size: 14px; font-weight: 600;">Notifications</span>
@@ -32,18 +32,18 @@
                         :class="tab === 'updates' ? 'btn-primary' : 'btn-ghost'"
                         class="btn btn-sm" style="flex: 1; border: 0; border-radius: 0; justify-content: center; gap: 7px;">
                     Updates
-                    <span :style="tab === 'updates' ? 'background: rgba(255,255,255,.22); color: #fff;' : 'background: var(--soft-surface); color: var(--text-soft);'" style="min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $this->updateCount }}</span>
+                    <span :style="tab === 'updates' ? ' color: #fff;' : ' color: var(--text-soft);'" style="min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $this->updateCount }}</span>
                 </button>
                 <button type="button" @click="tab = 'attention'; detail = null"
                         :class="tab === 'attention' ? 'btn-primary' : 'btn-ghost'"
                         class="btn btn-sm" style="flex: 1; border: 0; border-radius: 0; justify-content: center; gap: 7px;">
                     Needs attention
-                    <span :style="tab === 'attention' ? 'background: rgba(255,255,255,.22); color: #fff;' : 'background: var(--soft-surface); color: var(--text-soft);'" style="min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $this->attentionCount }}</span>
+                    <span :style="tab === 'attention' ? ' color: #fff;' : ' color: var(--text-soft);'" style="min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $this->attentionCount }}</span>
                 </button>
             </div>
         </div>
 
-        {{-- LISTS (capped preview, scrollable). Older items aren't deleted — they live on the full page. --}}
+        {{-- LISTS (capped preview, scrollable). Older items aren't deleted - they live on the full page. --}}
         <div x-show="!detail" style="max-height: 360px; overflow-y: auto;">
 
             {{-- Updates --}}
@@ -54,8 +54,8 @@
                        class="flex" style="gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; cursor: {{ $url || ! $n->read_at ? 'pointer' : 'default' }}; {{ $n->read_at ? '' : 'background: rgba(var(--accent-rgb),0.05);' }}">
                         <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $icon }}" size="17"/></span>
                         <div style="min-width: 0;">
-                            <div style="font-size: 13px; line-height: 1.45;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> — {{ $n->data['body'] ?? '' }}</div>
-                            <div style="font-size: 11px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}@if ($url) · <span style="color: var(--accent);">Open →</span>@endif</div>
+                            <div style="font-size: 13px; line-height: 1.45;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> - {{ $n->data['body'] ?? '' }}</div>
+                            <div style="font-size: 11px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}</div>
                         </div>
                     </a>
                 @empty

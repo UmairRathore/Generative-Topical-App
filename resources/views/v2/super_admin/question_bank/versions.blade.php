@@ -34,9 +34,9 @@
                     @foreach ($row['diff'] as $d)
                         <div style="margin-bottom: 4px;">
                             <span style="font-weight: 600;">{{ $d['field'] }}:</span>
-                            <span style="color: var(--bad); text-decoration: line-through;">{{ \Illuminate\Support\Str::limit((string) $d['old'], 120) ?: '—' }}</span>
+                            <span style="color: var(--bad); text-decoration: line-through;">{{ \Illuminate\Support\Str::limit((string) $d['old'], 120) ?: '-' }}</span>
                             <span style="color: var(--text-faint);">→</span>
-                            <span style="color: var(--ok);">{{ \Illuminate\Support\Str::limit((string) $d['new'], 120) ?: '—' }}</span>
+                            <span style="color: var(--ok);">{{ \Illuminate\Support\Str::limit((string) $d['new'], 120) ?: '-' }}</span>
                         </div>
                     @endforeach
                 </div>

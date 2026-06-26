@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
 | Gives each school campus branches, a branch admin per branch, and back-fills
 | branch_id on classes / teachers / students / enrollments. The flagship (Sage)
 | gets two branches (so branch isolation is demonstrable); others get one.
-| Idempotent — safe to re-run.  All branch admins use password "password".
+| Idempotent - safe to re-run.  All branch admins use password "password".
 */
 class V2BranchSeeder extends Seeder
 {

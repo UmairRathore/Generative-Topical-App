@@ -45,7 +45,7 @@
         </div>
     @empty
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; color: var(--text-faint); font-size: 13px;">
-            No submissions yet — topic accuracy appears once students submit tests.
+            No submissions yet - topic accuracy appears once students submit tests.
         </div>
     @endforelse
 @else

@@ -134,7 +134,7 @@
 
 {{-- Performance by topic --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-top: 20px;">
-    <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Performance by topic <span style="font-weight:400; color:var(--text-faint);">— this branch</span></div>
+    <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Performance by topic <span style="font-weight:400; color:var(--text-faint);">- this branch</span></div>
     @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet for this branch.'])
 </div>
 @endsection

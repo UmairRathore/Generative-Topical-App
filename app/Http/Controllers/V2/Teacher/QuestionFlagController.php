@@ -43,7 +43,7 @@ class QuestionFlagController extends Controller
             ? $request->file('screenshot')->store(self::UPLOAD_DIR.'/'.$question->id, 'public')
             : null;
 
-        // One open flag per (question, teacher) — re-flagging refreshes it, keeping
+        // One open flag per (question, teacher) - re-flagging refreshes it, keeping
         // any newly attached screenshot rather than spawning duplicate queue rows.
         QuestionFlag::updateOrCreate(
             [
@@ -74,7 +74,7 @@ class QuestionFlagController extends Controller
             'has_image'  => (bool) $path,
         ]);
 
-        $message = 'Thanks — reported and pulled from the question pool for review.';
+        $message = 'Thanks - reported and pulled from the question pool for review.';
 
         // AJAX (exam preview / question gallery): respond with JSON so the page
         // keeps its state instead of reloading and losing the drawn questions.

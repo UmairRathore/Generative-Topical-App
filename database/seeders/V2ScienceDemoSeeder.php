@@ -19,12 +19,12 @@ use Illuminate\Support\Carbon;
 
 /*
 |--------------------------------------------------------------------------
-| V2ScienceDemoSeeder — Chemistry + Biology demo, O Level and A Level
+| V2ScienceDemoSeeder - Chemistry + Biology demo, O Level and A Level
 |--------------------------------------------------------------------------
 | The base V2DemoSeeder only sets up A-Level Physics. This adds the science
 | spine the demo was missing: O-Level grade + Chemistry/Biology teachers,
 | classes, O-Level students, subject assignments, and (for subjects whose
-| question bank exists) sample exams with marked attempts — so a reviewer can
+| question bank exists) sample exams with marked attempts - so a reviewer can
 | log in and SEE Chemistry and Biology working end to end.
 |
 | Coverage (The Sage School, Gulberg campus):
@@ -63,7 +63,7 @@ class V2ScienceDemoSeeder extends Seeder
             ?: Branch::where('school_id', $school->id)->orderBy('id')->first();
         $branchId = $branch?->id;
 
-        // Subjects (already seeded by V2SubjectsSeeder — resolve, don't create).
+        // Subjects (already seeded by V2SubjectsSeeder - resolve, don't create).
         $subjects = Subject::whereIn('code', ['5070', '9701', '5090', '9700'])->get()->keyBy('code');
         foreach (['5070', '9701', '5090', '9700'] as $code) {
             if (! isset($subjects[$code])) {
@@ -158,7 +158,7 @@ class V2ScienceDemoSeeder extends Seeder
                 );
             }
 
-            // One released, mixed exam + marked attempts — only if the subject has a usable pool.
+            // One released, mixed exam + marked attempts - only if the subject has a usable pool.
             $this->seedExam($svc, $b, $class, $cohort);
         }
 
@@ -170,11 +170,11 @@ class V2ScienceDemoSeeder extends Seeder
         $pool = \App\Models\V2\Question::query()->active()->has('options')
             ->where('subject_id', $class->subject_id)->count();
         if ($pool < 10) {
-            $this->command->warn("  {$b['name']}: only {$pool} usable questions — skipping exam (e.g. 9700 not imported yet).");
+            $this->command->warn("  {$b['name']}: only {$pool} usable questions - skipping exam (e.g. 9700 not imported yet).");
             return;
         }
 
-        $title = $b['name'].' — Term Test';
+        $title = $b['name'].' - Term Test';
 
         $exam = Exam::where('class_id', $class->id)->where('title', $title)->first();
         if (! $exam) {

@@ -19,7 +19,7 @@
                 .then(d => {
                     var id = this.qid;
                     this.close();
-                    // Let the host page react (e.g. swap the pulled question out of a preview) — no reload, state preserved.
+                    // Let the host page react (e.g. swap the pulled question out of a preview) - no reload, state preserved.
                     window.dispatchEvent(new CustomEvent('question-flagged', { detail: { id: id } }));
                     this.showFlash((d && d.message) || 'Reported and pulled from the pool for review.');
                 })
@@ -40,7 +40,7 @@
         },
         onFile(e){ var f = e.target.files && e.target.files[0]; if (f) this.accept(f); else this.clearPreview(); },
         setFile(blob){ this.accept(new File([blob], 'pasted-screenshot.png', { type: blob.type || 'image/png' })); },
-        // One image, image-only, client-compressed, ≤3 MB — same limits as the student flag.
+        // One image, image-only, client-compressed, ≤3 MB - same limits as the student flag.
         async accept(file){
             this.error = '';
             if (! file) return;
@@ -120,12 +120,12 @@
                     </div>
 
                     <div style="margin-bottom:14px;">
-                        <label class="flag-lbl">Details <span style="text-transform:none;letter-spacing:0;font-weight:400;">— optional</span></label>
+                        <label class="flag-lbl">Details <span style="text-transform:none;letter-spacing:0;font-weight:400;">- optional</span></label>
                         <textarea name="note" rows="3" maxlength="1000" class="flag-field" placeholder="e.g. the diagram is cut off on the right edge"></textarea>
                     </div>
 
                     <div>
-                        <label class="flag-lbl">Screenshot <span style="text-transform:none;letter-spacing:0;font-weight:400;">— optional · one image, max 3 MB</span></label>
+                        <label class="flag-lbl">Screenshot <span style="text-transform:none;letter-spacing:0;font-weight:400;">- optional · one image, max 3 MB</span></label>
                         <div class="flag-tip">
                             Capture, then paste it here with <kbd>Ctrl</kbd> + <kbd>V</kbd> (<kbd>⌘</kbd> + <kbd>V</kbd> on Mac).<br>
                             <strong>Windows:</strong> <kbd>⊞ Win</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> &nbsp;·&nbsp; <strong>Mac:</strong> <kbd>⌘</kbd> + <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>4</kbd>
@@ -147,7 +147,7 @@
     </div>
     </template>
 
-    {{-- Success toast — survives the modal closing; no page reload. --}}
+    {{-- Success toast - survives the modal closing; no page reload. --}}
     <template x-teleport="body">
         <div class="flag-toast" x-show="flash" x-transition x-cloak><x-icon name="check" size="15"/> <span x-text="flash"></span></div>
     </template>

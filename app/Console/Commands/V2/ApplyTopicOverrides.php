@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
 | Curated, human-verified corrections layered on top of the deterministic
 | keyword classifier (v2:tag-questions). The classifier mis-tags a question
 | when another topic's question happens to contain kinematics keywords
-| (velocity / acceleration / displacement) — e.g. a Doppler, oil-drop, or
+| (velocity / acceleration / displacement) - e.g. a Doppler, oil-drop, or
 | collision question. Each entry below was verified by reading the question.
 |
 | Keyed by (source_paper, question_number) so it is stable across re-imports.

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 | Exam results release
 |--------------------------------------------------------------------------
 | Submitting a test no longer reveals the score/answers to the student. The
-| teacher releases results separately — either at the same time as releasing
+| teacher releases results separately - either at the same time as releasing
 | the test, or later from the exam's manage page. Until then a student sees
 | only "submitted, awaiting results".
 |

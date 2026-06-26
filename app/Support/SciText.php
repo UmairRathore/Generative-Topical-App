@@ -4,12 +4,12 @@ namespace App\Support;
 
 /*
 |--------------------------------------------------------------------------
-| SciText — render-time scientific notation for CAIE question text
+| SciText - render-time scientific notation for CAIE question text
 |--------------------------------------------------------------------------
 | Turns the plain extracted text ("H2O", "mol dm-3", "Na+") into proper
 | sub/superscript HTML ("H₂O" via <sub>, "mol dm⁻³" via <sup>) WITHOUT
 | touching the stored data. It is deliberately CONSERVATIVE: it only acts on
-| anchored patterns — a digit right after a real element symbol, an exponent
+| anchored patterns - a digit right after a real element symbol, an exponent
 | right after a known unit, a sign at a species boundary, or a curated common
 | ion. Anything it is not sure about (coefficients like "2H2O", "Figure 2",
 | "Period 3", bare numbers) is left exactly as-is. The toggle lives in the

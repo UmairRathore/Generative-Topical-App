@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 | Exam release window
 |--------------------------------------------------------------------------
 | A teacher-generated test is no longer instantly live. It is created as a
-| draft and the teacher "releases" it — immediately or at a scheduled time —
+| draft and the teacher "releases" it - immediately or at a scheduled time -
 | with an optional expiry. Students may only take it inside the window.
 |
 |   status = draft     -> created, not visible to students
@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Schema;
 |   available_from    access opens (release time, now or scheduled)
 |   available_until   access closes (expiry); null = no expiry
 |
-| A student who never submits before available_until is "missed" — computed
+| A student who never submits before available_until is "missed" - computed
 | from the absence of a submitted attempt, no extra column needed.
 */
 return new class extends Migration

@@ -42,7 +42,7 @@
 </div>
 
 {{-- Everything inside #qb-region is swapped in place on filter / pill / pager /
-     trash / restore actions — the element itself stays, so the delegated JS
+     trash / restore actions - the element itself stays, so the delegated JS
      handlers below survive and scroll position is preserved. --}}
 <div id="qb-region" data-index-url="{{ route('v2.super_admin.question_bank.index') }}">
 
@@ -218,7 +218,7 @@
 {{-- View toggle --}}
 @php
     // Periodic Table is a reference, offered only while a Chemistry subject
-    // (A- or O-Level) is the active filter — never as question content.
+    // (A- or O-Level) is the active filter - never as question content.
     $ptSubject = $filters['subject'] ? $subjects->firstWhere('id', $filters['subject']) : null;
     $ptPath = config('v2.periodic_table');
     $periodicTable = ($ptSubject && in_array($ptSubject->code, config('v2.periodic_table_codes', []), true))
@@ -238,7 +238,7 @@
                     <x-icon name="layers" size="14"/> Periodic Table
                 </button>
                 {{-- Pinned floating reference: stays fixed in the viewport while you scroll the
-                     question list and closes only via the × button or Esc — no page-dimming
+                     question list and closes only via the × button or Esc - no page-dimming
                      backdrop, so the page behind stays fully scrollable and clickable. --}}
                 <div x-show="ptOpen" x-cloak
                      @keydown.escape.window="ptOpen = false" class="pt-float">
@@ -449,7 +449,7 @@
             <h3 class="serif" style="font-size: 18px; font-weight: 600;">Move to Trash?</h3>
         </div>
         <p style="font-size: 13.5px; color: var(--text-soft); line-height: 1.55; margin-bottom: 22px;">
-            <strong x-text="delLabel" style="color: var(--text);"></strong> will be moved to the Trash. It keeps its options and images and is <strong style="color: var(--text);">never permanently deleted</strong> — you can restore it any time from the Trash view.
+            <strong x-text="delLabel" style="color: var(--text);"></strong> will be moved to the Trash. It keeps its options and images and is <strong style="color: var(--text);">never permanently deleted</strong> - you can restore it any time from the Trash view.
         </p>
         <div class="flex items-center justify-end gap-2">
             <button type="button" class="btn btn-ghost" @click="delOpen = false">Cancel</button>
@@ -509,7 +509,7 @@
                     region.innerHTML = fresh.innerHTML;
                     if (push !== false) history.pushState({ qb: true }, '', url);
                 } else {
-                    window.location.href = url; // unexpected (e.g. session expired) — hard nav
+                    window.location.href = url; // unexpected (e.g. session expired) - hard nav
                 }
             })
             .catch(function () { window.location.href = url; })
@@ -568,7 +568,7 @@
             return;
         }
 
-        // (b) trash / restore forms inside the region — POST, then refresh the region
+        // (b) trash / restore forms inside the region - POST, then refresh the region
         if (form.dataset.qbAjax !== undefined) {
             e.preventDefault();
             postForm(form.action, new FormData(form))

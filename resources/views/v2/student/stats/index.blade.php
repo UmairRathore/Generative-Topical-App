@@ -43,7 +43,7 @@
         <div class="sx-card">
             <div class="sx-klabel"><x-icon name="trending" size="13"/> Recent trend</div>
             @if ($improvement === null)
-                <div class="sx-kval" style="color: var(--text-faint);">—</div>
+                <div class="sx-kval" style="color: var(--text-faint);">-</div>
                 <div style="font-size:11px; color:var(--text-faint); margin-top:3px;">need 10+ exams</div>
             @else
                 <div class="sx-kval" style="color: {{ $improvement >= 0 ? 'var(--ok)' : 'var(--bad)' }};">
@@ -58,14 +58,14 @@
                 <div class="sx-kval" style="font-size:19px;">{{ $bestSubject['subject'] }}</div>
                 <div style="font-size:11px; color:var(--text-faint); margin-top:3px;">{{ $bestSubject['avg'] }}% average</div>
             @else
-                <div class="sx-kval" style="color: var(--text-faint);">—</div>
+                <div class="sx-kval" style="color: var(--text-faint);">-</div>
             @endif
         </div>
     </div>
 
     {{-- Score trend --}}
     <div class="sx-panel" style="margin-bottom: 18px;">
-        <div class="sx-ptitle">Score trend <span style="font-weight:400; color:var(--text-faint);">— last {{ count($trend) }} exams</span></div>
+        <div class="sx-ptitle">Score trend <span style="font-weight:400; color:var(--text-faint);">- last {{ count($trend) }} exams</span></div>
         <div class="sx-chart" style="height: 280px;"><canvas id="sxTrend"></canvas></div>
     </div>
 
@@ -80,14 +80,14 @@
             @endif
         </div>
         <div class="sx-panel">
-            <div class="sx-ptitle">Subject split <span style="font-weight:400; color:var(--text-faint);">— exams taken</span></div>
+            <div class="sx-ptitle">Subject split <span style="font-weight:400; color:var(--text-faint);">- exams taken</span></div>
             <div class="sx-chart" style="height: 240px;"><canvas id="sxSubjects"></canvas></div>
         </div>
     </div>
 
     {{-- Monthly activity --}}
     <div class="sx-panel" style="margin-bottom: 18px;">
-        <div class="sx-ptitle">Monthly activity <span style="font-weight:400; color:var(--text-faint);">— {{ now()->year }}</span></div>
+        <div class="sx-ptitle">Monthly activity <span style="font-weight:400; color:var(--text-faint);">- {{ now()->year }}</span></div>
         <div class="sx-chart" style="height: 220px;"><canvas id="sxMonthly"></canvas></div>
     </div>
 
@@ -130,7 +130,7 @@
     (function () {
         var t = V2.theme();
 
-        // 1) Score trend — line
+        // 1) Score trend - line
         var trend = @json($trend);
         new Chart(document.getElementById('sxTrend'), {
             type: 'line',
@@ -161,7 +161,7 @@
             }
         });
 
-        // 2) Topic performance — horizontal bar
+        // 2) Topic performance - horizontal bar
         var topics = @json($topics);
         if (topics.length) {
             new Chart(document.getElementById('sxTopics'), {
@@ -186,7 +186,7 @@
             });
         }
 
-        // 3) Subject split — doughnut
+        // 3) Subject split - doughnut
         var subjects = @json($subjects->map(fn ($s) => ['name' => $s['subject'], 'count' => $s['tests_count']])->values());
         var palette = [t.primary, t.accent, t.ok, t.warn, t.bad];
         new Chart(document.getElementById('sxSubjects'), {
@@ -203,7 +203,7 @@
             options: { cutout: '62%', plugins: { legend: { position: 'bottom' } } }
         });
 
-        // 4) Monthly activity — bar
+        // 4) Monthly activity - bar
         new Chart(document.getElementById('sxMonthly'), {
             type: 'bar',
             data: {

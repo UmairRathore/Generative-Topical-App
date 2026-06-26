@@ -17,7 +17,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Super Admin — Platform analytics / stats
+| Super Admin - Platform analytics / stats
 |--------------------------------------------------------------------------
 | Platform-wide: MRR + growth trends, school engagement & churn risk, daily
 | activity, most-attempted topics and the hardest questions. Not school-scoped.

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Question extends Model
 {
     use HasHashid;
-    // Questions are never permanently deleted — "delete" soft-deletes (recoverable from Trash).
+    // Questions are never permanently deleted - "delete" soft-deletes (recoverable from Trash).
     use SoftDeletes;
 
     protected $table = 'v2_questions';
@@ -114,7 +114,7 @@ class Question extends Model
         return $query->whereNotNull('correct_answer');
     }
 
-    /** Live questions — the only ones a generated test may draw from. */
+    /** Live questions - the only ones a generated test may draw from. */
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
@@ -126,7 +126,7 @@ class Question extends Model
      *
      * Rule: text_before → between diagrams → text_after → after diagrams → table,
      * EXCEPT when two between-diagrams are vertically separated by a text-sized
-     * gap — then text_after is placed in that gap (text → diagram → text → diagram).
+     * gap - then text_after is placed in that gap (text → diagram → text → diagram).
      * Diagrams that overlap vertically (one figure, e.g. side-by-side) stay together.
      *
      * @return array<int,array{type:string,text?:string,image?:\App\Models\V2\QuestionImage}>
@@ -203,7 +203,7 @@ class Question extends Model
      * `option_images` that slipped past the importer's dedup), return the
      * distinct figure(s) so the view can show them once and render A/B/C/D as
      * plain labels. Null for genuine per-option pictures. The canonical repair is
-     * the v2:fix-duplicate-option-images command — this just keeps the page sane
+     * the v2:fix-duplicate-option-images command - this just keeps the page sane
      * if an unfixed question is ever served.
      *
      * @return \Illuminate\Support\Collection<int,QuestionImage>|null

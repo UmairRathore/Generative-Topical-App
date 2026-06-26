@@ -13,7 +13,7 @@ class SyllabusPhysicsAlevelSeeder extends Seeder
         $stats = $loader->sync($path, SyllabusLoader::DEFAULT_CODE);
 
         $this->command?->info(sprintf(
-            'Synced syllabus from %s — topics=%d subtopics=%d objectives=%d',
+            'Synced syllabus from %s - topics=%d subtopics=%d objectives=%d',
             $path, $stats['topics'], $stats['subtopics'], $stats['objectives']
         ));
     }

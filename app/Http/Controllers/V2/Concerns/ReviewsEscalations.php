@@ -27,7 +27,7 @@ trait ReviewsEscalations
      */
     protected function reportedQuestions(?int $schoolId, ?int $branchId)
     {
-        // collect() coerces to a base collection — examReports() is an Eloquent
+        // collect() coerces to a base collection - examReports() is an Eloquent
         // collection of plain arrays, and Eloquent\Collection::merge() would call
         // getKey() on each array. Base merge just appends the two row lists.
         $rows = collect($this->examReports($schoolId, $branchId))
@@ -41,7 +41,7 @@ trait ReviewsEscalations
      * Phase 4 (read-only): attach the Support quality-review outcome + admin-scoped
      * propagation scope to each row. Resolves the review by the row's own
      * quality_review_id first, falling back to the latest DECIDED review for that
-     * question. Observers only — nothing here is actionable.
+     * question. Observers only - nothing here is actionable.
      */
     private function attachQualityReview($rows, ?int $schoolId, ?int $branchId)
     {
@@ -130,7 +130,7 @@ trait ReviewsEscalations
 
             // Workflow status = the report's lifecycle ONLY (Open / Escalated /
             // Resolved / Dismissed). Voiding is a separate per-exam academic action,
-            // surfaced as metadata below — never as a workflow status.
+            // surfaced as metadata below - never as a workflow status.
             if ($teacherFlag) {
                 [$status, $badge] = match ($teacherFlag->status) {
                     'open'     => ['Under Quality Review', 'badge-review'],
@@ -147,15 +147,15 @@ trait ReviewsEscalations
             }
 
             $decision = match (true) {
-                (bool) $teacherFlag => 'Escalated to Support Team'.($teacherFlag->note ? ' — “'.$teacherFlag->note.'”' : ''),
+                (bool) $teacherFlag => 'Escalated to Support Team'.($teacherFlag->note ? ' - “'.$teacherFlag->note.'”' : ''),
                 $isVoided           => 'Voided for this exam'.($eq?->void_reason ? ' ('.(QuestionFlag::REASONS[$eq->void_reason] ?? $eq->void_reason).')' : ''),
-                $students->where('status', 'open')->isEmpty() => 'Reports dismissed — question kept',
+                $students->where('status', 'open')->isEmpty() => 'Reports dismissed - question kept',
                 default             => 'Awaiting teacher review',
             };
 
             $timeline = collect();
             foreach ($students->sortBy('created_at') as $s) {
-                $timeline->push(['t' => $s->created_at, 'label' => 'Reported by '.($s->student?->name ?? 'a student').' — '.$s->reasonLabel()]);
+                $timeline->push(['t' => $s->created_at, 'label' => 'Reported by '.($s->student?->name ?? 'a student').' - '.$s->reasonLabel()]);
             }
             if ($isVoided && $eq?->voided_at) {
                 $timeline->push(['t' => $eq->voided_at, 'label' => 'Voided for this exam by '.($voiders[$eq->voided_by] ?? 'a teacher')]);
@@ -205,7 +205,7 @@ trait ReviewsEscalations
                     default    => ['Dismissed', 'badge-soft'],
                 };
 
-                $timeline = collect([['t' => $f->created_at, 'label' => 'Flagged by '.($f->teacher?->name ?? 'a teacher').' — '.$f->reasonLabel()]]);
+                $timeline = collect([['t' => $f->created_at, 'label' => 'Flagged by '.($f->teacher?->name ?? 'a teacher').' - '.$f->reasonLabel()]]);
                 if ($f->resolved_at) {
                     $timeline->push(['t' => $f->resolved_at, 'label' => ($f->status === 'resolved' ? 'Fixed' : 'Closed').' by the Support Team']);
                 }
@@ -226,7 +226,7 @@ trait ReviewsEscalations
                     'badge'      => $badge,
                     'voided'     => false,
                     'voidReason' => null,
-                    'decision'   => 'Flagged from the question bank'.($f->note ? ' — “'.$f->note.'”' : ''),
+                    'decision'   => 'Flagged from the question bank'.($f->note ? ' - “'.$f->note.'”' : ''),
                     'timeline' => $timeline->sortBy('t')->values()->all(),
                     'sortTime' => ($f->resolved_at ?? $f->created_at)?->timestamp,
                 ];

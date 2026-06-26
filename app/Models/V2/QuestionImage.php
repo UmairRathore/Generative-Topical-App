@@ -51,7 +51,7 @@ class QuestionImage extends Model
     | Every crop is rendered from the source PDF at the SAME 200 DPI, and its
     | `bbox` is stored in PDF points (72 pt = 1 in). So a single CSS-px-per-point
     | scale applied to every image gives a CONSTANT on-screen size for the
-    | internal label text, no matter how large the original diagram was — small
+    | internal label text, no matter how large the original diagram was - small
     | and large diagrams shrink/grow together instead of each being squeezed
     | into a fixed box (which makes the labels vary). Callers pair the returned
     | width with `max-width:100%` so a diagram wider than its column still fits.

@@ -27,7 +27,7 @@
     <div class="sx-panel" style="text-align:center; padding:48px 24px; color:var(--text-faint);">
         <div style="margin-bottom:10px; display:flex; justify-content:center;"><x-icon name="chart" size="34"/></div>
         <div style="font-size:15px; font-weight:600; color:var(--text); margin-bottom:6px;">No analytics yet</div>
-        <div style="font-size:13px;">Create and release an exam — once students submit, their results show up here.</div>
+        <div style="font-size:13px;">Create and release an exam - once students submit, their results show up here.</div>
         <a href="{{ route('v2.teacher.exams.create') }}" class="btn btn-primary btn-sm" style="margin-top:16px;">Create an exam</a>
     </div>
 @else
@@ -36,7 +36,7 @@
         @foreach ([
             ['Exams made', $overview['exams'], 'clipboard', null],
             ['Submissions', $overview['submissions'], 'check', null],
-            ['Avg score', $overview['avg'] !== null ? $overview['avg'].'%' : '—', 'chart', $overview['avg']],
+            ['Avg score', $overview['avg'] !== null ? $overview['avg'].'%' : '-', 'chart', $overview['avg']],
             ['Completion', $overview['completion'].'%', 'trending', null],
             ['This month', $overview['exams_this_month'], 'calendar', null],
             ['Needs attention', $needsAttention->count(), 'flag', null],
@@ -58,9 +58,9 @@
                     <x-icon name="flag" size="14"/>
                     <span style="flex:1;"><strong>{{ $s['name'] }}</strong>
                         @if ($s['attempts'] === 0)
-                            <span style="color: var(--text-soft);">— hasn't attempted any of your exams yet</span>
+                            <span style="color: var(--text-soft);">- hasn't attempted any of your exams yet</span>
                         @else
-                            <span style="color: var(--text-soft);">— {{ $s['avg'] }}% average across {{ $s['attempts'] }} {{ \Illuminate\Support\Str::plural('exam', $s['attempts']) }}</span>
+                            <span style="color: var(--text-soft);">- {{ $s['avg'] }}% average across {{ $s['attempts'] }} {{ \Illuminate\Support\Str::plural('exam', $s['attempts']) }}</span>
                         @endif
                     </span>
                     <a href="{{ route('v2.teacher.students.show', hid($s['id'])) }}" class="btn btn-ghost btn-sm">View</a>
@@ -72,18 +72,18 @@
     {{-- Class comparison + score distribution --}}
     <div class="sx-grid sx-2col" style="grid-template-columns: 1fr 1fr; margin-bottom: 18px;">
         <div class="sx-panel">
-            <div class="sx-ptitle">Class comparison <span style="font-weight:400; color:var(--text-faint);">— average score</span></div>
+            <div class="sx-ptitle">Class comparison <span style="font-weight:400; color:var(--text-faint);">- average score</span></div>
             <div class="sx-chart" style="height: 240px;"><canvas id="txClasses"></canvas></div>
         </div>
         <div class="sx-panel">
-            <div class="sx-ptitle">Score distribution <span style="font-weight:400; color:var(--text-faint);">— students by band</span></div>
+            <div class="sx-ptitle">Score distribution <span style="font-weight:400; color:var(--text-faint);">- students by band</span></div>
             <div class="sx-chart" style="height: 240px;"><canvas id="txDist"></canvas></div>
         </div>
     </div>
 
     {{-- Topic performance --}}
     <div class="sx-panel" style="margin-bottom: 18px;">
-        <div class="sx-ptitle">Performance by topic <span style="font-weight:400; color:var(--text-faint);">— all your classes</span></div>
+        <div class="sx-ptitle">Performance by topic <span style="font-weight:400; color:var(--text-faint);">- all your classes</span></div>
         @if (count($topics))
             <div class="sx-chart" style="height: {{ max(180, count($topics) * 30) }}px;"><canvas id="txTopics"></canvas></div>
         @else
@@ -93,7 +93,7 @@
 
     {{-- Exam trend --}}
     <div class="sx-panel" style="margin-bottom: 18px;">
-        <div class="sx-ptitle">Exam performance trend <span style="font-weight:400; color:var(--text-faint);">— avg score & submissions</span></div>
+        <div class="sx-ptitle">Exam performance trend <span style="font-weight:400; color:var(--text-faint);">- avg score & submissions</span></div>
         <div class="sx-chart" style="height: 260px;"><canvas id="txTrend"></canvas></div>
     </div>
 
@@ -112,7 +112,7 @@
                         <td style="padding: var(--pad-cell); font-size: 13px; font-weight: 500;">{{ $s['name'] }}</td>
                         <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-faint);">{{ $s['roll'] }}</td>
                         <td style="padding: var(--pad-cell); text-align: right; font-size: 13px;">{{ $s['attempts'] }}</td>
-                        <td style="padding: var(--pad-cell); text-align: right; font-size: 13px; font-weight: 600; color: {{ $s['avg'] !== null ? $tone($s['avg']) : 'var(--text-faint)' }};">{{ $s['avg'] !== null ? $s['avg'].'%' : '—' }}</td>
+                        <td style="padding: var(--pad-cell); text-align: right; font-size: 13px; font-weight: 600; color: {{ $s['avg'] !== null ? $tone($s['avg']) : 'var(--text-faint)' }};">{{ $s['avg'] !== null ? $s['avg'].'%' : '-' }}</td>
                         <td style="padding: var(--pad-cell); text-align: right;"><a href="{{ route('v2.teacher.students.show', hid($s['id'])) }}" class="btn btn-ghost btn-sm">View</a></td>
                     </tr>
                 @empty
@@ -127,7 +127,7 @@
     (function () {
         var t = V2.theme();
 
-        // 1) Class comparison — bar
+        // 1) Class comparison - bar
         var classes = @json(collect($classes)->map(fn ($c) => ['name' => $c['name'], 'avg' => $c['avg'] ?? 0])->values());
         new Chart(document.getElementById('txClasses'), {
             type: 'bar',
@@ -141,7 +141,7 @@
             }
         });
 
-        // 2) Score distribution — histogram
+        // 2) Score distribution - histogram
         new Chart(document.getElementById('txDist'), {
             type: 'bar',
             data: {
@@ -154,7 +154,7 @@
             }
         });
 
-        // 3) Topic performance — horizontal bar
+        // 3) Topic performance - horizontal bar
         var topics = @json($topics);
         if (topics.length) {
             new Chart(document.getElementById('txTopics'), {
@@ -171,7 +171,7 @@
             });
         }
 
-        // 4) Exam trend — combo (line avg + bar submissions)
+        // 4) Exam trend - combo (line avg + bar submissions)
         var trend = @json($examTrend);
         new Chart(document.getElementById('txTrend'), {
             data: {

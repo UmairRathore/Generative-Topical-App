@@ -19,9 +19,9 @@
                     <div class="flex items-center gap-2" style="margin-bottom: 10px; padding: 7px 11px; border: 1px dashed var(--border); border-radius: 8px; background: var(--soft-surface);">
                         <x-icon name="flag" size="13" />
                         @if ($eq->void_source === 'quality_review')
-                            <span style="font-size: 12px; color: var(--text-soft);"><strong style="color: var(--text);">Quality Review Update</strong> — this question was excluded because its digital version did not accurately match the official Cambridge paper and mark scheme. Your score and statistics were recalculated automatically.</span>
+                            <span style="font-size: 12px; color: var(--text-soft);"><strong style="color: var(--text);">Quality Review Update</strong> - this question was excluded because its digital version did not accurately match the official Cambridge paper and mark scheme. Your score and statistics were recalculated automatically.</span>
                         @else
-                            <span style="font-size: 12px; color: var(--text-soft);"><strong style="color: var(--text);">Excluded from scoring</strong> — this question was removed after review and does not count towards your result.</span>
+                            <span style="font-size: 12px; color: var(--text-soft);"><strong style="color: var(--text);">Excluded from scoring</strong> - this question was removed after review and does not count towards your result.</span>
                         @endif
                     </div>
                 @endif

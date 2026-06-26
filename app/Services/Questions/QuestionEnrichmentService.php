@@ -17,8 +17,8 @@ use RuntimeException;
  * Orchestrates topic-tag and difficulty enrichment for questions.
  *
  * Sources:
- *   - DB (default if --from-db or no flag) — questions already imported.
- *   - JSON (--from-json) — read directly from storage/output/papers/{stem}/questions.json.
+ *   - DB (default if --from-db or no flag) - questions already imported.
+ *   - JSON (--from-json) - read directly from storage/output/papers/{stem}/questions.json.
  *
  * Output:
  *   - Persists question_topic_tags + question_difficulties (idempotent: tags

@@ -25,7 +25,7 @@ class QuestionRenderDataFactory
             return null;
         }
 
-        // For non-public disks (S3, etc.) keep the full URL — they need the host.
+        // For non-public disks (S3, etc.) keep the full URL - they need the host.
         $disk = $disk ?: 'public';
         if ($disk !== 'public') {
             return Storage::disk($disk)->url($imagePath);

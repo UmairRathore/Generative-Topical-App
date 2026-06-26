@@ -64,7 +64,7 @@ class ReportService
                 'subtopics' => collect($t['subtopics'] ?? [])
                     ->map(fn ($st) => ['subtopic' => $st['subtopic'], 'percent' => $st['percent']])->all(),
             ])->all(),
-            // The complete list of real topics in this subject — the only pool the model
+            // The complete list of real topics in this subject - the only pool the model
             // may pick prerequisite recommendations from.
             'syllabus_topics' => $s['all_topics'] ?? [],
         ])->all();
@@ -77,7 +77,7 @@ class ReportService
             ."and \"subjects\" (an object mapping each subject name to a 2-3 sentence comment). For each subject: "
             ."(1) name the strongest topic; "
             ."(2) identify the weakest topic and, using the per-subtopic accuracy, name the 1-3 specific subtopics to focus on first; "
-            ."(3) recommend 1-2 prerequisite/foundational topics to revisit to fix that weakness — chosen ONLY from that subject's "
+            ."(3) recommend 1-2 prerequisite/foundational topics to revisit to fix that weakness - chosen ONLY from that subject's "
             ."\"syllabus_topics\" list, and never invent a topic that is not in that list. "
             ."Use the student's first name and keep every recommendation concrete.";
 
@@ -134,7 +134,7 @@ class ReportService
                     ->all();
 
                 $line = "Needs work on {$weak['topic']} ({$weak['percent']}%)";
-                $line .= $weakSubs ? ' — focus first on '.implode(' and ', $weakSubs).'.' : ' — recommend focused practice there.';
+                $line .= $weakSubs ? ' - focus first on '.implode(' and ', $weakSubs).'.' : ' - recommend focused practice there.';
                 $parts[] = $line;
             }
             $subjects[$s['subject']] = implode(' ', $parts);
@@ -142,7 +142,7 @@ class ReportService
 
         $summary = "Over {$periodLabel}, {$first} completed {$stats['overall']['tests']} "
             .\Illuminate\Support\Str::plural('test', $stats['overall']['tests'])
-            ." with an overall average of {$avg}% — {$standing}.";
+            ." with an overall average of {$avg}% - {$standing}.";
         if ($weakestOverall) {
             $summary .= " The clearest priority is {$weakestOverall['topic']} in {$weakestOverall['subject']} ({$weakestOverall['percent']}%).";
         }

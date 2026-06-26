@@ -31,7 +31,7 @@ use Illuminate\Support\Facades\File;
 |                storage/app/public/<image_path>. Use for disaster recovery.
 |
 | Tags are re-mapped through v2_topics/v2_subtopics by external_id (scoped to
-| the subject), exactly as v2:tag-questions does — so they survive row-id churn.
+| the subject), exactly as v2:tag-questions does - so they survive row-id churn.
 | A tag whose external_id no longer resolves is left null and counted.
 */
 class ImportFromBackup extends Command
@@ -43,7 +43,7 @@ class ImportFromBackup extends Command
         {--mode=tags : "tags" (restore tags/answers onto existing questions) or "full" (also rebuild missing rows + image files)}
         {--dry-run : Report what would change without writing}';
 
-    protected $description = 'Restore topic tags + answers (and optionally full rows/images) from a v2:export-questions backup — no AI re-run';
+    protected $description = 'Restore topic tags + answers (and optionally full rows/images) from a v2:export-questions backup - no AI re-run';
 
     /** Cache of external_id => id maps, keyed by subject_id. */
     private array $topicMaps = [];
@@ -97,7 +97,7 @@ class ImportFromBackup extends Command
 
             $subject = Subject::where('code', $subjectCode)->first();
             if (! $subject) {
-                $this->warn("  {$paperMeta['source_paper']}: subject {$subjectCode} not in v2_subjects — skipped.");
+                $this->warn("  {$paperMeta['source_paper']}: subject {$subjectCode} not in v2_subjects - skipped.");
                 $bar->advance();
                 continue;
             }

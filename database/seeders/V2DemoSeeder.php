@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
 
 /*
 |--------------------------------------------------------------------------
-| V2DemoSeeder — the canonical, multi-school demo dataset
+| V2DemoSeeder - the canonical, multi-school demo dataset
 |--------------------------------------------------------------------------
 | Builds the full hierarchy (School → Grade → Teacher → Subject → Class →
 | Students → Exams → Attempts) across several schools so the stats interfaces
@@ -75,7 +75,7 @@ class V2DemoSeeder extends Seeder
         $topicsByTitle = Topic::where('subject_id', $physics->id)->get()
             ->keyBy(fn ($t) => strtolower($t->title));
 
-        // Other subjects for the assignment-matrix UI (no exams — only Physics has questions).
+        // Other subjects for the assignment-matrix UI (no exams - only Physics has questions).
         $matrixSubjects = Subject::whereIn('code', ['9702', '9701', '9709'])->pluck('id')->all();
 
         $svc = app(ExamService::class);
@@ -257,7 +257,7 @@ class V2DemoSeeder extends Seeder
 
             $attempt = $svc->startAttempt($exam, $student);
             if ($attempt->status === 'submitted') {
-                continue; // already seeded — idempotent
+                continue; // already seeded - idempotent
             }
 
             [$ability, $affinity] = $this->profile($student->id);
@@ -302,7 +302,7 @@ class V2DemoSeeder extends Seeder
         return [$ability, $affinity];
     }
 
-    /** Deterministic pseudo-random in [0,1) from integer parts (FNV-1a hash) — stable across runs. */
+    /** Deterministic pseudo-random in [0,1) from integer parts (FNV-1a hash) - stable across runs. */
     private function rand(int ...$parts): float
     {
         $x = 2166136261;

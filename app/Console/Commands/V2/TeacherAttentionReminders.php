@@ -14,11 +14,11 @@ use Illuminate\Support\Facades\DB;
 | v2:teacher-attention-reminders
 |--------------------------------------------------------------------------
 | Daily generator for teacher notifications. Two parts:
-|   1. Attention — for each student with enough recent tests, flag the weakest
+|   1. Attention - for each student with enough recent tests, flag the weakest
 |      topic per subject (below TARGET, with enough sample) to that SUBJECT'S
 |      teacher (v2_classes.subject_id), preferring the primary. Existing flags are
-|      refreshed and auto-resolved on improvement. Idempotent — safe to re-run.
-|   2. Updates — operational alerts: exams starting today, results overdue.
+|      refreshed and auto-resolved on improvement. Idempotent - safe to re-run.
+|   2. Updates - operational alerts: exams starting today, results overdue.
 |
 | Run on the daily scheduler (see routes/console.php). No external API.
 */

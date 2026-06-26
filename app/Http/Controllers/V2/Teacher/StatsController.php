@@ -8,7 +8,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Teacher — Class analytics / stats
+| Teacher - Class analytics / stats
 |--------------------------------------------------------------------------
 | Across the teacher's own exams + assigned classes: class comparison,
 | score distribution, per-topic performance, exam trend and the students

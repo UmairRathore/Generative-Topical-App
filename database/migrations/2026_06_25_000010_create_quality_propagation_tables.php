@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
-| Phase 3 — material-error propagation audit
+| Phase 3 - material-error propagation audit
 |--------------------------------------------------------------------------
 | One decision row per propagation run (the confirmed faulty version_ids are the
 | job's single source of truth), plus a full audit: every exam-question pivot it
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('quality_review_id');
             $table->unsignedBigInteger('question_id');
-            $table->json('version_ids');                              // confirmed faulty versions — job source of truth
+            $table->json('version_ids');                              // confirmed faulty versions - job source of truth
             $table->unsignedBigInteger('confirmed_by')->nullable();   // super admin
             $table->timestamp('confirmed_at')->nullable();
 

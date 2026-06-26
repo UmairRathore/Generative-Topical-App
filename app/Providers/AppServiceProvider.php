@@ -28,7 +28,7 @@ class AppServiceProvider extends ServiceProvider
         // capped. The doc keeps velocity limits off normal student test-taking.
         RateLimiter::for('secure-image', fn (Request $r) => Limit::perMinute(1200)->by((string) $r->query('u', $r->ip())));
 
-        // Auth routes — 5 attempts / 15 min per the security spec, keyed by IP+email.
+        // Auth routes - 5 attempts / 15 min per the security spec, keyed by IP+email.
         RateLimiter::for('v2-login', fn (Request $r) => Limit::perMinutes(15, 5)->by($r->ip().'|'.$r->input('email')));
     }
 }

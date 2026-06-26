@@ -6,7 +6,7 @@ use App\Support\Hashid;
 
 /*
 |--------------------------------------------------------------------------
-| HasHashid — route ids are encoded short codes instead of integers
+| HasHashid - route ids are encoded short codes instead of integers
 |--------------------------------------------------------------------------
 | getRouteKey() emits the encoded code (so route($model) and {model} links are
 | automatically hashed); resolveRouteBinding() decodes it back. Raw integer ids

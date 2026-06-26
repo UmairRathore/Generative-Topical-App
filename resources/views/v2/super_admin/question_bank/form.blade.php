@@ -75,12 +75,12 @@
     {{-- Carries the filtered/paged list URL the editor was opened from, so saving
          returns there instead of an unfiltered page 1. --}}
     <input type="hidden" name="return" value="{{ request('return') }}">
-    {{-- Set when opened from a Quality Review ("Correct Question") — links the saved version to it. --}}
+    {{-- Set when opened from a Quality Review ("Correct Question") - links the saved version to it. --}}
     <input type="hidden" name="quality_review_id" value="{{ $quality_review_id ?? '' }}">
 
     @if ($editing)
         <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <input type="text" name="change_summary" maxlength="500" placeholder="What changed? (optional — saved with this version)"
+            <input type="text" name="change_summary" maxlength="500" placeholder="What changed? (optional - saved with this version)"
                    style="{{ $fieldStyle }} flex:1;min-width:240px;">
             <a href="{{ route('v2.super_admin.question_bank.versions', $question) }}" class="btn btn-ghost btn-sm">
                 <x-icon name="clock" size="13"/> Version history
@@ -94,7 +94,7 @@
              restores the question to active, and closes the review. --}}
         <div style="background:var(--soft-surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:16px;">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">
-                Quality review #{{ $quality_review_id }} — outcome (required)
+                Quality review #{{ $quality_review_id }} - outcome (required)
             </div>
             <p style="font-size:12.5px;color:var(--text-soft);margin:0 0 12px;line-height:1.5;">
                 What does your correction represent? Saving creates a new immutable version and restores the question to the active pool.
@@ -102,12 +102,12 @@
             <label style="display:flex;gap:9px;align-items:flex-start;margin-bottom:10px;cursor:pointer;font-size:13px;line-height:1.5;">
                 <input type="radio" name="outcome" value="cosmetic" required style="margin-top:3px;flex:none;"
                        @checked(old('outcome') === 'cosmetic')>
-                <span><strong>Cosmetic / non-material improvement</strong> — a harmless formatting, crop, OCR or layout fix. New exams use the improved version; past exams are unaffected.</span>
+                <span><strong>Cosmetic / non-material improvement</strong> - a harmless formatting, crop, OCR or layout fix. New exams use the improved version; past exams are unaffected.</span>
             </label>
             <label style="display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:13px;line-height:1.5;">
                 <input type="radio" name="outcome" value="material" required style="margin-top:3px;flex:none;"
                        @checked(old('outcome') === 'material')>
-                <span><strong>Material representation error</strong> — a meaning-changing mismatch with the official Cambridge paper or mark scheme. The review is queued for historical propagation (handled separately); past exams are not changed yet.</span>
+                <span><strong>Material representation error</strong> - a meaning-changing mismatch with the official Cambridge paper or mark scheme. The review is queued for historical propagation (handled separately); past exams are not changed yet.</span>
             </label>
             @error('outcome')<div style="color:var(--bad);font-size:12px;margin-top:8px;">{{ $message }}</div>@enderror
         </div>

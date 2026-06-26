@@ -13,7 +13,7 @@ use Livewire\WithPagination;
 
 /*
 |--------------------------------------------------------------------------
-| Teacher notifications — full page (overflow destination for the bell)
+| Teacher notifications - full page (overflow destination for the bell)
 |--------------------------------------------------------------------------
 | Two tabs, paginated, with class + subject filters and an open/resolved toggle
 | on the attention tab. All queries scoped to the logged-in teacher.
@@ -24,6 +24,7 @@ class NotificationIndex extends Component
 
     public string $tab = 'attention';   // attention | updates
     public string $status = 'open';      // open | resolved (attention only)
+    public string $read = 'all';         // all | unread (updates only)
     public ?int $classId = null;
     public ?int $subjectId = null;
 
@@ -34,14 +35,11 @@ class NotificationIndex extends Component
         if (in_array($t, ['attention', 'updates'], true)) {
             $this->tab = $t;
         }
-
-        // Opening the full list counts as seeing everything to date — clear the bell.
-        $this->base()->unread()->update(['read_at' => now()]);
     }
 
     public function updated($name): void
     {
-        if (in_array($name, ['tab', 'status', 'classId', 'subjectId'], true)) {
+        if (in_array($name, ['tab', 'status', 'read', 'classId', 'subjectId'], true)) {
             $this->resetPage();
         }
     }
@@ -93,15 +91,30 @@ class NotificationIndex extends Component
 
             $q->orderByRaw("CAST(JSON_EXTRACT(data, '$.current_avg') AS UNSIGNED) ASC");
         } else {
-            $q->updates()->latest();
+            $q->updates();
+            if ($this->read === 'unread') {
+                $q->unread();
+            }
+            $q->latest();
         }
 
         return $q->paginate(20);
     }
 
+    #[Computed]
+    public function unreadUpdateCount(): int
+    {
+        return (int) $this->base()->updates()->unread()->count();
+    }
+
     public function markRead(int $id): void
     {
         $this->base()->where('id', $id)->unread()->update(['read_at' => now()]);
+    }
+
+    public function markUnread(int $id): void
+    {
+        $this->base()->where('id', $id)->whereNotNull('read_at')->update(['read_at' => null]);
     }
 
     public function markAllRead(): void

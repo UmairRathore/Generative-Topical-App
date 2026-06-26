@@ -25,7 +25,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('tests_count')->default(0);
             $table->string('source', 20)->default('template');        // openai / template / none
 
-            // the report content (stats + narrative) — PDF is rendered from this at runtime
+            // the report content (stats + narrative) - PDF is rendered from this at runtime
             $table->json('payload');
 
             $table->timestamps();

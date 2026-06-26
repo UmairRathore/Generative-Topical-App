@@ -35,7 +35,7 @@
     @endforeach
 </div>
 
-{{-- Branches — drill into a branch to reach its teachers, classes and students --}}
+{{-- Branches - drill into a branch to reach its teachers, classes and students --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 20px;">
     <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600;">Branches</div>
     <table class="tbl" style="width: 100%; border-collapse: collapse;">
@@ -65,7 +65,7 @@
 
 {{-- Performance by topic --}}
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px;">
-    <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Performance by topic <span style="font-weight:400; color:var(--text-faint);">— school-wide</span></div>
+    <div style="font-size: 14px; font-weight: 600; margin-bottom: 14px;">Performance by topic <span style="font-weight:400; color:var(--text-faint);">- school-wide</span></div>
     @include('v2.partials.topic_bars', ['stats' => $topicStats, 'empty' => 'No submissions yet - topic stats appear once students complete tests.'])
 </div>
 @endsection

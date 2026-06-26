@@ -155,7 +155,7 @@ class CambPastImportService
             ],
         );
 
-        // Replace child rows on every import — keeps re-imports idempotent.
+        // Replace child rows on every import - keeps re-imports idempotent.
         $question->options()->delete();
         $question->assets()->delete();
         $question->optionTable()->delete();
@@ -327,7 +327,7 @@ class CambPastImportService
             $meta = [];
         }
 
-        // Extractor uses "9702/12" — split into subject code and paper-variant suffix.
+        // Extractor uses "9702/12" - split into subject code and paper-variant suffix.
         $rawCode = (string) ($meta['paper_code'] ?? '');
         $codeParts = explode('/', $rawCode, 2);
         $subjectCode = $codeParts[0] !== '' ? $codeParts[0] : null;
@@ -346,7 +346,7 @@ class CambPastImportService
         $year = $stemParts['year'];
 
         if (is_string($meta['session'] ?? null)) {
-            // e.g. "February/March 2024" — pull the year if our stem parse missed it.
+            // e.g. "February/March 2024" - pull the year if our stem parse missed it.
             if ($year === null && preg_match('/(\d{4})/', $meta['session'], $ym)) {
                 $year = (int) $ym[1];
             }

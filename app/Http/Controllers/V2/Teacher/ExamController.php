@@ -147,7 +147,7 @@ class ExamController extends Controller
     }
 
     /**
-     * Render the full gallery cards for a set of hand-picked question ids — used
+     * Render the full gallery cards for a set of hand-picked question ids - used
      * by the "Selected questions" drawer so the teacher reviews the actual
      * questions (across every page/filter), not just a text snippet. Scoped to
      * the subjects the teacher teaches; selection order is preserved.
@@ -223,7 +223,7 @@ class ExamController extends Controller
 
     /**
      * Re-roll the preview: keep the questions the teacher ticked ($keep) in place
-     * and draw fresh ones — different from everything currently shown — for the
+     * and draw fresh ones - different from everything currently shown - for the
      * rest. With nothing ticked this is a full new draw; tick 1 of 20 and only
      * the other 19 are replaced.
      */
@@ -307,7 +307,7 @@ class ExamController extends Controller
         return Topic::where('subject_id', $subjectId)->whereIn('id', $ids)->pluck('id')->all();
     }
 
-    /** Release a draft test — immediately or at a scheduled time, with optional expiry. */
+    /** Release a draft test - immediately or at a scheduled time, with optional expiry. */
     public function release(Exam $exam, Request $request, NotificationService $notifications)
     {
         $teacher = $this->teacher();
@@ -326,7 +326,7 @@ class ExamController extends Controller
         abort_if($until && $until->lessThanOrEqualTo($from), 422, 'Expiry must be after the release time.');
 
         // Brand guard: a question flagged after this exam was frozen is no longer
-        // 'active'. Hiding it only stops future generation — it still rides along
+        // 'active'. Hiding it only stops future generation - it still rides along
         // in this already-built paper. Block release so a flagged question can
         // never reach a student; the teacher regenerates or rebuilds the test.
         $flagged = $exam->examQuestions()
@@ -354,7 +354,7 @@ class ExamController extends Controller
         // Notify the class's students that a new (or scheduled) test is available.
         $notifications->announceExamRelease($exam);
 
-        $msg = $exam->isScheduled() ? 'Test scheduled to open '.$from->diffForHumans().'.' : 'Test released — students can take it now.';
+        $msg = $exam->isScheduled() ? 'Test scheduled to open '.$from->diffForHumans().'.' : 'Test released - students can take it now.';
         if ($request->boolean('release_results')) {
             $msg .= ' Results will be visible to students as they submit.';
         }
@@ -362,7 +362,7 @@ class ExamController extends Controller
         return back()->with('success', $msg);
     }
 
-    /** Release (or re-hide) results — the score + answer review — to students. */
+    /** Release (or re-hide) results - the score + answer review - to students. */
     public function releaseResults(Exam $exam, Request $request, NotificationService $notifications)
     {
         $teacher = $this->teacher();
@@ -380,8 +380,8 @@ class ExamController extends Controller
         AuditLogger::record('exam.results_'.($release ? 'released' : 'hidden'), $exam);
 
         return back()->with('success', $release
-            ? 'Results released — students can now see their scores and answers.'
-            : 'Results hidden — students can no longer see their scores.');
+            ? 'Results released - students can now see their scores and answers.'
+            : 'Results hidden - students can no longer see their scores.');
     }
 
     public function show(Exam $exam, ExamService $service)
@@ -402,7 +402,7 @@ class ExamController extends Controller
             'examQuestions.question.subject', 'examQuestions.question.paper',
         ]);
 
-        // Enrolled students — fetched without the pivot join so the Student
+        // Enrolled students - fetched without the pivot join so the Student
         // global scope's school_id filter stays unambiguous.
         $studentIds = StudentEnrollment::where('class_id', $exam->class_id)->pluck('student_id');
         $students   = Student::whereIn('id', $studentIds)->orderBy('name')->get();
@@ -410,7 +410,7 @@ class ExamController extends Controller
         $submitted = $attempts->where('status', 'submitted');
 
         // Every question in this exam that has a student report, OR was voided, OR
-        // was escalated — each carrying the actions still available. Void and
+        // was escalated - each carrying the actions still available. Void and
         // escalate are INDEPENDENT, so a voided question can still be escalated and
         // vice-versa. Purely-dismissed questions (resolved, nothing pending) drop off.
         $allStudentFlags = QuestionFlag::studentLevel()
@@ -437,7 +437,7 @@ class ExamController extends Controller
             $hasOpen     = $openFlags->isNotEmpty();
 
             if (! $hasOpen && ! $isVoided && ! $isEscalated) {
-                return null; // resolved/dismissed only — nothing to show or do
+                return null; // resolved/dismissed only - nothing to show or do
             }
 
             return [
@@ -461,7 +461,7 @@ class ExamController extends Controller
         })->filter()->sortByDesc('count')->values();
 
         // Phase 4.1: surface the Support quality-review outcome (read-only) on each
-        // reported question — the teacher sees the decision, not just "Voided".
+        // reported question - the teacher sees the decision, not just "Voided".
         $qrReviews = QualityReview::whereIn('question_id', $studentFlags->pluck('question_id'))
             ->where('status', 'decided')
             ->orderByDesc('reviewed_at')->orderByDesc('id')
@@ -497,11 +497,11 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)->where('question_id', $question->id)->where('status', 'open')
             ->update(['status' => 'dismissed', 'resolved_by' => $teacher->id, 'resolved_at' => now()]);
 
-        return back()->with('success', 'Reports dismissed — the question stays as it is.');
+        return back()->with('success', 'Reports dismissed - the question stays as it is.');
     }
 
     /**
-     * Send a flagged question for quality review — the single "questionable"
+     * Send a flagged question for quality review - the single "questionable"
      * action. It atomically (1) VOIDS the question for THIS exam (students are
      * never graded on it; marks/analytics recompute via the pivot), (2) locks the
      * student reports as "escalated", (3) creates the Support Team queue item, and
@@ -549,7 +549,7 @@ class ExamController extends Controller
 
         AuditLogger::record('exam.question_sent_for_review', $exam, ['question_id' => $question->id, 'students_adjusted' => count($changed)]);
 
-        return back()->with('success', 'Sent for quality review — voided for this exam and hidden from new exams pending review.');
+        return back()->with('success', 'Sent for quality review - voided for this exam and hidden from new exams pending review.');
     }
 
     private function assertOwnsExam(Exam $exam, $teacher): void
@@ -561,7 +561,7 @@ class ExamController extends Controller
         );
     }
 
-    /** One student's full submitted paper — the same per-question review the student sees. */
+    /** One student's full submitted paper - the same per-question review the student sees. */
     public function studentPaper(Exam $exam, Student $student, ExamService $service)
     {
         $teacher = $this->teacher();

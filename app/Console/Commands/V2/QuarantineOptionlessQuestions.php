@@ -34,7 +34,7 @@ class QuarantineOptionlessQuestions extends Command
 
         $total = (clone $base)->count();
         if ($total === 0) {
-            $this->info('No active optionless questions found — nothing to quarantine.');
+            $this->info('No active optionless questions found - nothing to quarantine.');
 
             return self::SUCCESS;
         }
@@ -51,7 +51,7 @@ class QuarantineOptionlessQuestions extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->warn("Dry run — no changes written. Would move {$total} questions to '{$status}'.");
+            $this->warn("Dry run - no changes written. Would move {$total} questions to '{$status}'.");
 
             return self::SUCCESS;
         }

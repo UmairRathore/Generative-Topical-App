@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 | Platform analytics (Super Admin)
 |--------------------------------------------------------------------------
 | Cross-school business + engagement metrics. All raw DB::table so no
-| per-school global scope fires — Super Admin sees the whole platform.
+| per-school global scope fires - Super Admin sees the whole platform.
 | MRR/growth are reconstructed from row timestamps (there is no historical
 | billing ledger), so they are best-effort trends, not an accounting source.
 */

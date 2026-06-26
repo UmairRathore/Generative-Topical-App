@@ -13,7 +13,7 @@
 return [
 
     // Disk the originals live on. 'public' today; switch to 's3' (config/filesystems.php)
-    // with no code change — the controller presigns S3 URLs when this is not 'public'.
+    // with no code change - the controller presigns S3 URLs when this is not 'public'.
     'disk' => env('SECURE_IMAGE_DISK', 'public'),
 
     // HMAC secret for the URL token. Defaults to the app key.

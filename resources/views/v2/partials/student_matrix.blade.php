@@ -2,7 +2,7 @@
      Props: $matrix = ['topics'=>[...], 'rows'=>[['id','student','roll','overall','attempted','cells'=>[topic=>{percent,correct,total}|null]]]]
      Optional: $studentRoute (route name) to link each student name.
      Optional: $studentRouteParams (leading route params, e.g. [$school]) prepended
-     before the student id — pass the parent model explicitly so its hashid is used
+     before the student id - pass the parent model explicitly so its hashid is used
      (Laravel's missing-param backfill emits a model's raw key, not its route key). --}}
 @php
     $barColor = fn ($p) => $p >= 60 ? 'var(--ok)' : ($p >= 40 ? 'var(--warn)' : 'var(--bad)');

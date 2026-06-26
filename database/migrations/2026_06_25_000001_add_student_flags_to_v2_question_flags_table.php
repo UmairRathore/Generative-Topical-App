@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 |--------------------------------------------------------------------------
 | Students can now report a question they hit during an exam (or while reviewing
 | their result). Unlike a teacher flag, a student flag does NOT pull the question
-| from the pool — it is a soft signal routed to that exam's teacher, who makes the
+| from the pool - it is a soft signal routed to that exam's teacher, who makes the
 | call. We reuse v2_question_flags and tag each row with its `level`:
 |   - teacher : the existing behaviour (auto-hide + super-admin queue)
 |   - student : pending the teacher's review; scoped to the exam it was raised on

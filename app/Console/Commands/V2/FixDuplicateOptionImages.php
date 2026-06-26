@@ -46,7 +46,7 @@ class FixDuplicateOptionImages extends Command
                     throw new RollbackSignal();
                 });
             } catch (RollbackSignal) {
-                // expected — nothing was persisted
+                // expected - nothing was persisted
             }
         } else {
             $run();

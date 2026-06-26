@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 
 /*
 |--------------------------------------------------------------------------
-| Student question flag — "report a problem" during an exam / on the result
+| Student question flag - "report a problem" during an exam / on the result
 |--------------------------------------------------------------------------
 | A student flag is a SOFT signal: unlike a teacher flag it does NOT pull the
 | question from the pool. It records a pending row (level = student) tied to the
@@ -52,7 +52,7 @@ class QuestionFlagController extends Controller
             $msg = match (true) {
                 $voided                       => 'This question is under review and has been excluded from scoring for this exam.',
                 $priorStatus === 'escalated'  => 'Your teacher has escalated this question for quality review.',
-                default                       => 'Your teacher has reviewed this report and decided to keep the question. If you still believe there is an issue, please discuss it with your teacher — they or your school administration can escalate it for quality review if needed.',
+                default                       => 'Your teacher has reviewed this report and decided to keep the question. If you still believe there is an issue, please discuss it with your teacher - they or your school administration can escalate it for quality review if needed.',
             };
 
             return $request->wantsJson()
@@ -63,7 +63,7 @@ class QuestionFlagController extends Controller
         $data = $request->validate([
             'reason'     => ['required', Rule::in(array_keys(QuestionFlag::REASONS))],
             'note'       => ['nullable', 'string', 'max:1000'],
-            // Optional single image — helps show cropped diagrams / broken rendering / mobile bugs.
+            // Optional single image - helps show cropped diagrams / broken rendering / mobile bugs.
             'screenshot' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:3072'],
         ]);
 
@@ -71,7 +71,7 @@ class QuestionFlagController extends Controller
             ? $request->file('screenshot')->store(self::UPLOAD_DIR.'/'.$question->id, 'public')
             : null;
 
-        // One open flag per (student, exam, question) — re-reporting refreshes it
+        // One open flag per (student, exam, question) - re-reporting refreshes it
         // (and keeps a freshly attached screenshot rather than duplicating the row).
         QuestionFlag::updateOrCreate(
             [
@@ -89,7 +89,7 @@ class QuestionFlagController extends Controller
             ], fn ($v) => $v !== null),
         );
 
-        // Soft signal only — the question stays live. The exam's teacher is notified.
+        // Soft signal only - the question stays live. The exam's teacher is notified.
         $notifications->notifyTeachersOfStudentFlag($exam, $question->id, $student, $data['reason'], $data['note'] ?? null);
 
         AuditLogger::record('question.flagged_by_student', $question, [
@@ -97,7 +97,7 @@ class QuestionFlagController extends Controller
             'reason'  => $data['reason'],
         ]);
 
-        $message = 'Reported — your teacher will review it. Thanks for flagging it.';
+        $message = 'Reported - your teacher will review it. Thanks for flagging it.';
 
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'message' => $message]);

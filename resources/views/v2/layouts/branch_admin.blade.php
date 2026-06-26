@@ -120,7 +120,7 @@
         </div>
     </main>
 </div>
-{{-- Modals render here — a direct child of <body>, outside the animated .fade-in
+{{-- Modals render here - a direct child of <body>, outside the animated .fade-in
      wrapper, so position:fixed is relative to the viewport (true centering). --}}
 @stack('modals')
 @livewireScripts

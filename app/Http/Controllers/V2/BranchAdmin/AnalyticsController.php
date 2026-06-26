@@ -14,7 +14,7 @@ use App\Services\V2\ExamService;
 
 /*
 |--------------------------------------------------------------------------
-| Branch Admin — Analytics
+| Branch Admin - Analytics
 |--------------------------------------------------------------------------
 | Same drill-down as the school admin (grade → teacher → subject → topic →
 | class → student → paper), but every stat is narrowed to the admin's branch

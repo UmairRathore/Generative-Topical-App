@@ -13,7 +13,7 @@ use App\Services\V2\ExamService;
 
 /*
 |--------------------------------------------------------------------------
-| School Admin — Analytics
+| School Admin - Analytics
 |--------------------------------------------------------------------------
 | Whole-school analytics with drill-down: School → Teacher → Class → Student.
 | Every query is scoped to the admin's school (global scopes + explicit checks).

@@ -8,7 +8,7 @@ use Illuminate\Database\Seeder;
 
 /*
 |--------------------------------------------------------------------------
-| V2BiologyTopicsSeeder — CAIE O-Level Biology 5090 topic taxonomy
+| V2BiologyTopicsSeeder - CAIE O-Level Biology 5090 topic taxonomy
 |--------------------------------------------------------------------------
 | The 19 top-level subject-content topics of the Cambridge O Level Biology
 | 5090 syllabus (2023–2025, derived from 5090_y25_sy.pdf), used to topic-tag

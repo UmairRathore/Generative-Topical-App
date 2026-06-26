@@ -2,7 +2,7 @@
     $user = auth('v2_super_admin')->user();
     $currentRouteName = request()->route()?->getName() ?? '';
 
-    // Open quality reviews awaiting a Support decision — shown as a nav badge.
+    // Open quality reviews awaiting a Support decision - shown as a nav badge.
     $openFlagCount = \App\Models\V2\QualityReview::where('status', 'open')->count();
 
     $nav = [

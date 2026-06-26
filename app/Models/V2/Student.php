@@ -95,7 +95,7 @@ class Student extends Authenticatable
     }
 
     /**
-     * The student's single "primary" grade — taken from their active enrollments'
+     * The student's single "primary" grade - taken from their active enrollments'
      * classes, lowest grade sort_order first. Falls back to the denormalised
      * `grade` column when the student has no active enrollment yet.
      */

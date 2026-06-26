@@ -43,7 +43,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v2')->name('v2.')->group(function () {
 
-    // Signed image endpoint — every question / option / diagram crop is fetched
+    // Signed image endpoint - every question / option / diagram crop is fetched
     // through here. The token is verified + bound to the logged-in viewer by the
     // controller (open to any V2 guard). Throttled to blunt bulk image pulls.
     Route::get('img', [SecureImageController::class, 'show'])
@@ -81,9 +81,9 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
                 // Schools + per-school drill-down (school → grade/teacher/subject/topic → class → student → paper)
                 Route::get('schools', [SuperAdminSchool::class, 'index'])->name('schools.index');
-                Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create'); // stub — create not built yet
+                Route::view('schools/create', 'v2.super_admin.schools.create')->name('schools.create'); // stub - create not built yet
                 Route::get('schools/{school}', [SuperAdminSchool::class, 'show'])->name('schools.show');
-                Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit'); // stub — edit not built yet
+                Route::view('schools/{school}/edit', 'v2.super_admin.schools.edit')->name('schools.edit'); // stub - edit not built yet
 
                 // Branch sits between a school and its teachers/classes/students. Every
                 // leaf drill-down is reached THROUGH a branch so the hierarchy holds.
@@ -97,7 +97,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                     Route::get('exams/{exam}/students/{student}/paper', [SuperAdminStudent::class, 'paper'])->name('student_paper');
                 });
 
-                // Question bank — browse + full CRUD (Super Admin only). 'create' before '{question}'.
+                // Question bank - browse + full CRUD (Super Admin only). 'create' before '{question}'.
                 Route::get('question-bank', [SuperAdminQuestionBank::class, 'index'])->name('question_bank.index');
                 Route::get('question-bank/create', [SuperAdminQuestionBank::class, 'create'])->name('question_bank.create');
                 Route::post('question-bank', [SuperAdminQuestionBank::class, 'store'])->name('question_bank.store');
@@ -108,14 +108,14 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');
                 Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
 
-                // Quality Review queue — reported questions grouped into one review each.
+                // Quality Review queue - reported questions grouped into one review each.
                 Route::get('question-flags', [SuperAdminQuestionFlag::class, 'index'])->name('question_flags.index');
                 Route::patch('question-flags/{review}/correct', [SuperAdminQuestionFlag::class, 'markCorrect'])->name('question_flags.correct');
                 // Material-error global propagation (Phase 3): preview → confirm.
                 Route::get('question-flags/{review}/propagate', [SuperAdminQuestionPropagation::class, 'preview'])->name('question_flags.propagate');
                 Route::post('question-flags/{review}/propagate', [SuperAdminQuestionPropagation::class, 'confirm'])->name('question_flags.propagate.confirm');
 
-                Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub — audit viewer not built yet
+                Route::view('audit', 'v2.super_admin.audit.index')->name('audit.index'); // stub - audit viewer not built yet
             });
         });
     });
@@ -204,7 +204,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::post('students/{student}/enroll', [SchoolAdminStudent::class, 'enroll'])->name('students.enroll');
                 Route::delete('students/{student}/unenroll', [SchoolAdminStudent::class, 'unenroll'])->name('students.unenroll');
 
-                // Flagged questions — read-only audit (escalations + voided), no actions.
+                // Flagged questions - read-only audit (escalations + voided), no actions.
                 Route::get('flagged-questions', [SchoolAdminFlaggedQuestion::class, 'index'])->name('flagged_questions.index');
             });
         });
@@ -212,7 +212,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
 
     /*
     |----------------------------------------------------------------------
-    | Branch Admin (campus) — same drill-down as school admin, scoped to one branch
+    | Branch Admin (campus) - same drill-down as school admin, scoped to one branch
     |----------------------------------------------------------------------
     */
     Route::prefix('branch')->name('branch.')->group(function () {
@@ -241,7 +241,7 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::get('reports/{report}/pdf', [BranchReport::class, 'pdf'])->name('report.pdf');
                 Route::get('exams/{exam}/students/{student}/paper', [BranchAnalytics::class, 'studentPaper'])->name('student_paper');
 
-                // Flagged questions — read-only audit (escalations + voided), no actions.
+                // Flagged questions - read-only audit (escalations + voided), no actions.
                 Route::get('flagged-questions', [BranchFlaggedQuestion::class, 'index'])->name('flagged_questions.index');
             });
         });

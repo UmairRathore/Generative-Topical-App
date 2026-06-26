@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\Schema;
 | propagation_status marks that hand-off, kept separate from `status`
 | (open | decided) so a review can be fully decided while propagation is still
 | queued:
-|   null                 — nothing to propagate (correct / cosmetic).
-|   propagation_pending  — confirmed material error awaiting the Phase 3 job.
-|   propagated           — the Phase 3 job has run for this review.
+|   null                 - nothing to propagate (correct / cosmetic).
+|   propagation_pending  - confirmed material error awaiting the Phase 3 job.
+|   propagated           - the Phase 3 job has run for this review.
 */
 return new class extends Migration
 {

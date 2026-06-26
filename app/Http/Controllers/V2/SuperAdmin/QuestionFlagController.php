@@ -16,11 +16,11 @@ use Illuminate\Support\Facades\DB;
 |--------------------------------------------------------------------------
 | Every question under review has exactly one OPEN v2_quality_reviews row; the
 | teacher/student question flags are its reports. Support decides an outcome:
-|   • Correct  — our digital copy already matches the official Cambridge source.
+|   • Correct  - our digital copy already matches the official Cambridge source.
 |                Restore the question to active, close the review + its reports,
 |                notify the reporting teacher. No version, no propagation.
-|                (Handled here, inline — see markCorrect.)
-|   • Cosmetic / Material — the correction needs a new content version, so
+|                (Handled here, inline - see markCorrect.)
+|   • Cosmetic / Material - the correction needs a new content version, so
 |                "Correct question" opens the Question Bank editor
 |                (?quality_review_id). The outcome is recorded on save in
 |                QuestionBankController::update. Material is additionally marked
@@ -65,7 +65,7 @@ class QuestionFlagController extends Controller
 
     /**
      * Outcome "Correct": our digital representation already matches the official
-     * Cambridge source — restore the question to the active pool, close the review
+     * Cambridge source - restore the question to the active pool, close the review
      * and its reports, and notify the reporting teacher(s). No version, no
      * propagation. (Cosmetic/Material are decided from the editor on save.)
      */
@@ -95,6 +95,6 @@ class QuestionFlagController extends Controller
         $notifications->notifyReviewDecision($review->fresh(['question.subject', 'reports']), 'correct');
         AuditLogger::record('quality_review.correct', $review->question, ['review_id' => $review->id]);
 
-        return back()->with('success', 'Marked correct — restored to the active pool and the reporting teacher was notified.');
+        return back()->with('success', 'Marked correct - restored to the active pool and the reporting teacher was notified.');
     }
 }

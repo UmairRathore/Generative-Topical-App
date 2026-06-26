@@ -8,7 +8,7 @@ use App\Services\Syllabus\SyllabusLoader;
  * Deterministic keyword/rule classifier mapping a question's normalized text
  * to Cambridge AS/A Level Physics syllabus topics, subtopics and learning objectives.
  *
- * Topic IDs and titles are NEVER invented — every output row is anchored
+ * Topic IDs and titles are NEVER invented - every output row is anchored
  * to the loaded syllabus tree.
  */
 class QuestionTopicClassifier

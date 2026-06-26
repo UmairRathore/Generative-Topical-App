@@ -1,7 +1,7 @@
 {{-- Full gallery render of a set of questions, returned over AJAX. Each card has
      a Report button plus a per-card control chosen by $action:
-       'remove' (default) — custom-selection drawer: data-remove hook
-       'swap'            — random-generator preview: data-swap hook (re-draw one)
+       'remove' (default) - custom-selection drawer: data-remove hook
+       'swap'            - random-generator preview: data-swap hook (re-draw one)
      Both hooks are handled by the host page's Alpine store. --}}
 @php
     $sessionLabels = ['m' => 'Feb/Mar', 's' => 'May/Jun', 'w' => 'Oct/Nov'];

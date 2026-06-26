@@ -6,7 +6,7 @@ namespace App\Services\Questions;
  * Heuristic difficulty evaluator for Cambridge AS/A Level Physics MCQs.
  *
  * Difficulty is judged relative to a Paper-1 candidate, NOT a university
- * physics student — direct recall and one-formula substitution land at "easy".
+ * physics student - direct recall and one-formula substitution land at "easy".
  */
 class QuestionDifficultyEvaluator
 {

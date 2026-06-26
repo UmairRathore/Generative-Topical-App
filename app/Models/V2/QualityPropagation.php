@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /*
 | One material-error propagation run. The confirmed faulty `version_ids` captured
-| here are the queued job's SINGLE source of truth — the job never re-derives the
+| here are the queued job's SINGLE source of truth - the job never re-derives the
 | set. Idempotency: idempotency_key is unique (one run per review) and the child
 | audit tables carry composite uniques so retries don't duplicate.
 */

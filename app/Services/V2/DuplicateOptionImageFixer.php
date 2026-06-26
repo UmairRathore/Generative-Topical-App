@@ -14,14 +14,14 @@ use Illuminate\Support\Facades\DB;
  *
  * Two related faults, both detected by comparing image file content (MD5):
  *
- *  1. Duplicate figures — the question diagram saved twice (e.g. as both
+ *  1. Duplicate figures - the question diagram saved twice (e.g. as both
  *     `question_image_between_text` and `question_image_after_text`), or the
  *     diagram also copied into the `table` slot, or copied once per A/B/C/D
  *     `option_image`. The figure then appears in the stem AND again under
  *     "OPTIONS".
  *
- *  2. Mis-tagged "label the diagram" questions — "at which point…", "which
- *     arrow…", "which line…" — whose answer choices are labels drawn ON one
+ *  2. Mis-tagged "label the diagram" questions - "at which point…", "which
+ *     arrow…", "which line…" - whose answer choices are labels drawn ON one
  *     figure, but were extracted as four separate option pictures (identical
  *     crops of that one figure).
  *
@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\DB;
  *   - Collapse byte-identical images to a single row, keeping the most useful
  *     role (figure > table > option image).
  *   - Then normalise option images: a genuine "which graph/diagram" set has one
- *     DISTINCT picture per choice. Anything else is not real per-option art —
+ *     DISTINCT picture per choice. Anything else is not real per-option art -
  *     either the choices are textual (drop the spurious crops, keep the text) or
  *     they are labels on the figure (promote the distinct figure(s), drop the
  *     crops, and let A/B/C/D render as plain choices).
@@ -134,7 +134,7 @@ class DuplicateOptionImageFixer
                         QuestionOption::where('question_id', $question->id)->update(['text' => '']);
                         $clearedText = true;
                     }
-                    // else: spurious but >MAX_DISTINCT distinct and no text — too ambiguous to
+                    // else: spurious but >MAX_DISTINCT distinct and no text - too ambiguous to
                     // auto-repair; left untouched (surfaced by the dry-run report).
                 }
             }

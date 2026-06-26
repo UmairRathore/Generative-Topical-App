@@ -49,7 +49,7 @@ class QuestionSnapshot
     /**
      * Hydrate a NON-persisted Question (with options/images relations set) from a
      * snapshot, keeping the original id, so the render partials reproduce the exact
-     * frozen appearance. Not saved — purely for rendering.
+     * frozen appearance. Not saved - purely for rendering.
      */
     public static function hydrate(array $snapshot, int $questionId): Question
     {

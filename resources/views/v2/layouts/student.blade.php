@@ -99,7 +99,7 @@
             <x-theme-toggle />
         </header>
 
-        {{-- Identity strip — school · branch · grade · roll, on every student screen --}}
+        {{-- Identity strip - school · branch · grade · roll, on every student screen --}}
         @php $idParts = array_filter([
             $identity['school'],
             $identity['branch'] ? 'Branch: '.$identity['branch'] : null,

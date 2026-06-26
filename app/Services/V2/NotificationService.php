@@ -84,7 +84,7 @@ class NotificationService
             ->where('dedupe_key', $key)
             ->first();
 
-        // A teacher already handled this subject — leave it resolved, don't re-open.
+        // A teacher already handled this subject - leave it resolved, don't re-open.
         if ($existing && $existing->resolved_at) {
             return false;
         }
@@ -146,7 +146,7 @@ class NotificationService
 
     /**
      * Resolve a (student, subject) flag when the subject no longer has any weak
-     * topic — i.e. the student is now ≥ TARGET on all tested topics. Returns true
+     * topic - i.e. the student is now ≥ TARGET on all tested topics. Returns true
      * if a flag was resolved.
      */
     public function resolveSubjectFlag(int $teacherId, Student $student, int $subjectId): bool
@@ -205,7 +205,7 @@ class NotificationService
 
     /*
     |--------------------------------------------------------------------------
-    | Student notifications (all "update" category — exam lifecycle alerts)
+    | Student notifications (all "update" category - exam lifecycle alerts)
     |--------------------------------------------------------------------------
     | Students get operational updates only: a new/scheduled exam, an exam due
     | today, results released, or a missed exam. Same idempotent dedupe model as
@@ -296,34 +296,34 @@ class NotificationService
         }
     }
 
-    /** Real-time: a teacher released results — students can now see their score. */
+    /** Real-time: a teacher released results - students can now see their score. */
     public function announceResults(Exam $exam): void
     {
         $this->notifyExamToStudents(
             $exam,
             'results_released',
             "results_released:{$exam->id}",
-            'Results have been released — view your score',
+            'Results have been released - view your score',
             null,
             route('v2.student.exams.result', hid($exam->id)),
         );
     }
 
-    /** A void changed students' visible marksheet — tell each affected student. */
+    /** A void changed students' visible marksheet - tell each affected student. */
     public function announceScoreAdjusted(Exam $exam, array $studentIds): void
     {
         $this->notifyExamToStudents(
             $exam,
             'results_released',
             "score_adjusted:{$exam->id}",
-            'A question was removed after review — your result has been updated',
+            'A question was removed after review - your result has been updated',
             array_values(array_unique(array_map('intval', $studentIds))),
             route('v2.student.exams.result', hid($exam->id)),
         );
     }
 
     /**
-     * A student flagged a question on an exam — tell that exam's teacher(s). One
+     * A student flagged a question on an exam - tell that exam's teacher(s). One
      * notification per (exam, question): it names the latest reporter (name + roll)
      * and reason, and carries the running count so repeat reports bump, not spam.
      */
@@ -344,7 +344,7 @@ class NotificationService
         $reasonLabel = QuestionFlag::REASONS[$reason] ?? ucfirst(str_replace('_', ' ', $reason));
         $who         = $student->name.($student->roll_number ? " (Roll {$student->roll_number})" : '');
         $others      = $count > 1 ? ' · +'.($count - 1).' other '.\Illuminate\Support\Str::plural('report', $count - 1) : '';
-        $noteSnippet = $note ? ' — “'.\Illuminate\Support\Str::limit($note, 80).'”' : '';
+        $noteSnippet = $note ? ' - “'.\Illuminate\Support\Str::limit($note, 80).'”' : '';
 
         $data = [
             'title'    => "Question reported in “{$exam->title}”",
@@ -365,7 +365,7 @@ class NotificationService
     }
 
     /**
-     * A Support quality review was decided — tell only the teacher(s) who reported
+     * A Support quality review was decided - tell only the teacher(s) who reported
      * it. The broader affected-teacher fan-out for a material error is sent later by
      * the Phase 3 propagation job, so this stays scoped to the reporters. One
      * notification per (review, teacher).
@@ -380,9 +380,9 @@ class NotificationService
             : 'A question';
 
         $titles = [
-            'correct'  => 'Quality review complete — no change needed',
-            'cosmetic' => 'Quality review complete — question improved',
-            'material' => 'Quality review complete — question corrected',
+            'correct'  => 'Quality review complete - no change needed',
+            'cosmetic' => 'Quality review complete - question improved',
+            'material' => 'Quality review complete - question corrected',
         ];
         $bodies = [
             'correct'  => "“{$label}” you reported was reviewed: it accurately matches the official Cambridge paper and mark scheme, so no change was needed.",
@@ -420,7 +420,7 @@ class NotificationService
 
     /**
      * Phase 4 fan-out: a material-error propagation excluded a question from ONE
-     * exam — tell that exam's teacher(s) (creator + class co-teachers), in exam-local
+     * exam - tell that exam's teacher(s) (creator + class co-teachers), in exam-local
      * wording with no internal IDs. The dedupe key carries the propagation id so a
      * later propagation for a different question in the same exam is never
      * suppressed, while a retry of the same run stays a no-op. Returns how many

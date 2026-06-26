@@ -274,7 +274,7 @@ class QuestionBankController extends Controller
         $data = $this->validateQuestion($request, $question);
 
         // Opened from a Quality Review ("Correct question"): the admin must classify
-        // the correction as Cosmetic or Material — that closes the review on save.
+        // the correction as Cosmetic or Material - that closes the review on save.
         $reviewId = $request->integer('quality_review_id') ?: null;
         $outcome  = $reviewId
             ? $request->validate(['outcome' => ['required', Rule::in(['cosmetic', 'material'])]])['outcome']
@@ -312,8 +312,8 @@ class QuestionBankController extends Controller
         // keeps their place instead of being dropped at an unfiltered page 1.
         return redirect($this->safeReturn($request) ?? route('v2.super_admin.question_bank.index'))
             ->with('ok', $decided
-                ? 'Saved as a new version — quality review closed and the reporting teacher notified.'
-                : 'Question updated — saved as a new version.');
+                ? 'Saved as a new version - quality review closed and the reporting teacher notified.'
+                : 'Question updated - saved as a new version.');
     }
 
     /**
@@ -321,7 +321,7 @@ class QuestionBankController extends Controller
      * Runs inside the save transaction after the new version exists: records the
      * outcome on the review, links the resulting version, restores the question to
      * the active pool and closes the attached reports. A material error is marked
-     * propagation_pending for the Phase 3 historical-propagation job — no past exams
+     * propagation_pending for the Phase 3 historical-propagation job - no past exams
      * are voided or recomputed here. Returns the decided review (so the caller can
      * notify after commit), or null when there is nothing to decide.
      */
@@ -361,7 +361,7 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Soft-delete only — a question is NEVER removed from the database. It moves to
+     * Soft-delete only - a question is NEVER removed from the database. It moves to
      * Trash (recoverable via restore); its options and images are kept intact so a
      * restore is lossless, and frozen exams keep rendering it (ExamQuestion::question
      * uses withTrashed). Active questions must be archived/drafted first.
@@ -422,7 +422,7 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * A safe "go back to where I was" URL passed through the editor — only ever
+     * A safe "go back to where I was" URL passed through the editor - only ever
      * a question-bank index URL on this host, never an open redirect.
      */
     private function safeReturn(Request $request): ?string
@@ -626,7 +626,7 @@ class QuestionBankController extends Controller
     }
 
     /**
-     * Remove image ROWS from the current question, but NEVER unlink the files —
+     * Remove image ROWS from the current question, but NEVER unlink the files -
      * older immutable version snapshots reference them by path and must keep
      * rendering faithfully. (Orphaned files can be GC'd later against the snapshots.)
      */

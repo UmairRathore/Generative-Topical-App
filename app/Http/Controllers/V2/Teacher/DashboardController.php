@@ -8,7 +8,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Teacher — Dashboard / analytics hub
+| Teacher - Dashboard / analytics hub
 |--------------------------------------------------------------------------
 | Locked to the signed-in teacher: their topic performance, single-vs-mixed
 | exam split, and their classes (drill into class → student → graded paper).

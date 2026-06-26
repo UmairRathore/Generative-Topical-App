@@ -45,7 +45,7 @@ class SubjectController extends Controller
     /**
      * Subject catalogue: every global subject with its status, usage and a
      * platform-wide performance roll-up. This is also where Super Admin turns a
-     * subject on/off (is_active) — off subjects stay fully intact (questions,
+     * subject on/off (is_active) - off subjects stay fully intact (questions,
      * history) but are no longer offered to schools via Subject::active().
      */
     public function platform(ExamService $service): View
@@ -75,7 +75,7 @@ class SubjectController extends Controller
         ]);
     }
 
-    /** Turn a subject on/off platform-wide. Non-destructive — only flips is_active. */
+    /** Turn a subject on/off platform-wide. Non-destructive - only flips is_active. */
     public function toggle(Subject $subject): RedirectResponse
     {
         $subject->update(['is_active' => ! $subject->is_active]);

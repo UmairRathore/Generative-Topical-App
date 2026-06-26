@@ -26,7 +26,7 @@ class ExamQuestion extends Model
     public function questionVersion(): BelongsTo { return $this->belongsTo(QuestionVersion::class, 'question_version_id'); }
 
     /**
-     * The question AS THE STUDENT SAW IT — rendered from the frozen version
+     * The question AS THE STUDENT SAW IT - rendered from the frozen version
      * snapshot. Falls back to the live question if no version was stamped (e.g. an
      * exam built before versioning that the backfill somehow missed).
      */

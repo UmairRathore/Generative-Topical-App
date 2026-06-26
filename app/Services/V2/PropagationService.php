@@ -15,10 +15,10 @@ use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
-| Phase 3 — material-error global propagation
+| Phase 3 - material-error global propagation
 |--------------------------------------------------------------------------
 | preview(): read-only blast radius for a set of faulty version ids (no writes).
-| run(): the idempotent, resumable engine the queued job calls — voids only the
+| run(): the idempotent, resumable engine the queued job calls - voids only the
 | pivots that used a confirmed faulty version (never the corrected/future one),
 | recomputes each affected exam via the existing ExamService engine, records a
 | full per-pivot + per-attempt audit, and reuses the existing student
@@ -135,7 +135,7 @@ class PropagationService
     /**
      * Execute a propagation run. Idempotent + resumable: the faulty set is read
      * ONLY from $prop->version_ids; each exam is processed in its own transaction,
-     * and a pivot already recorded for this run is skipped — so a completed exam
+     * and a pivot already recorded for this run is skipped - so a completed exam
      * (pivots voided + recomputed + audited atomically) is never reprocessed.
      */
     public function run(QualityPropagation $prop): void

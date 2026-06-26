@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 |   - the "option_table.image_path" image (role: table) for the 575
 |     option_table questions, which is NOT present in "assets".
 |
-| RULE: image_path always points inside images_final/ — the only image
+| RULE: image_path always points inside images_final/ - the only image
 | folder the application ever reads. Stored relative; the app resolves it
 | to the storage disk / R2 URL at render time.
 */

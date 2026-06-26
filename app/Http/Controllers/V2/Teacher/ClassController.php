@@ -52,7 +52,7 @@ class ClassController extends Controller
         ]);
     }
 
-    /** One student's performance — only for students in this teacher's classes. */
+    /** One student's performance - only for students in this teacher's classes. */
     public function student(Student $student, ExamService $service)
     {
         $classes  = $this->teacher()->classes()->get(['v2_classes.id', 'v2_classes.subject_id']);
@@ -62,7 +62,7 @@ class ClassController extends Controller
             403
         );
 
-        // A teacher only sees the subjects they actually teach — never the
+        // A teacher only sees the subjects they actually teach - never the
         // student's other subjects taught by colleagues.
         $subjectIds = $classes->pluck('subject_id')->filter()->unique()->values()->all();
 

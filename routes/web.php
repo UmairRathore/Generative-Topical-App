@@ -34,7 +34,7 @@ Route::get('/practice/session/{session}/result', ResultSummary::class)->name('pr
 
 /*
 |--------------------------------------------------------------------------
-| Dashboard router — picks role-specific dashboard
+| Dashboard router - picks role-specific dashboard
 |--------------------------------------------------------------------------
 */
 Route::get('dashboard', function () {

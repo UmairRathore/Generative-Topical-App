@@ -17,7 +17,7 @@ use Illuminate\Console\Command;
 | Tags v2_questions with a syllabus topic + subtopic using the deterministic
 | QuestionTopicClassifier (rule/keyword based). NO external API.
 |
-| The classifier is anchored to the loaded syllabus tree — it can only return
+| The classifier is anchored to the loaded syllabus tree - it can only return
 | topic/subtopic ids that exist in the syllabus, so nothing out-of-syllabus is
 | ever written. We additionally hard-map every returned id back to a real
 | v2_topics / v2_subtopics row and skip anything that doesn't resolve.

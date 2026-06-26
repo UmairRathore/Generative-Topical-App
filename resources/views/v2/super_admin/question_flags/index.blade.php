@@ -9,7 +9,7 @@
         'archived'     => ['badge-blocker', 'Archived'],
     ];
     $outcomeBadge = [
-        'correct'  => ['badge-pass', 'Correct — matches source'],
+        'correct'  => ['badge-pass', 'Correct - matches source'],
         'cosmetic' => ['badge-emerald', 'Cosmetic fix'],
         'material' => ['badge-blocker', 'Material error'],
     ];
@@ -34,7 +34,7 @@
         <h2 class="serif" style="font-size:24px;font-weight:600;">Quality Reviews</h2>
         <p style="color:var(--text-soft);font-size:13px;margin-top:4px;max-width:660px;">
             Reported questions, grouped into one review each. <strong>Mark correct</strong> if our digital copy already
-            matches the official Cambridge source. To change a question, use <strong>Correct question</strong> — it opens the
+            matches the official Cambridge source. To change a question, use <strong>Correct question</strong> - it opens the
             <a href="{{ route('v2.super_admin.question_bank.index') }}" style="color:var(--accent);">Question Bank</a>
             editor where you classify the fix as cosmetic or material on save.
         </p>

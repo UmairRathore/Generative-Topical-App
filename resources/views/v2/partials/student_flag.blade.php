@@ -2,7 +2,7 @@
      and result-review screens. Posts via fetch (multipart) so it never submits the
      exam form or reloads the page (timer keeps running, answers preserved). It is a
      SOFT flag: the question stays live and the report is routed to the exam's teacher.
-     One optional screenshot (image-only, client-compressed, ≤3 MB) — pick a file or
+     One optional screenshot (image-only, client-compressed, ≤3 MB) - pick a file or
      paste it (Ctrl/⌘+V) while the report form is focused. Great for cropped diagrams,
      missing symbols, broken rendering, mobile display bugs.
      Props: $exam, $q (models). Gate inclusion to the student guard at the callsite. --}}
@@ -29,7 +29,7 @@
                 $__reviewIds[(int) $fl->question_id] = $fl->quality_review_id;
             }
         }
-        // A voided question is locked for everyone, regardless of who reported it —
+        // A voided question is locked for everyone, regardless of who reported it -
         // but don't overwrite a more specific status the reporter already has (e.g.
         // 'escalated', so they see the "under review" message, not the generic one).
         foreach (\Illuminate\Support\Facades\DB::table('v2_exam_questions')
@@ -53,19 +53,19 @@
 
     $lockState = $__map[(int) $q->id] ?? null;
     $lockMessages = [
-        'open'      => "You've already reported this question — your teacher will review it.",
+        'open'      => "You've already reported this question - your teacher will review it.",
         'dismissed' => 'Your teacher has reviewed this report and decided to keep the question. If you still believe there is an issue, please discuss it with your teacher. Your teacher or school administration can escalate the question for quality review if further review is required.',
         'escalated' => "Your teacher has escalated this question for quality review. You'll see any change to your result if it's corrected or removed.",
         'voided'    => 'This question is under review and has been excluded from scoring for this exam.',
     ];
     $lockMessage = $lockState ? ($lockMessages[$lockState] ?? "You've already reported this question.") : null;
 
-    // Phase 4.1: tailored Quality Review outcome message — shown as a SEPARATE
+    // Phase 4.1: tailored Quality Review outcome message - shown as a SEPARATE
     // status line once Support has decided the review. The exclusion badge above
     // (in answer_review) stays provenance-based and is untouched.
     $qr = $__review[(int) $q->id] ?? null;
     $qrMsg = $qr ? match (true) {
-        $qr['outcome'] === 'correct'  => 'Quality Review Outcome: Correct — Matches Source. This question was reviewed and confirmed to accurately match the official Cambridge source.',
+        $qr['outcome'] === 'correct'  => 'Quality Review Outcome: Correct - Matches Source. This question was reviewed and confirmed to accurately match the official Cambridge source.',
         $qr['outcome'] === 'cosmetic' => 'Quality Review Outcome: Non-material Improvement. This question was reviewed and improved for future exams. Your score was not changed because the issue did not affect the meaning of the question.',
         $qr['outcome'] === 'material' && $qr['prop'] === 'propagated' => 'Quality Review Outcome: Material Representation Error Confirmed. This question was reviewed and corrected because its digital version did not accurately match the official Cambridge paper and mark scheme. Historical affected exams were updated where required.',
         $qr['outcome'] === 'material' => 'Quality Review Outcome: Material Representation Error Confirmed. This question has been corrected. Historical propagation is pending.',
@@ -75,7 +75,7 @@
 
 <div x-data="studentFlag('{{ route('v2.student.exams.flag', [$exam, $q]) }}')" style="margin-top: 12px; border-top: 1px dashed var(--border); padding-top: 10px;">
 @if ($qrMsg)
-    {{-- Support has decided the quality review — show the outcome to the reporter. --}}
+    {{-- Support has decided the quality review - show the outcome to the reporter. --}}
     <div style="display: flex; gap: 8px; align-items: flex-start; font-size: 11.5px; color: var(--text-soft); line-height: 1.55; background: var(--soft-surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;">
         <x-icon name="check" size="13" style="flex: none; margin-top: 1px; color: var(--ok);"/>
         <span>{{ $qrMsg }}</span>
@@ -92,7 +92,7 @@
     </span>
 @else
     <span x-show="reported" x-cloak style="font-size: 11.5px; color: var(--ok); display: inline-flex; align-items: center; gap: 5px;">
-        <x-icon name="check" size="12"/> You've already reported this question — your teacher will review it.
+        <x-icon name="check" size="12"/> You've already reported this question - your teacher will review it.
     </span>
 
     <button type="button" @click="open = !open" x-show="!reported" x-cloak
@@ -104,7 +104,7 @@
          style="margin-top: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--soft-surface); outline: none;">
         <div style="display: flex; gap: 7px; align-items: flex-start; font-size: 11.5px; color: var(--text-soft); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 8px 10px; margin-bottom: 10px;">
             <x-icon name="eye" size="13" style="flex: none; margin-top: 1px;"/>
-            <span>Reporting <strong>doesn't</strong> submit, skip, or change this question — please still choose your answer. Your teacher reviews the report separately.</span>
+            <span>Reporting <strong>doesn't</strong> submit, skip, or change this question - please still choose your answer. Your teacher reviews the report separately.</span>
         </div>
         <select x-model="reason" style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--text); margin-bottom: 8px;">
             <option value="">What's wrong with this question?</option>

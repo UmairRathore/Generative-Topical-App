@@ -1,5 +1,5 @@
 /*
- *  Generative Topical — global stylesheet
+ *  Generative Topical - global stylesheet
  *
  *  Colour tokens live in `theme.css` (edit hex codes there to re-skin the app).
  *  This file owns: Tailwind setup, layout primitives (radii / shadows / density),
@@ -18,7 +18,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ─────────────────────────────────────────────────────────────────
-   LAYOUT PRIMITIVES — radii, shadows, density, font aliases
+   LAYOUT PRIMITIVES - radii, shadows, density, font aliases
    (Colour tokens are NOT here. See theme.css.)
    ─────────────────────────────────────────────────────────────── */
 :root {
@@ -107,8 +107,8 @@
 
 /* ===== Grain texture =====
    Two flavours:
-   .grain        — dark grain for emerald/dark surfaces (overlay blend, ::before)
-   .paper-grain  — warm sepia grain for ivory/light surfaces (multiply blend,
+   .grain        - dark grain for emerald/dark surfaces (overlay blend, ::before)
+   .paper-grain  - warm sepia grain for ivory/light surfaces (multiply blend,
                    fixed-position so it stays put as the page scrolls).
 */
 .grain::before {
@@ -122,7 +122,7 @@
 }
 [data-grain="off"] .grain::before { display: none; }
 
-/* Paper grain — apply to <body> on light/ivory pages.
+/* Paper grain - apply to <body> on light/ivory pages.
    Sepia-tinted noise, multiply-blended at low opacity, fixed-positioned
    so it doesn't repeat on scroll. Sits behind page content (z-index: 0
    with body{position:relative} so cards/text render on top). */

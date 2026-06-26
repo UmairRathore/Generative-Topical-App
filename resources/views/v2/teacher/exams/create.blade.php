@@ -83,7 +83,7 @@
                 .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)))
                 .then(d => {
                     this.previewIds = d.ids || []; this.previewHtml = d.html || '';
-                    this.chosen = [];                              // nothing locked yet — tick the ones you want to keep
+                    this.chosen = [];                              // nothing locked yet - tick the ones you want to keep
                     if (! this.previewIds.length) this.previewError = 'No questions match these topics yet.';
                     this.$nextTick(() => { this.syncChecks(); this.$refs.genPreview && this.$refs.genPreview.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
                 })
@@ -234,7 +234,7 @@
                 <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; justify-content: center;">
                     <x-icon name="eye" size="15"/> <span x-text="previewOpen ? 'Draw a fresh set' : 'Preview questions'"></span>
                 </button>
-                <p style="font-size:12px;color:var(--text-faint);text-align:center;margin-top:8px;" x-text="previewOpen ? 'Draws a brand-new set with these settings (clears your ticks). To keep some and re-roll the rest, use Regenerate below.' : 'We\'ll draw the questions below so you can review, swap, or pick a subset — before the test is created.'"></p>
+                <p style="font-size:12px;color:var(--text-faint);text-align:center;margin-top:8px;" x-text="previewOpen ? 'Draws a brand-new set with these settings (clears your ticks). To keep some and re-roll the rest, use Regenerate below.' : 'We\'ll draw the questions below so you can review, swap, or pick a subset - before the test is created.'"></p>
             </div>
         </form>
 
@@ -252,7 +252,7 @@
             <div class="flex items-center justify-between" style="gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                 <div>
                     <h3 class="serif" style="font-size: 18px; font-weight: 600;">Preview <span style="font-weight:400;color:var(--text-faint);" x-text="'· ' + previewIds.length + ' drawn'"></span></h3>
-                    <p style="font-size: 12.5px; color: var(--text-faint); margin-top: 2px;"><strong>Tick</strong> the ones you want to keep, <strong>Swap</strong> a single question, or <strong>Regenerate</strong> to re-roll everything you haven't kept. Then create the test from all of them — or just the ones you kept.</p>
+                    <p style="font-size: 12.5px; color: var(--text-faint); margin-top: 2px;"><strong>Tick</strong> the ones you want to keep, <strong>Swap</strong> a single question, or <strong>Regenerate</strong> to re-roll everything you haven't kept. Then create the test from all of them - or just the ones you kept.</p>
                 </div>
                 <button type="button" class="btn btn-ghost btn-sm" @click="previewOpen = false">Hide preview</button>
             </div>

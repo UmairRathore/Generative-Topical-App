@@ -13,10 +13,10 @@ use Illuminate\Support\Facades\DB;
 | the last question, so the extractor wrongly attached it to that question as a
 | stem diagram. This re-roles those full-page reference pages to 'reference' so
 | the question renderer (stemBlocks, which only reads question_image_* roles)
-| skips them — the files stay on disk, nothing is deleted, fully reversible.
+| skips them - the files stay on disk, nothing is deleted, fully reversible.
 |
 | Detection (conservative): a Chemistry (9701/5070) stem image that is a large
-| PORTRAIT full page AND sits on the LAST question of its paper — the Periodic
+| PORTRAIT full page AND sits on the LAST question of its paper - the Periodic
 | Table is always printed after the final question, so this targets it precisely
 | and never touches a mid-paper diagram.
 */

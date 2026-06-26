@@ -10,7 +10,7 @@ use Illuminate\Database\Migrations\Migration;
 |--------------------------------------------------------------------------
 | Every question currently sitting in `under_review` needs an open
 | v2_quality_reviews row so it surfaces in the Phase 2 review queue, with its
-| still-unresolved flags attached as reports. Idempotent — QualityReview::openFor
+| still-unresolved flags attached as reports. Idempotent - QualityReview::openFor
 | firstOrCreates the review and only attaches not-yet-linked open/escalated flags,
 | so re-running is a no-op. Runs without global scopes (no auth guard in CLI).
 */
@@ -30,7 +30,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Reviews are never destroyed on rollback — they may already hold decisions
+        // Reviews are never destroyed on rollback - they may already hold decisions
         // or be linked to corrected versions.
     }
 };

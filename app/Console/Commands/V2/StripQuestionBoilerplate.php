@@ -45,7 +45,7 @@ class StripQuestionBoilerplate extends Command
 
         foreach ($plans as $entry) {
             $q = $entry['question'];
-            $this->line("  QID {$q->id} {$q->source_paper} q{$q->question_number} — ".implode(', ', array_keys($entry['plan'])));
+            $this->line("  QID {$q->id} {$q->source_paper} q{$q->question_number} - ".implode(', ', array_keys($entry['plan'])));
             foreach ($entry['plan'] as $field => $c) {
                 $this->line("      removed from {$field}: …".mb_strimwidth(preg_replace('/\s+/', ' ', mb_substr($c['from'], mb_strlen($c['to']))), 0, 90, '…'));
             }

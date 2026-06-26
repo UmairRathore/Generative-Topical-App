@@ -12,10 +12,10 @@ use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
-| Branch Admin — student progress report
+| Branch Admin - student progress report
 |--------------------------------------------------------------------------
 | generate(): builds the report (stats + AI/fallback narrative) over a chosen
-| duration and stores it as JSON in v2_reports. The PDF is NOT stored — it is
+| duration and stores it as JSON in v2_reports. The PDF is NOT stored - it is
 | rendered from the saved JSON on demand (saves space; the JSON stays readable
 | and re-usable for any other operation). Branch-scoped.
 */
@@ -47,15 +47,15 @@ class ReportController extends BaseController
             'payload'      => $data,
         ]);
 
-        // No data in the window is not an error — the report is still saved, but say so plainly.
+        // No data in the window is not an error - the report is still saved, but say so plainly.
         if ($tests === 0) {
             return redirect()->route('v2.branch.student', $student)
-                ->with('info', "No completed tests for {$student->name} in {$label} — an empty report was saved.")
+                ->with('info', "No completed tests for {$student->name} in {$label} - an empty report was saved.")
                 ->with('report_ready', $report->id);
         }
 
         return redirect()->route('v2.branch.student', $student)
-            ->with('success', "Report generated for {$student->name} — {$label}: {$tests} tests, {$avg}% average.")
+            ->with('success', "Report generated for {$student->name} - {$label}: {$tests} tests, {$avg}% average.")
             ->with('report_ready', $report->id);
     }
 

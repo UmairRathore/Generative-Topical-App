@@ -74,7 +74,7 @@ class QuestionPropagationController extends Controller
         PropagateMaterialCorrection::dispatch($prop->id);
 
         return redirect()->route('v2.super_admin.question_flags.index', ['status' => 'decided'])
-            ->with('success', "Propagation queued — {$counts['would_void']} exam-question(s) across {$counts['exams']} exam(s) will be updated.");
+            ->with('success', "Propagation queued - {$counts['would_void']} exam-question(s) across {$counts['exams']} exam(s) will be updated.");
     }
 
     private function guard(QualityReview $review): void
@@ -91,7 +91,7 @@ class QuestionPropagationController extends Controller
     }
 
     /**
-     * Keep only ids that are real prior versions of THIS question — the corrected
+     * Keep only ids that are real prior versions of THIS question - the corrected
      * version and anything at/after it are rejected (safeguard: the corrected/future
      * version can never be propagated).
      */

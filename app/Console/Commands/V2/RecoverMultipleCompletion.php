@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 | v2:recover-multiple-completion
 |--------------------------------------------------------------------------
 | CIE "multiple completion" MCQs print the A–D key ONCE as a shared grid at the
-| top of the section, not under each question — so the per-question extractor
+| top of the section, not under each question - so the per-question extractor
 | produced empty option sets for them (left optionless, then quarantined to
 | under_review). The key is a FIXED rubric, verified identical across every
 | affected 9701 paper (2010–2021):
@@ -72,7 +72,7 @@ class RecoverMultipleCompletion extends Command
         }
 
         if ($this->option('dry-run')) {
-            $this->warn("Dry run — would attach the A–D rubric to {$mc->count()} questions and set them active.");
+            $this->warn("Dry run - would attach the A–D rubric to {$mc->count()} questions and set them active.");
 
             return self::SUCCESS;
         }
@@ -95,7 +95,7 @@ class RecoverMultipleCompletion extends Command
                 $warnings[] = 'options auto-synthesized from the CIE multiple-completion rubric (v2:recover-multiple-completion '.$now->toDateString().')';
                 Question::where('id', $q->id)->update([
                     'status'       => 'active',
-                    'needs_review' => true, // recovered automatically — keep on the human review queue
+                    'needs_review' => true, // recovered automatically - keep on the human review queue
                     'warnings'     => json_encode(array_values($warnings)),
                 ]);
                 $done++;

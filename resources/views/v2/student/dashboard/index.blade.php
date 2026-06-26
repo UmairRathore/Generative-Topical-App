@@ -121,7 +121,7 @@
             <div x-show="open" x-cloak x-transition.opacity style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border);">
                 <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
 
-                    {{-- By topic — every syllabus topic (the coverage reference) --}}
+                    {{-- By topic - every syllabus topic (the coverage reference) --}}
                     <div>
                         <div class="flex items-center justify-between" style="margin-bottom: 12px;">
                             <span style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint);">By topic</span>
@@ -152,7 +152,7 @@
                         @endforelse
                     </div>
 
-                    {{-- Tests — scrollable once they exceed the topic-count reference --}}
+                    {{-- Tests - scrollable once they exceed the topic-count reference --}}
                     <div>
                         <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 12px;">Tests</div>
                         <div class="space-y-2" @if ($scrollTests) style="max-height: {{ $testsMaxH }}px; overflow-y: auto; padding-right: 6px;" @endif>

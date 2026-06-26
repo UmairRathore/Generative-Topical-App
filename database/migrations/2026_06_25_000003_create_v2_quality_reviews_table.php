@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
 | v2_question_flags rows are the "reports" that feed it (linked via
 | v2_question_flags.quality_review_id). The review records the outcome and
 | links to the corrected version (resulting_version_id). The 4-outcome decision
-| UI + propagation audit columns are added in later phases — this is the entity.
+| UI + propagation audit columns are added in later phases - this is the entity.
 */
 return new class extends Migration
 {
@@ -30,7 +30,7 @@ return new class extends Migration
             $table->unsignedBigInteger('reviewed_by')->nullable(); // super admin
             $table->timestamp('reviewed_at')->nullable();
 
-            // The corrected version this review produced (plain column — versions are
+            // The corrected version this review produced (plain column - versions are
             // created after this table, so no hard FK to avoid a circular dependency).
             $table->unsignedBigInteger('resulting_version_id')->nullable();
 

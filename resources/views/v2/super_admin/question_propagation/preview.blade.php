@@ -30,13 +30,13 @@
     <h2 class="serif" style="font-size:24px;font-weight:600;margin-top:4px;">Propagate correction across history</h2>
     <p style="color:var(--text-soft);margin-top:4px;font-size:13.5px;max-width:680px;">
         {{ $q->subject?->name }} · {{ $q->source_paper }} · Q{{ $q->question_number }}.
-        Voiding targets the exact <strong>question versions</strong> students saw — the corrected version
+        Voiding targets the exact <strong>question versions</strong> students saw - the corrected version
         @if ($preview['corrected_number']) (v{{ $preview['corrected_number'] }}) @endif and any later version are never voided.
         Past exams that used a selected faulty version are excluded from marks, rankings &amp; analytics and recomputed; released-exam students whose score changes are notified.
     </p>
 </div>
 
-{{-- Version selection — GET form recalculates the blast radius for the ticked set. --}}
+{{-- Version selection - GET form recalculates the blast radius for the ticked set. --}}
 <div class="pg-card">
     <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Faulty versions to void</div>
     <p style="font-size:12px;color:var(--text-soft);margin:0 0 12px;">All versions before the correction are pre-selected. Untick any that were actually fine, then recalculate.</p>
@@ -48,7 +48,7 @@
                 <div style="flex:1;min-width:0;">
                     <div class="flex items-center" style="gap:8px;flex-wrap:wrap;">
                         <span class="badge badge-emerald" style="font-weight:700;">v{{ $v['version_number'] }}</span>
-                        @if ($v['is_corrected'])<span class="badge badge-pass">Corrected — never voided</span>@endif
+                        @if ($v['is_corrected'])<span class="badge badge-pass">Corrected - never voided</span>@endif
                         @if ($v['quality_review_id'])<span class="badge badge-review">QR #{{ $v['quality_review_id'] }}</span>@endif
                         <span style="font-size:12px;color:var(--text-soft);">{{ $v['change_summary'] }}</span>
                     </div>
@@ -94,7 +94,7 @@
                         <td>#{{ $s['attempt_id'] }}</td>
                         <td>{{ $s['score_before'] }}/{{ $s['total_before'] }}</td>
                         <td><strong>{{ $s['score_after'] }}/{{ $s['total_after'] }}</strong></td>
-                        <td>{{ $s['released'] ? 'yes — will notify' : 'no' }}</td>
+                        <td>{{ $s['released'] ? 'yes - will notify' : 'no' }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -102,7 +102,7 @@
     </div>
 @endif
 
-{{-- Confirm — posts exactly the versions that produced THIS preview. --}}
+{{-- Confirm - posts exactly the versions that produced THIS preview. --}}
 <form method="POST" action="{{ route('v2.super_admin.question_flags.propagate.confirm', $review) }}"
       onsubmit="return confirm('Queue propagation? This voids {{ $c['would_void'] }} exam-question(s) across {{ $c['exams'] }} exam(s) and recomputes them. Released-exam students whose score changes will be notified.');">
     @csrf

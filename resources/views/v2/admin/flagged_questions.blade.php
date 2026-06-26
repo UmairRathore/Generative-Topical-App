@@ -16,7 +16,7 @@
         <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint);">Quality · read-only</div>
         <h2 class="serif" style="font-size: 26px; font-weight: 600; margin-top: 4px;">Reported Questions</h2>
         <p style="color: var(--text-soft); margin-top: 2px; font-size: 13.5px; line-height: 1.5;">
-            Every reported question across your {{ $scopeLabel }} — for visibility and auditing. Teachers make the academic
+            Every reported question across your {{ $scopeLabel }} - for visibility and auditing. Teachers make the academic
             decisions (dismiss, void, or escalate for quality review); there's nothing to action here.
         </p>
     </div>
@@ -47,12 +47,12 @@
                                 @if (! empty($r['students']))
                                     {{ collect($r['students'])->take(2)->implode(', ') }}@if (count($r['students']) > 2) <span style="color: var(--text-faint);">+{{ count($r['students']) - 2 }} more</span>@endif
                                 @else
-                                    <span style="color: var(--text-faint);">—</span>
+                                    <span style="color: var(--text-faint);">-</span>
                                 @endif
                             </td>
-                            <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $r['teacher'] ?? '—' }}</td>
+                            <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $r['teacher'] ?? '-' }}</td>
                             @if ($showBranch)
-                                <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $r['branch'] ?? '—' }}</td>
+                                <td style="padding: var(--pad-cell); font-size: 12.5px; color: var(--text-soft);">{{ $r['branch'] ?? '-' }}</td>
                             @endif
                             <td style="padding: var(--pad-cell);">
                                 <span class="badge {{ $r['badge'] }}" style="white-space: nowrap;">{{ $r['status'] }}</span>
@@ -76,7 +76,7 @@
                                     @if ($r['voided'])
                                         <span class="badge badge-blocker" style="font-size: 10px;">Voided for this exam</span>
                                         @if ($r['voidReason'])<span style="color: var(--text-faint);">({{ $r['voidReason'] }})</span>@endif
-                                        <span style="color: var(--text-faint);">— excluded from this exam's marks, rankings &amp; analytics; affected students were notified. The void is permanent for this exam.</span>
+                                        <span style="color: var(--text-faint);">- excluded from this exam's marks, rankings &amp; analytics; affected students were notified. The void is permanent for this exam.</span>
                                     @else
                                         <span style="color: var(--text-soft);">Not voided</span>
                                     @endif
@@ -90,7 +90,7 @@
                                         @if (! empty($r['qrPropagated']) && ! empty($r['propScope']))
                                             @php $brSuffix = ($showBranch && $r['propScope']['branches']) ? ' across '.$r['propScope']['branches'].' branch(es)' : ''; @endphp
                                             <div style="color: var(--text-soft); margin-top: 6px;">
-                                                Confirmed material error — propagated across history. In your {{ $scopeLabel }}:
+                                                Confirmed material error - propagated across history. In your {{ $scopeLabel }}:
                                                 <strong>{{ $r['propScope']['exams'] }}</strong> exam(s) and
                                                 <strong>{{ $r['propScope']['attempts'] }}</strong> attempt(s) were excluded &amp; recalculated{{ $brSuffix }}.
                                             </div>

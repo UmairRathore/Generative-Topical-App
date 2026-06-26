@@ -14,9 +14,9 @@ use Illuminate\Support\Facades\DB;
 |--------------------------------------------------------------------------
 | Daily generator for student notifications (the time-based ones the release
 | hook can't fire on its own):
-|   1. Opens today  — a scheduled exam whose window opens today is now live.
-|   2. Due today    — a live exam whose window closes today, still unattempted.
-|   3. Missed       — a released exam whose window has closed, never attempted.
+|   1. Opens today  - a scheduled exam whose window opens today is now live.
+|   2. Due today    - a live exam whose window closes today, still unattempted.
+|   3. Missed       - a released exam whose window has closed, never attempted.
 | New/scheduled-exam and results-released alerts are pushed in real time from the
 | teacher release actions; this fills in the date-driven reminders. Idempotent.
 */
@@ -41,7 +41,7 @@ class StudentExamReminders extends Command
         foreach ($opening as $exam) {
             $opens += $notifications->notifyExamToStudents(
                 $exam, 'exam_released', "exam_open:{$exam->id}:{$today}",
-                'Your test is now open — take it before it closes',
+                'Your test is now open - take it before it closes',
                 $this->unattempted($exam), route('v2.student.exams.index'),
             );
         }
@@ -58,7 +58,7 @@ class StudentExamReminders extends Command
             $time = $exam->available_until?->format('g:i A');
             $due += $notifications->notifyExamToStudents(
                 $exam, 'exam_due_today', "exam_due:{$exam->id}:{$today}",
-                'Due today'.($time ? " — closes at {$time}" : ''),
+                'Due today'.($time ? " - closes at {$time}" : ''),
                 $this->unattempted($exam), route('v2.student.exams.index'),
             );
         }
@@ -73,7 +73,7 @@ class StudentExamReminders extends Command
         foreach ($expired as $exam) {
             $missed += $notifications->notifyExamToStudents(
                 $exam, 'exam_missed', "exam_missed:{$exam->id}",
-                'You missed this test — the window has closed',
+                'You missed this test - the window has closed',
                 $this->unattempted($exam), null,
             );
         }

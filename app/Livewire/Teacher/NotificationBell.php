@@ -40,7 +40,7 @@ class NotificationBell extends Component
     #[Computed]
     public function attention()
     {
-        // Worst (lowest current %) first — the right 8 to preview.
+        // Worst (lowest current %) first - the right 8 to preview.
         return $this->base()->attention()->active()->with('student')
             ->orderByRaw("CAST(JSON_EXTRACT(data, '$.current_avg') AS UNSIGNED) ASC")
             ->limit(self::PREVIEW)->get();

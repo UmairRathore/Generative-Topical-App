@@ -121,7 +121,7 @@ async function loginAs(context, role) {
         await page.locator('input[type="email"], input[name="email"]').first().fill(cred.email);
         await page.locator('input[type="password"], input[name="password"]').first().fill(cred.password);
 
-        // Livewire intercepts the submit click — wait until URL leaves /login.
+        // Livewire intercepts the submit click - wait until URL leaves /login.
         await Promise.all([
             page.waitForURL(u => !new URL(u).pathname.includes('/login'), { timeout: NAV_TIMEOUT_MS }).catch(() => {}),
             page.locator('button[type="submit"]').first().click(),
@@ -173,9 +173,9 @@ function renderReportMd(results) {
     md += `|---|---|---|---|---|---|\n`;
     for (const r of results) {
         const status = r.success ? '✅' : '❌';
-        const file   = r.success ? `[png](${r.file})` : '—';
-        const err    = r.error ? ' — ' + r.error.split('\n')[0] : '';
-        md += `| \`${r.path}\` | ${r.role} | ${r.viewport} | ${r.status ?? '—'} | ${status}${err} | ${file} |\n`;
+        const file   = r.success ? `[png](${r.file})` : '-';
+        const err    = r.error ? ' - ' + r.error.split('\n')[0] : '';
+        md += `| \`${r.path}\` | ${r.role} | ${r.viewport} | ${r.status ?? '-'} | ${status}${err} | ${file} |\n`;
     }
     return md;
 }
@@ -279,7 +279,7 @@ async function main() {
         let auth = { ok: true };
         if (role) {
             auth = await loginAs(context, role);
-            console.log(`auth: ${auth.ok ? 'ok' : 'FAILED — ' + auth.error}`);
+            console.log(`auth: ${auth.ok ? 'ok' : 'FAILED - ' + auth.error}`);
         }
 
         for (const route of routes) {
@@ -293,7 +293,7 @@ async function main() {
                 const res = await captureOne(context, r, viewport);
                 results.push(res);
                 const tag = res.success ? 'ok  ' : 'fail';
-                const extra = res.error ? ' — ' + res.error.slice(0, 80) : '';
+                const extra = res.error ? ' - ' + res.error.slice(0, 80) : '';
                 console.log(`  [${tag}] ${r.path} (${vpName})${res.status ? ' ' + res.status : ''}${extra}`);
             }
         }

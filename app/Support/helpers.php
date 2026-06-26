@@ -19,7 +19,7 @@ if (! function_exists('v2_actor')) {
             'v2_student'      => 'student',
         ];
         foreach ($guards as $guard => $role) {
-            // check() lazily resolves from the session — hasUser() only sees a
+            // check() lazily resolves from the session - hasUser() only sees a
             // user already eagerly loaded by an auth: middleware (absent here).
             if (auth()->guard($guard)->check()) {
                 return ['id' => auth()->guard($guard)->id(), 'role' => $role, 'guard' => $guard];

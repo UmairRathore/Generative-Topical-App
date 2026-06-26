@@ -44,7 +44,7 @@
                     @endforeach
                 </div>
                 <div class="serif" style="font-size: 17px; font-weight: 600;">Generating with AI…</div>
-                <div style="font-size: 12.5px; color: var(--text-soft); max-width: 320px;">Reading {{ $student->name }}'s results and writing the report — this can take a few seconds.</div>
+                <div style="font-size: 12.5px; color: var(--text-soft); max-width: 320px;">Reading {{ $student->name }}'s results and writing the report - this can take a few seconds.</div>
             </div>
 
             <div class="flex items-center justify-between" style="padding: 15px 20px; border-bottom: 1px solid var(--border);">

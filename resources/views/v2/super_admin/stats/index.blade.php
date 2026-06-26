@@ -48,18 +48,18 @@
 
 {{-- MRR + growth --}}
 <div class="sx-panel" style="margin-bottom: 18px;">
-    <div class="sx-ptitle">Monthly recurring revenue <span style="font-weight:400; color:var(--text-faint);">— last 12 months (estimated)</span></div>
+    <div class="sx-ptitle">Monthly recurring revenue <span style="font-weight:400; color:var(--text-faint);">- last 12 months (estimated)</span></div>
     <div class="sx-chart" style="height: 240px;"><canvas id="paMrr"></canvas></div>
 </div>
 
 <div class="sx-panel" style="margin-bottom: 18px;">
-    <div class="sx-ptitle">Platform growth <span style="font-weight:400; color:var(--text-faint);">— new accounts per month</span></div>
+    <div class="sx-ptitle">Platform growth <span style="font-weight:400; color:var(--text-faint);">- new accounts per month</span></div>
     <div class="sx-chart" style="height: 250px;"><canvas id="paGrowth"></canvas></div>
 </div>
 
 {{-- School engagement --}}
 <div class="sx-panel" style="padding: 0; overflow: hidden; margin-bottom: 18px;">
-    <div class="sx-ptitle" style="padding: 16px 20px 0;">School engagement <span style="font-weight:400; color:var(--text-faint);">— this month</span></div>
+    <div class="sx-ptitle" style="padding: 16px 20px 0;">School engagement <span style="font-weight:400; color:var(--text-faint);">- this month</span></div>
     <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
         <thead><tr style="background: var(--soft-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
             @foreach (['School', 'MRR', 'Exams/mo', 'Reports/mo', 'Last exam', 'Churn risk'] as $h)
@@ -86,7 +86,7 @@
 
 {{-- Daily activity --}}
 <div class="sx-panel" style="margin-bottom: 18px;">
-    <div class="sx-ptitle">Daily activity <span style="font-weight:400; color:var(--text-faint);">— submissions, last 30 days</span></div>
+    <div class="sx-ptitle">Daily activity <span style="font-weight:400; color:var(--text-faint);">- submissions, last 30 days</span></div>
     <div class="sx-chart" style="height: 200px;"><canvas id="paDaily"></canvas></div>
 </div>
 
@@ -101,7 +101,7 @@
         @endif
     </div>
     <div class="sx-panel" style="padding: 0; overflow: hidden;">
-        <div class="sx-ptitle" style="padding: 18px 20px 0;">Hardest questions <span style="font-weight:400; color:var(--text-faint);">— lowest correct rate</span></div>
+        <div class="sx-ptitle" style="padding: 18px 20px 0;">Hardest questions <span style="font-weight:400; color:var(--text-faint);">- lowest correct rate</span></div>
         <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
             <thead><tr style="background: var(--soft-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
                 @foreach (['Question', 'Topic', 'Attempts', 'Correct'] as $h)
@@ -130,7 +130,7 @@
     var t = V2.theme();
     var money = function (v) { return 'Rs ' + Number(v).toLocaleString(); };
 
-    // 1) MRR trend — area
+    // 1) MRR trend - area
     var mrr = @json($mrrTrend);
     new Chart(document.getElementById('paMrr'), {
         type: 'line',
@@ -144,7 +144,7 @@
         }
     });
 
-    // 2) Platform growth — multi-line (students/exams on right axis)
+    // 2) Platform growth - multi-line (students/exams on right axis)
     var g = @json($growth);
     new Chart(document.getElementById('paGrowth'), {
         type: 'line',
@@ -168,7 +168,7 @@
         }
     });
 
-    // 3) Daily activity — bar (weekends lighter)
+    // 3) Daily activity - bar (weekends lighter)
     var daily = @json($daily);
     new Chart(document.getElementById('paDaily'), {
         type: 'bar',
@@ -182,7 +182,7 @@
         }
     });
 
-    // 4) Most-attempted topics — horizontal bar
+    // 4) Most-attempted topics - horizontal bar
     var topics = @json($topTopics);
     if (topics.length) {
         new Chart(document.getElementById('paTopics'), {

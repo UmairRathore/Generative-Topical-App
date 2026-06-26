@@ -151,7 +151,7 @@ class ImportQuestions extends Command
                 // Always the syllabus code of the subject being imported (5054 / 9702 / …),
                 // so the shared tables stay cleanly partitioned by subject + level.
                 'subject_code'    => $subject->code,
-                // paper_code is NOT NULL — derive a subject-generic fallback if the JSON omits it.
+                // paper_code is NOT NULL - derive a subject-generic fallback if the JSON omits it.
                 'paper_code'      => $meta['paper_code'] ?? trim($subject->code.'/'.(string) $variant, '/'),
                 'paper_number'    => $paperNumber,
                 'variant'         => $variant,
@@ -178,7 +178,7 @@ class ImportQuestions extends Command
         $answer = ($answer !== null && $answer !== '') ? strtoupper(substr($answer, 0, 1)) : null;
 
         // A question with neither options nor an option-table is unanswerable
-        // (incomplete source extraction) — flag it so it surfaces for review and
+        // (incomplete source extraction) - flag it so it surfaces for review and
         // is never drawn into a generated test (ExamService requires has('options')).
         $incomplete = empty($q['options']) && empty($q['option_table']);
 

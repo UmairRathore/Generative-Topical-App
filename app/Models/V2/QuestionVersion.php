@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /*
 | An immutable snapshot of a question's content at one point in time. Never edited
-| after creation — corrections create a NEW version and advance the question's
+| after creation - corrections create a NEW version and advance the question's
 | current_version_id pointer.
 */
 class QuestionVersion extends Model

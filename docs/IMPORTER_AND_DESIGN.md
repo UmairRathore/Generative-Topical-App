@@ -1,4 +1,4 @@
-# V2 Question Bank — Importer & Design Choices
+# V2 Question Bank - Importer & Design Choices
 
 How Cambridge past-paper MCQs get into the platform, how they are rendered, and
 the content-security + test-lifecycle systems built around them. Everything here
@@ -7,7 +7,7 @@ subjects all share the same tables, partitioned by subject.
 
 ---
 
-## 1. The importer — `v2:import-questions`
+## 1. The importer - `v2:import-questions`
 
 One generic command imports any subject's bundle. It reads the pipeline output
 and writes `v2_papers`, `v2_questions`, `v2_question_options`,
@@ -48,7 +48,7 @@ Image `image_path` is relative to the bundle root, e.g.
 - **Subject partitioning.** `v2_papers.subject_code` is set to the imported
   subject's own code; every question's `subject_id` matches its paper's. O-Level
   (5054, subject id 5, level "O Level") and A-Level (9702, id 16, "A Level")
-  never mix — all app scoping (classes, exams, question bank, `ExamService`) is
+  never mix - all app scoping (classes, exams, question bank, `ExamService`) is
   by `subject_id`. Image directories are keyed by `<stem>` (`5054_*` vs
   `9702_*`), so they never collide.
 - **Idempotency.** Papers upsert by the unique `source_file`; questions are
@@ -71,11 +71,11 @@ files deleted on question delete (imported paper crops are never touched).
 
 Questions import with `topic_id = null`; a tagging pass assigns topics.
 
-- **A-Level (9702):** `v2:tag-questions` + `QuestionTopicClassifier` — a tuned,
+- **A-Level (9702):** `v2:tag-questions` + `QuestionTopicClassifier` - a tuned,
   hardcoded keyword/score map over the 9702 subtopics, plus
   `v2:apply-topic-overrides` for curated corrections.
 - **O-Level (5054) and future subjects:** `v2:tag-by-keywords --subject=<code>`
-  — subject-generic. It reads a syllabus JSON
+  - subject-generic. It reads a syllabus JSON
   (`storage/syllabus/physics/OLevels/subject_content_o_level_physics.json`, 23
   topics with weighted keywords), upserts the topics into `v2_topics`, then
   scores each question's text + options + table cells + image captions/OCR and
@@ -91,23 +91,23 @@ header label distinguishes them.
 
 ## 2. Rendering design choices (shared across every subject & role)
 
-Three Blade partials render every question — `question_stem`, `question_card`
+Three Blade partials render every question - `question_stem`, `question_card`
 (pool gallery), `answer_review` (results/papers). Because they are shared, O-Level
 renders exactly like A-Level.
 
 ### Layout taxonomy (`v2_questions.layout_type`)
 
-Derived from which images a question has — by the importer and by the CRUD:
+Derived from which images a question has - by the importer and by the CRUD:
 
 | layout_type | Meaning |
 |---|---|
 | `text_only` | Plain stem, text options. |
 | `question_diagram` | Stem diagram(s), text options. |
 | `option_images` | A picture per A/B/C/D option. |
-| `option_table` | The answer set **is a table** — one table image + circles. |
+| `option_table` | The answer set **is a table** - one table image + circles. |
 | `question_diagram_and_option_images` | Both a stem diagram and per-option pictures. |
 
-### "Tables and stuff" — the option-table layout
+### "Tables and stuff" - the option-table layout
 
 For `option_table` questions the answers are a single table image rendered with
 selectable **A / B / C / D circles beside it** (`.v2-table-pick`), the correct
@@ -121,7 +121,7 @@ Some papers print one figure and label the choices A/B/C/D *on* it, which the
 extractor captures as four near-identical `option_image` crops. The
 **`DuplicateOptionImageFixer`** (run at import with `--copy-images`) detects this
 and collapses them to the single figure, reclassifying the question to
-`question_diagram` and rendering plain A/B/C/D labels — so the diagram shows
+`question_diagram` and rendering plain A/B/C/D labels - so the diagram shows
 **once**, not four times. `Question::collapsedOptionFigures()` is the render-time
 safety net for any unfixed question. This applied to ~124 O-Level questions on
 import (option_images 297 → 178), identical to the A-Level behaviour.
@@ -141,7 +141,7 @@ only non-active questions may be deleted.
 
 ---
 
-## 3. Content security — signed image serving
+## 3. Content security - signed image serving
 
 Per the Content-Security spec, no question image is a public static path. Every
 crop is fetched through `GET /v2/img` with an HMAC token.
@@ -153,12 +153,12 @@ crop is fetched through `GET /v2/img` with an HMAC token.
   allowed-path prefix, then confirms the request's authenticated V2 actor
   (`v2_actor()`, resolved across all five guards) matches the token's user. A
   harvested link is useless without that user's live session.
-- **Expiry.** `SECURE_IMAGE_TTL` (default 6h — long enough for a full exam
+- **Expiry.** `SECURE_IMAGE_TTL` (default 6h - long enough for a full exam
   sitting with lazy-loaded images; the viewer-binding is the real control).
 - **Headless detection.** UA / `Accept-Language` / `Sec-Fetch-*` heuristics are
-  logged for review on a hit — never blocked, so a scraper gets no signal.
+  logged for review on a hit - never blocked, so a scraper gets no signal.
 - **S3 / R2 fallback.** Set `SECURE_IMAGE_DISK=s3` (`config/secureimages.php`)
-  and the controller presigns a short-lived S3 URL instead — **no code change**.
+  and the controller presigns a short-lived S3 URL instead - **no code change**.
 - **Rate limits.** Login throttled 5 / 15 min; `/v2/img` keyed by the *viewer*
   (not IP) so a classroom behind one NAT is never throttled while a single
   bulk-puller is capped.
@@ -174,11 +174,11 @@ full, Teacher = filtered, Branch/School Admin = none (stats only), Student = non
 
 ---
 
-## 4. Test lifecycle — release, schedule, expiry
+## 4. Test lifecycle - release, schedule, expiry
 
 A teacher-generated test is **not instantly live**.
 
-- Created as a **draft** (`ExamService::generate`) — invisible to students.
+- Created as a **draft** (`ExamService::generate`) - invisible to students.
 - The teacher **releases** it (`PATCH …/exams/{exam}/release`): **now** or at a
   **scheduled** time (`available_from`), with an optional **expiry**
   (`available_until`). After expiry no student can access it.

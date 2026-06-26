@@ -1,6 +1,6 @@
 /* ╔═══════════════════════════════════════════════════════════════════╗
    ║                                                                   ║
-   ║   GENERATIVE TOPICAL — THEME COLORS  ("Heritage" palette)         ║
+   ║   GENERATIVE TOPICAL - THEME COLORS  ("Heritage" palette)         ║
    ║                                                                   ║
    ║   Edit the hex codes below to re-skin the entire app.             ║
    ║   No other file needs to change.                                  ║
@@ -24,7 +24,7 @@
    ╚═══════════════════════════════════════════════════════════════════╝ */
 
 /* ──────────────────────────────────────────────────────────────────────
-   TAILWIND TOKENS — referenced by class names like `bg-brand-emerald`
+   TAILWIND TOKENS - referenced by class names like `bg-brand-emerald`
    ────────────────────────────────────────────────────────────────────── */
 @theme {
     /* Fonts */
@@ -32,11 +32,11 @@
     --font-serif: 'Cormorant Garamond', 'EB Garamond', 'Iowan Old Style', Georgia, serif;
     --font-mono:  'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
 
-    /* 1. Brand primary — Heritage Blue (token names kept for compat) */
+    /* 1. Brand primary - Heritage Blue (token names kept for compat) */
     --color-brand-emerald:    #313D4B;   /* primary brand */
     --color-brand-forest:     #3E4E60;   /* hover, slightly lighter */
 
-    /* 2. Brand accent — Cambridge Red */
+    /* 2. Brand accent - Cambridge Red */
     --color-brand-gold:       #CD5554;
     --color-brand-gold-soft:  #D97675;
 
@@ -73,13 +73,13 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   DESIGN-SYSTEM TOKENS — referenced everywhere via var(--xxx)
+   DESIGN-SYSTEM TOKENS - referenced everywhere via var(--xxx)
    These are what the .btn, .card, .badge, sidebar, etc. read from.
    IF YOU CHANGE A HEX HERE, ALSO CHANGE THE MATCHING ONE IN @theme ABOVE
    so the Tailwind utility classes stay in sync.
    ────────────────────────────────────────────────────────────────────── */
 :root {
-    /* 1. Brand primary — Heritage Blue (used for sidebar, buttons, links) */
+    /* 1. Brand primary - Heritage Blue (used for sidebar, buttons, links) */
     --emerald-900: #1E2832;   /* darkest, hero gradient end */
     --emerald-800: #313D4B;   /* primary brand color (sidebar bg, btn-primary) */
     --emerald-700: #3E4E60;   /* hover, gradient mid */
@@ -87,7 +87,7 @@
     --emerald-500: #62748B;
     --emerald-50:  #ECEEF2;   /* tinted backgrounds, badges */
 
-    /* 2. Brand accent — Cambridge Red (used for CTAs, highlights) */
+    /* 2. Brand accent - Cambridge Red (used for CTAs, highlights) */
     --gold-700: #A33F3E;
     --gold-600: #B84A49;
     --gold-500: #CD5554;      /* primary accent */
@@ -95,12 +95,12 @@
     --gold-100: #F3D4D4;
     --gold-50:  #FBEAEA;
 
-    /* 2b. Warm secondary — Brick Brown */
+    /* 2b. Warm secondary - Brick Brown */
     --brick-700: #71503A;
     --brick-500: #91684A;
     --brick-100: #E9DBCF;
 
-    /* 3. Neutrals (page surface) — warm white */
+    /* 3. Neutrals (page surface) - warm white */
     --ivory:        #F7F3EE;  /* main page background */
     --ivory-deep:   #EFE9E1;  /* slightly darker (e.g. login left panel) */
     --paper:        #FFFFFF;  /* cards, inputs */
@@ -134,7 +134,7 @@
     --warn:      #D9952B;  --warn-soft: #FBEFD8;
     --bad:       #D9433F;  --bad-soft:  #FAE3E2;
 
-    /* 6. QA badges (domain-specific — Cambridge MCQ pipeline) */
+    /* 6. QA badges (domain-specific - Cambridge MCQ pipeline) */
     --qa-pass:     #00C07F;
     --qa-review:   #D9952B;
     --qa-blocker:  #D9433F;
@@ -154,7 +154,7 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────
-   7. DARK THEME — Heritage dark base #1C2530. Triggered by either:
+   7. DARK THEME - Heritage dark base #1C2530. Triggered by either:
       <html class="dark">             (Flux's appearance toggle)
       <html data-theme="dark">         (custom switcher)
    ────────────────────────────────────────────────────────────────────── */

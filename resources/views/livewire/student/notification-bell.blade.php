@@ -20,7 +20,7 @@
     </button>
 
     <div x-show="open" x-cloak x-transition.origin.top.right @click.outside="open = false"
-         style="position: absolute; top: 42px; right: 0; width: 380px; max-width: 92vw; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 18px 50px rgba(0,0,0,.28); z-index: 50; overflow: hidden;">
+         style="position: fixed; top: 58px; right: 12px; left: auto; width: 380px; max-width: calc(100vw - 24px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: 0 18px 50px rgba(0,0,0,.28); z-index: 50; overflow: hidden;">
 
         <div class="flex items-center justify-between" style="padding: 12px 14px; border-bottom: 1px solid var(--border);">
             <span style="font-size: 14px; font-weight: 600;">Notifications</span>
@@ -31,9 +31,10 @@
 
         <div style="max-height: 380px; overflow-y: auto;">
             @forelse ($this->items as $n)
-                @php [$icon, $color] = $meta[$n->type] ?? ['bell', 'var(--text-soft)']; $d = $n->data; @endphp
-                <div @if (! $n->read_at) wire:click="markRead({{ $n->id }})" @endif
-                     class="flex" style="gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: {{ $n->read_at ? 'default' : 'pointer' }}; {{ $n->read_at ? '' : 'background: rgba(var(--accent-rgb),0.06);' }}">
+                @php [$icon, $color] = $meta[$n->type] ?? ['bell', 'var(--text-soft)']; $d = $n->data; $url = $d['url'] ?? null; @endphp
+                {{-- Whole row opens the update (and marks it read). --}}
+                <div @if ($url || ! $n->read_at) wire:click="open({{ $n->id }})" @endif
+                     class="flex" style="gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--border); cursor: {{ $url || ! $n->read_at ? 'pointer' : 'default' }}; {{ $n->read_at ? '' : 'background: rgba(var(--accent-rgb),0.06);' }}">
                     <span style="margin-top: 1px; flex: none; color: {{ $color }};"><x-icon name="{{ $icon }}" size="17"/></span>
                     <div style="min-width: 0; flex: 1;">
                         <div style="font-size: 13px; line-height: 1.4;"><span style="font-weight: 600;">{{ $d['title'] ?? 'Update' }}</span></div>
@@ -41,9 +42,6 @@
                         <div style="font-size: 11px; color: var(--text-faint); margin-top: 3px;">
                             {{ $d['subject'] ?? '' }}@if (! empty($d['teacher'])) · {{ $d['teacher'] }}@endif · {{ $n->created_at->diffForHumans() }}
                         </div>
-                        @if (! empty($d['url']))
-                            <a href="{{ $d['url'] }}" wire:navigate style="font-size: 11.5px; color: var(--accent); text-decoration: none; display: inline-block; margin-top: 4px;">Open →</a>
-                        @endif
                     </div>
                     @unless ($n->read_at)
                         <span style="flex: none; width: 7px; height: 7px; border-radius: 999px; background: var(--accent); margin-top: 6px;"></span>

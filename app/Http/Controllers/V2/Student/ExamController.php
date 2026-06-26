@@ -74,7 +74,7 @@ class ExamController extends Controller
     public function result(Exam $exam, ExamService $service)
     {
         $student = $this->student();
-        // A submitted result is viewable any time — even after expiry.
+        // A submitted result is viewable any time - even after expiry.
         abort_unless($student->classes()->where('v2_classes.id', $exam->class_id)->exists(), 403);
 
         $attempt = ExamAttempt::where('exam_id', $exam->id)

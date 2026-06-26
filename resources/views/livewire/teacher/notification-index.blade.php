@@ -37,6 +37,21 @@
         </div>
     @endif
 
+    {{-- Read filter (updates only) --}}
+    @if ($tab === 'updates')
+        <div class="flex items-center" style="gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div class="flex" style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                <button type="button" wire:click="$set('read', 'all')" class="btn btn-sm {{ $read === 'all' ? 'btn-primary' : 'btn-ghost' }}" style="border: 0; border-radius: 0;">All</button>
+                <button type="button" wire:click="$set('read', 'unread')" class="btn btn-sm {{ $read === 'unread' ? 'btn-primary' : 'btn-ghost' }}" style="border: 0; border-radius: 0;">
+                    Unread
+                    @if ($this->unreadUpdateCount > 0)
+                        <span style="margin-left: 6px; min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $this->unreadUpdateCount }}</span>
+                    @endif
+                </button>
+            </div>
+        </div>
+    @endif
+
     {{-- List --}}
     <div class="space-y-2">
         @forelse ($this->items as $n)
@@ -97,25 +112,30 @@
                 </div>
             @else
                 @php $url = $n->data['url'] ?? null; $icon = $n->type === 'question_flag' ? 'flag' : ($n->type === 'results_due' ? 'check' : 'calendar'); @endphp
-                <div class="flex items-center" style="gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; {{ $n->read_at ? '' : 'border-left: 3px solid var(--accent);' }}">
-                    <span style="margin-top: 1px; color: var(--accent);"><x-icon name="{{ $icon }}" size="18"/></span>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-size: 13.5px;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> — {{ $n->data['body'] ?? '' }}</div>
-                        <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}</div>
+                {{-- On mobile this stacks: statement first, then the action buttons. --}}
+                <div class="flex flex-col sm:flex-row sm:items-center" style="gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; {{ $n->read_at ? '' : 'border-left: 3px solid var(--accent); background: rgba(var(--accent-rgb),0.05);' }}">
+                    <div class="flex items-center" style="gap: 12px; flex: 1; min-width: 0;">
+                        <span style="flex: none; color: var(--accent);"><x-icon name="{{ $icon }}" size="18"/></span>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 13.5px;"><span style="font-weight: 500;">{{ $n->data['title'] ?? 'Update' }}</span> - {{ $n->data['body'] ?? '' }}</div>
+                            <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">{{ $n->created_at->diffForHumans() }}</div>
+                        </div>
                     </div>
                     <div class="flex items-center" style="gap: 8px; flex: none;">
                         @if ($url)
                             <a href="{{ $url }}" class="btn btn-ghost btn-sm"><x-icon name="eye" size="13"/> Open</a>
                         @endif
-                        @unless ($n->read_at)
-                            <button type="button" wire:click="markRead({{ $n->id }})" class="btn btn-ghost btn-sm">Mark read</button>
-                        @endunless
+                        @if ($n->read_at)
+                            <button type="button" wire:click="markUnread({{ $n->id }})" class="btn btn-ghost btn-sm"><x-icon name="eye-off" size="13"/> Mark as unread</button>
+                        @else
+                            <button type="button" wire:click="markRead({{ $n->id }})" class="btn btn-ghost btn-sm"><x-icon name="check" size="13"/> Mark as read</button>
+                        @endif
                     </div>
                 </div>
             @endif
         @empty
             <div style="padding: 48px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); color: var(--text-soft); font-size: 14px;">
-                {{ $tab === 'attention' ? ($status === 'resolved' ? 'No resolved flags yet.' : 'No students need attention right now.') : 'No updates.' }}
+                {{ $tab === 'attention' ? ($status === 'resolved' ? 'No resolved flags yet.' : 'No students need attention right now.') : ($read === 'unread' ? 'No unread updates.' : 'No updates.') }}
             </div>
         @endforelse
     </div>

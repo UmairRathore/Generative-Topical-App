@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Schema;
 |--------------------------------------------------------------------------
 | Lifecycle flag for the global question pool, managed from the Super Admin
 | question-bank CRUD:
-|   active   — live; eligible to be drawn into generated tests (default).
-|   draft    — being authored / reviewed; never used in a test.
-|   archived — retired; kept for records, never used in a test.
+|   active   - live; eligible to be drawn into generated tests (default).
+|   draft    - being authored / reviewed; never used in a test.
+|   archived - retired; kept for records, never used in a test.
 |
 | Every imported question defaults to 'active' so existing behaviour is
 | unchanged. ExamService only ever selects 'active' questions.

@@ -60,6 +60,21 @@ class NotificationBell extends Component
         $this->base()->where('id', $id)->unread()->update(['read_at' => now()]);
     }
 
+    // Clicking a row opens the update and marks it read.
+    public function open(int $id)
+    {
+        $n = $this->base()->where('id', $id)->first();
+        if (! $n) {
+            return null;
+        }
+
+        $this->base()->where('id', $id)->unread()->update(['read_at' => now()]);
+
+        $url = $n->data['url'] ?? null;
+
+        return $url ? $this->redirect($url, navigate: true) : null;
+    }
+
     public function render()
     {
         return view('livewire.student.notification-bell');

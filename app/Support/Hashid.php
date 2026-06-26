@@ -4,11 +4,11 @@ namespace App\Support;
 
 /*
 |--------------------------------------------------------------------------
-| Hashid — reversible, non-sequential short codes for URL ids
+| Hashid - reversible, non-sequential short codes for URL ids
 |--------------------------------------------------------------------------
 | A 40-bit balanced Feistel cipher (bijective, so collision-free for every id
 | up to ~1.1e12) keyed by the app key, then base-54 encoded with an
-| unambiguous alphabet. Produces short codes like "Mj3kP9". Self-contained —
+| unambiguous alphabet. Produces short codes like "Mj3kP9". Self-contained -
 | no package, no schema change. decode() is the exact inverse of encode().
 */
 class Hashid

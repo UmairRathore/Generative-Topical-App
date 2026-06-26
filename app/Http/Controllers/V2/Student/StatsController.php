@@ -9,7 +9,7 @@ use Illuminate\View\View;
 
 /*
 |--------------------------------------------------------------------------
-| Student — Performance / stats
+| Student - Performance / stats
 |--------------------------------------------------------------------------
 | The signed-in student's own history: score trend, per-topic mastery,
 | subject split, monthly activity and an exam log. Read-only, self-scoped.

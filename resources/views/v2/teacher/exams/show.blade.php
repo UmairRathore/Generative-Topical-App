@@ -277,7 +277,7 @@
             @if ($toReview > 0)<span class="badge badge-review">{{ $toReview }} to review</span>@endif
         </div>
         <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 16px; line-height: 1.5;">
-            <strong>Dismiss</strong> if the question is valid — it stays in the exam and keeps counting. Or
+            <strong>Dismiss</strong> if the question is valid - it stays in the exam and keeps counting. Or
             <strong>Send for Quality Review</strong> if it may have an issue: this voids it for this exam (so no student is
             graded on it), recomputes marks, rankings &amp; analytics{{ $exam->resultsReleased() ? ' and notifies affected students' : '' }},
             and sends the bank question to the Support Team. Each action applies to <strong>all</strong> reports on that question.
@@ -301,7 +301,7 @@
                         @if (! empty($f['qr_outcome']))
                             @php
                                 [$qrCls, $qrTxt] = [
-                                    'correct'  => ['badge-pass', 'Correct — Matches Source'],
+                                    'correct'  => ['badge-pass', 'Correct - Matches Source'],
                                     'cosmetic' => ['badge-emerald', 'Cosmetic Improvement'],
                                     'material' => ['badge-blocker', 'Material Error Confirmed'],
                                 ][$f['qr_outcome']] ?? ['badge-soft', ucfirst($f['qr_outcome'])];
@@ -338,7 +338,7 @@
                     <div x-show="esc" x-cloak style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
                         <form method="POST" action="{{ route('v2.teacher.exams.send_for_review', [$exam, hid($f['question_id'])]) }}">
                             @csrf @method('PATCH')
-                            <label style="display: block; font-size: 11.5px; font-weight: 600; color: var(--text-faint); margin-bottom: 5px;">What's the concern? (optional — the Support Team sees this)</label>
+                            <label style="display: block; font-size: 11.5px; font-weight: 600; color: var(--text-faint); margin-bottom: 5px;">What's the concern? (optional - the Support Team sees this)</label>
                             <textarea name="note" rows="2" maxlength="1000" placeholder="e.g. I've confirmed the answer key is wrong against the mark scheme."
                                       style="width: 100%; padding: 8px 10px; font-size: 12.5px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); resize: vertical; margin-bottom: 8px;"></textarea>
                             <button type="submit" class="btn btn-primary btn-sm"><x-icon name="send" size="12"/> Send for Quality Review</button>

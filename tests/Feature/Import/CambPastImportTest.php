@@ -59,7 +59,7 @@ class CambPastImportTest extends TestCase
                 'total_questions' => 5,
             ],
             'questions' => [
-                // Q1 — option_table with rows AND fallback image (rows present → table renders, not fallback)
+                // Q1 - option_table with rows AND fallback image (rows present → table renders, not fallback)
                 [
                     'question_number' => 1,
                     'question_text' => 'Which row shows units?',
@@ -80,7 +80,7 @@ class CambPastImportTest extends TestCase
                     'correct_answer' => null,
                     'layout_type' => 'option_table',
                 ],
-                // Q2 — split text with embedded diagram (assets[] is the source)
+                // Q2 - split text with embedded diagram (assets[] is the source)
                 [
                     'question_number' => 2,
                     'question_text' => 'A car... <full text>',
@@ -99,7 +99,7 @@ class CambPastImportTest extends TestCase
                     'correct_answer' => null,
                     'layout_type' => 'question_diagram',
                 ],
-                // Q3 — option_images with one option having an image
+                // Q3 - option_images with one option having an image
                 [
                     'question_number' => 3,
                     'question_text' => 'Which graph?',
@@ -114,7 +114,7 @@ class CambPastImportTest extends TestCase
                     'correct_answer' => null,
                     'layout_type' => 'option_images',
                 ],
-                // Q4 — pure text
+                // Q4 - pure text
                 [
                     'question_number' => 4,
                     'question_text' => 'Plain text question',
@@ -129,7 +129,7 @@ class CambPastImportTest extends TestCase
                     'correct_answer' => 'B',
                     'layout_type' => 'text_only',
                 ],
-                // Q5 — flagged as blocker via worklist (passed via $blockerNumbers)
+                // Q5 - flagged as blocker via worklist (passed via $blockerNumbers)
                 [
                     'question_number' => 5,
                     'question_text' => 'Empty options question',
@@ -171,31 +171,31 @@ class CambPastImportTest extends TestCase
         $this->assertSame(5, Question::count());
         $this->assertSame(20, QuestionOption::count());
 
-        // Q1 — option table with rows
+        // Q1 - option table with rows
         $q1 = Question::where('question_number', 1)->first();
         $optTable1 = OptionTable::where('question_id', $q1->id)->first();
         $this->assertNotNull($optTable1);
         $this->assertFalse((bool) $optTable1->use_fallback_image, 'rows present → render HTML table');
         $this->assertNotNull($optTable1->image_path);
 
-        // Q2 — split text + 1 between-text diagram
+        // Q2 - split text + 1 between-text diagram
         $q2 = Question::where('question_number', 2)->first();
         $this->assertSame('A car of mass 850 kg is travelling.', $q2->image_between_question_before_text);
         $this->assertSame('What is the magnitude of the acceleration?', $q2->image_between_question_after_text);
         $this->assertSame(1, QuestionAsset::where('question_id', $q2->id)
             ->where('role', 'question_image_between_text')->count());
 
-        // Q3 — one option image attached to A
+        // Q3 - one option image attached to A
         $q3 = Question::where('question_number', 3)->first();
         $optionA = QuestionOption::where('question_id', $q3->id)->where('label', 'A')->first();
         $this->assertSame(1, QuestionAsset::where('question_option_id', $optionA->id)->count());
 
-        // Q4 — has correct answer
+        // Q4 - has correct answer
         $q4 = Question::where('question_number', 4)->first();
         $this->assertSame('B', $q4->correct_answer);
         $this->assertSame(QuestionVisibility::Public, $q4->visibility);
 
-        // Q5 — forced blocker via qa worklist
+        // Q5 - forced blocker via qa worklist
         $q5 = Question::where('question_number', 5)->first();
         $this->assertSame(QaStatus::Blocker, $q5->qa_status);
         $this->assertSame(QuestionVisibility::Hidden, $q5->visibility);

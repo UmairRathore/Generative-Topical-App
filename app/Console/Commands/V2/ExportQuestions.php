@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\File;
 |   storage/app/questions/backups/<stem>/questions.json   (DB reconstruction)
 |   storage/app/questions/backups/<stem>/images/<file>    (asset file backups)
 |
-| The JSON carries everything the DB holds — markings (correct_answer + marks),
+| The JSON carries everything the DB holds - markings (correct_answer + marks),
 | status, difficulty, review/warnings, topic/subtopic tags, every option, every
 | image with its metadata (role, bbox, dimensions, caption, ocr, confidence,
 | diagram labels), and any quality flags. A top-level index.json manifests the

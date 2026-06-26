@@ -412,7 +412,7 @@ class ExamService
             ->get()
             ->groupBy('topic_id');
 
-        // Full syllabus (every topic title) per subject, in syllabus order — lets the
+        // Full syllabus (every topic title) per subject, in syllabus order - lets the
         // narrative recommend prerequisite topics chosen only from real, existing topics.
         $subjectIds = $attempts->pluck('exam.subject_id')->filter()->unique()->all();
         $syllabus = DB::table('v2_topics')
@@ -428,7 +428,7 @@ class ExamService
                 'subject'     => $group->first()->exam->subject?->name ?? 'Subject',
                 'tests_count' => $group->count(),
                 'avg'         => (int) round($group->avg(fn ($a) => $a->percentage)),
-                // Only topics that actually appeared in a test this period (total > 0) —
+                // Only topics that actually appeared in a test this period (total > 0) -
                 // a topic never asked is omitted, not shown as 0%.
                 'topics'      => collect($topicRows[$subjectId] ?? [])
                     ->filter(fn ($r) => (int) $r->total > 0)
@@ -447,7 +447,7 @@ class ExamService
                                 'percent'  => $s->total ? (int) round($s->correct / $s->total * 100) : 0,
                             ])->values()->all(),
                     ])->values()->all(),
-                // Every topic in this subject's syllabus (not just tested ones) — the pool
+                // Every topic in this subject's syllabus (not just tested ones) - the pool
                 // the narrative may draw prerequisite recommendations from.
                 'all_topics'  => collect($syllabus[$subjectId] ?? [])->pluck('title')->all(),
                 'tests'       => $group->map(fn ($a) => [
@@ -475,7 +475,7 @@ class ExamService
      * Everything the student dashboard needs in one shot:
      *   - overall: completed + missed tests, overall average, subject count
      *   - per subject: teacher, average, attempted/missed test counts, full topic
-     *     coverage (every syllabus topic — examined / attempted / untouched), and
+     *     coverage (every syllabus topic - examined / attempted / untouched), and
      *     the list of tests taken
      *   - upcoming: live + scheduled exams the student hasn't taken yet
      *
@@ -510,7 +510,7 @@ class ExamService
             ->groupBy('subject_id')
             ->map(fn ($rows) => $rows->pluck('name')->unique()->implode(', '));
 
-        // Full syllabus topics per subject, in syllabus order — the coverage reference length.
+        // Full syllabus topics per subject, in syllabus order - the coverage reference length.
         $syllabus = Topic::whereIn('subject_id', $subjectIds)
             ->orderBy('sort_order')->orderByRaw('CAST(external_id AS UNSIGNED)')
             ->get(['id', 'title', 'subject_id'])
@@ -663,7 +663,7 @@ class ExamService
         ];
     }
 
-    /** Last $limit submitted attempts in chronological order — for a trend line. */
+    /** Last $limit submitted attempts in chronological order - for a trend line. */
     public function studentScoreTrend(int $studentId, int $limit = 10): array
     {
         return ExamAttempt::where('student_id', $studentId)
@@ -920,7 +920,7 @@ class ExamService
                 'name'     => $c->name,
                 'grade'    => $c->grade?->name,
                 'subject'  => $c->subject?->name,
-                'teacher'  => ($classTeachers[$c->id] ?? collect())->pluck('name')->implode(', ') ?: '—',
+                'teacher'  => ($classTeachers[$c->id] ?? collect())->pluck('name')->implode(', ') ?: '-',
                 'students' => $c->student_count,
                 'exams'    => (int) ($examCounts[$c->id] ?? 0),
                 'avg'      => isset($perf[$c->id]) && $perf[$c->id]->avg_pct !== null ? (int) round($perf[$c->id]->avg_pct) : null,
@@ -1160,7 +1160,7 @@ class ExamService
     }
 
     /**
-     * Same answer-weighted topic accuracy, but GROUPED BY SUBJECT — so the
+     * Same answer-weighted topic accuracy, but GROUPED BY SUBJECT - so the
      * platform-wide rollup (which spans Physics, Chemistry, Biology, …) reads as
      * one block per subject instead of a single mixed list. Each group carries the
      * subject name/code/level, an overall accuracy, and its per-topic rows
@@ -1191,7 +1191,7 @@ class ExamService
     /**
      * Shared engine for the subject-grouped topic rollups: takes an answers base
      * query (already scoped: platform / school / branch) and returns one block per
-     * subject — subject name/code/level, overall accuracy, and its per-topic rows
+     * subject - subject name/code/level, overall accuracy, and its per-topic rows
      * (untagged questions roll up as "Untagged" within their own subject). Groups
      * are ordered by volume (most-answered subject first).
      *

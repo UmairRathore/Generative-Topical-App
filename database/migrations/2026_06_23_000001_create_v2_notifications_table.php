@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Schema;
 | In-app notifications for V2 roles. Polymorphic recipient (notifiable_*) so the
 | same table can later serve students/admins; for now only Teacher rows are
 | written. Two categories with different lifecycles:
-|   - update    : transient operational alerts (exam today, results due) — age out.
-|   - attention : persistent "student needs attention" cases — created when a weak
+|   - update    : transient operational alerts (exam today, results due) - age out.
+|   - attention : persistent "student needs attention" cases - created when a weak
 |                 topic is detected, updated in place each daily run, and
 |                 auto-resolved (resolved_at) when the student improves.
 | dedupe_key makes the daily generator idempotent (updateOrCreate, no re-spam).

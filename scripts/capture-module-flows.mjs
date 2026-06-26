@@ -1,9 +1,9 @@
 // @ts-check
 /**
- * capture-module-flows.mjs — flow-wise screenshot capture for the V2 module docs.
+ * capture-module-flows.mjs - flow-wise screenshot capture for the V2 module docs.
  *
  * Reads every docs/modules/NN-*.md, extracts the ```flow code block(s) embedded in
- * each, and DRIVES the real app with Playwright — logging in as the right role,
+ * each, and DRIVES the real app with Playwright - logging in as the right role,
  * clicking through the flow step by step, and screenshotting each labelled screen.
  * Produces screenshots/flows/<module>/NN-step.png plus an index.html gallery and a
  * report.md. You update the flow blocks in the docs; this script captures them.
@@ -141,7 +141,7 @@ async function main() {
 
     const shots = manifest.reduce((n, f) => n + f.steps.filter((s) => s.file).length, 0);
     const fails = manifest.reduce((n, f) => n + f.steps.filter((s) => s.error).length, 0);
-    console.log(`\nDone — ${shots} screenshots across ${manifest.length} flow(s)${fails ? `, ${fails} step error(s)` : ''}.`);
+    console.log(`\nDone - ${shots} screenshots across ${manifest.length} flow(s)${fails ? `, ${fails} step error(s)` : ''}.`);
     console.log(`Gallery: ${path.join(OUT_DIR, 'index.html')}`);
 }
 
@@ -173,7 +173,7 @@ async function runFlow(browser, target, flowIndex, flow) {
             await runStep(step);
         } catch (e) {
             const label = describe(step);
-            console.log(`  ✗ ${label} — ${e.message.split('\n')[0]}`);
+            console.log(`  ✗ ${label} - ${e.message.split('\n')[0]}`);
             // capture the failure state so you can see what went wrong
             const file = await snap(`ERROR-${++shotSeq}-${slugify(label)}`);
             record.steps.push({ shot: `error:${label}`, caption: `ERROR: ${e.message.split('\n')[0]}`, file, error: e.message.split('\n')[0] });
@@ -268,7 +268,7 @@ async function runFlow(browser, target, flowIndex, flow) {
     async function capture(step) {
         const re = new RegExp(step.fromUrl);
         const m = page.url().match(re);
-        if (!m || !m[1]) throw new Error(`capture "${step.capture}" — pattern /${step.fromUrl}/ did not match ${page.url()}`);
+        if (!m || !m[1]) throw new Error(`capture "${step.capture}" - pattern /${step.fromUrl}/ did not match ${page.url()}`);
         vars[step.capture] = m[1];
         console.log(`  · captured ${step.capture}=${m[1]}`);
     }
@@ -338,7 +338,7 @@ function slugify(s) {
 async function writeReport() {
     let md = `# Module flow captures\n\nGenerated against ${BASE_URL}. ${manifest.length} flow(s).\n\n`;
     for (const f of manifest) {
-        md += `## ${f.module} — ${f.moduleTitle}\n\n**Flow:** ${f.flowName}\n\n`;
+        md += `## ${f.module} - ${f.moduleTitle}\n\n**Flow:** ${f.flowName}\n\n`;
         md += `| # | Screen | Caption | Status |\n|---|---|---|---|\n`;
         f.steps.forEach((s, i) => {
             md += `| ${i + 1} | ${s.shot} | ${s.caption} | ${s.error ? '❌ ' + s.error : '✅'} |\n`;
@@ -366,7 +366,7 @@ async function writeGallery() {
     let html = `<!doctype html><html><head><meta charset="utf-8"><title>Module flow captures</title><style>${css}</style></head><body>`;
     html += `<header><h1>Module flow captures</h1><div class="sub">${BASE_URL} · ${new Date().toISOString()}</div></header>`;
     for (const f of manifest) {
-        html += `<div class="mod">${f.module} — ${esc(f.moduleTitle)}</div><div class="flow">▶ ${esc(f.flowName)}</div><div class="grid">`;
+        html += `<div class="mod">${f.module} - ${esc(f.moduleTitle)}</div><div class="flow">▶ ${esc(f.flowName)}</div><div class="grid">`;
         f.steps.forEach((s, i) => {
             html += `<div class="shot ${s.error ? 'err' : ''}">`;
             if (s.file) html += `<a href="${s.file}" target="_blank"><img src="${s.file}" loading="lazy"></a>`;

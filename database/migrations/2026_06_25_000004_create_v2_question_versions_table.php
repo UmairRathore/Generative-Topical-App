@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 | Immutable history of a question's content. Every save in Super Admin
 | Question Management creates a new version. `snapshot` is a SELF-CONTAINED JSON
 | of the question content + its options + its images metadata (image_path, role,
-| option_label, bbox, dims, caption …) — enough to faithfully re-render the exact
+| option_label, bbox, dims, caption …) - enough to faithfully re-render the exact
 | state a student saw. v2_questions.current_version_id points to the live version;
 | v2_exam_questions.question_version_id pins the version each exam froze.
 | Old image FILES are retained forever so historical snapshots still render.

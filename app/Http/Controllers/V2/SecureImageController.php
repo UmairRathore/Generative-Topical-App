@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\Response;
 | It (1) verifies the HMAC token + expiry, (2) binds the URL to the logged-in
 | viewer (a leaked link is useless without that user's session), (3) silently
 | flags automation/headless signals for review, and (4) streams the file from
-| the configured disk — presigning an S3 URL when the disk isn't local.
+| the configured disk - presigning an S3 URL when the disk isn't local.
 */
 class SecureImageController extends Controller
 {
@@ -27,7 +27,7 @@ class SecureImageController extends Controller
         $path = SignedImage::verify($request->query());
         abort_if($path === null, 403, 'Invalid or expired image link.');
 
-        // 2. Viewer binding — the token's user must be the authenticated V2 actor.
+        // 2. Viewer binding - the token's user must be the authenticated V2 actor.
         $actor = v2_actor();
         abort_if($actor === null, 403);
         abort_unless((string) $actor['id'] === (string) $request->query('u', ''), 403);
@@ -42,7 +42,7 @@ class SecureImageController extends Controller
             $remote = Storage::disk($disk);
             abort_unless($remote->exists($path), 404);
 
-            // Presigned, short-lived redirect (S3 / R2 fallback — config-only switch).
+            // Presigned, short-lived redirect (S3 / R2 fallback - config-only switch).
             if (method_exists($remote, 'temporaryUrl')) {
                 return redirect()->away($remote->temporaryUrl($path, now()->addSeconds((int) config('secureimages.ttl'))));
             }
@@ -61,7 +61,7 @@ class SecureImageController extends Controller
 
     /**
      * Header + nothing-blocking heuristics for headless browsers / scrapers.
-     * Per the security spec this NEVER blocks (no signal to the attacker) — it
+     * Per the security spec this NEVER blocks (no signal to the attacker) - it
      * just records an anomaly so a session can be reviewed.
      */
     private function flagAutomation(Request $request, array $actor): void

@@ -7,7 +7,7 @@ use App\Http\Controllers\V2\Concerns\ReviewsEscalations;
 
 /*
 | Read-only "Reported Questions" audit scoped to this branch only.
-| Admins are not in the approval chain — there are no actions here.
+| Admins are not in the approval chain - there are no actions here.
 */
 class FlaggedQuestionController extends Controller
 {

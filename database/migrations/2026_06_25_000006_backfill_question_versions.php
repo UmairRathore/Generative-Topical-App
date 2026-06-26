@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\DB;
 |--------------------------------------------------------------------------
 | Idempotent + chunked. Gives every existing question an immutable v1 snapshot
 | and a current_version_id, then points every existing v2_exam_questions row at
-| that v1 (the content it froze). Safe to re-run — already-backfilled rows are
+| that v1 (the content it froze). Safe to re-run - already-backfilled rows are
 | skipped by the NULL filters.
 */
 return new class extends Migration
 {
     public function up(): void
     {
-        // 1. One v1 version per question (incl. soft-deleted — frozen exams may reference them).
+        // 1. One v1 version per question (incl. soft-deleted - frozen exams may reference them).
         Question::withTrashed()->whereNull('current_version_id')
             ->with(['options', 'images'])
             ->chunkById(200, function ($questions) {
