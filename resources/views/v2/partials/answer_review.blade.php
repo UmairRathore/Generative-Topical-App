@@ -31,8 +31,8 @@
             $badgeClass = 'badge-blocker';
         }
     @endphp
-    <div id="q{{ $eq->sort_order }}" data-result-question-card data-question-number="{{ $eq->sort_order }}"
-         style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px; scroll-margin-top: 84px; {{ $isVoided ? 'opacity: .72;' : '' }}">
+    <div id="q{{ $eq->sort_order }}" data-result-question-card data-question-number="{{ $eq->sort_order }}" class="ar-card"
+         style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 14px; scroll-margin-top: 84px; {{ $isVoided ? 'opacity: .72;' : '' }}">
         <div class="flex items-start gap-3">
             <span class="badge {{ $badgeClass }}" style="{{ $badgeStyle }}">{{ $eq->sort_order }}</span>
             <div style="flex: 1; min-width: 0;">

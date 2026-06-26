@@ -15,8 +15,8 @@
         $chips[] = ['Excluded', $breakdown['voided'], 'var(--text-soft)'];
     }
 @endphp
-<div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px 26px; margin-bottom: 18px;">
-    <div class="flex items-center gap-6" style="flex-wrap: wrap;">
+<div class="rs-strip" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 18px;">
+    <div class="flex items-center gap-6 rs-hero" style="flex-wrap: wrap;">
         <div style="flex: none; width: 92px; height: 92px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 4px solid {{ $tone }};">
             <div class="serif" style="font-size: 25px; font-weight: 700; color: {{ $tone }};">{{ $pct }}%</div>
         </div>

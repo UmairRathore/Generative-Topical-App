@@ -3,25 +3,28 @@
      while scrolling. Props: $palette (from ExamService::resultBreakdown), $breakdown. --}}
 <div class="result-aside">
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
-        <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Result summary</div>
+        {{-- Summary counts duplicate the score strip, so they are hidden on mobile (where the strip sits just above). --}}
+        <div class="rp-summary">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Result summary</div>
 
-        <div class="space-y-2" style="margin-bottom: 14px;">
-            @php
-                $rows = [
-                    ['Correct', $breakdown['correct'], 'var(--ok)'],
-                    ['Wrong', $breakdown['wrong'], 'var(--bad)'],
-                    ['Unattempted', $breakdown['unattempted'], 'var(--text-soft)'],
-                ];
-                if (! empty($breakdown['voided'])) {
-                    $rows[] = ['Excluded', $breakdown['voided'], 'var(--text-faint)'];
-                }
-            @endphp
-            @foreach ($rows as [$label, $val, $color])
-                <div class="flex items-center justify-between" style="font-size: 12.5px;">
-                    <span class="flex items-center gap-2"><span style="width: 9px; height: 9px; border-radius: 50%; background: {{ $color }}; display: inline-block;"></span>{{ $label }}</span>
-                    <strong>{{ $val }}</strong>
-                </div>
-            @endforeach
+            <div class="space-y-2" style="margin-bottom: 14px;">
+                @php
+                    $rows = [
+                        ['Correct', $breakdown['correct'], 'var(--ok)'],
+                        ['Wrong', $breakdown['wrong'], 'var(--bad)'],
+                        ['Unattempted', $breakdown['unattempted'], 'var(--text-soft)'],
+                    ];
+                    if (! empty($breakdown['voided'])) {
+                        $rows[] = ['Excluded', $breakdown['voided'], 'var(--text-faint)'];
+                    }
+                @endphp
+                @foreach ($rows as [$label, $val, $color])
+                    <div class="flex items-center justify-between" style="font-size: 12.5px;">
+                        <span class="flex items-center gap-2"><span style="width: 9px; height: 9px; border-radius: 50%; background: {{ $color }}; display: inline-block;"></span>{{ $label }}</span>
+                        <strong>{{ $val }}</strong>
+                    </div>
+                @endforeach
+            </div>
         </div>
 
         <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); margin-bottom: 9px;">Questions</div>
@@ -37,8 +40,10 @@
 <style>
     .result-shell{max-width:1180px;margin:0 auto;}
     .result-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start;}
-    .result-aside{position:sticky;top:84px;}
+    .result-aside{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto;}
     .result-palette-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+    .rs-strip{padding:22px 26px;}
+    .ar-card{padding:20px;}
     .qp{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;text-decoration:none;color:var(--text);cursor:pointer;transition:box-shadow .12s;}
     .qp--correct{background:var(--ok-soft);color:#15803d;border-color:rgba(95,160,82,.4);}
     .qp--wrong{background:var(--bad-soft);color:#b91c1c;border-color:rgba(200,60,60,.4);}
@@ -49,9 +54,15 @@
     .qp.is-flagged.is-active{box-shadow:0 0 0 2px var(--accent),0 0 0 4px var(--warn);}
     @media (max-width:900px){
         .result-grid{grid-template-columns:1fr;}
-        .result-aside{position:static;order:-1;}
+        .result-aside{position:static;order:-1;max-height:none;overflow:visible;}
+        .rp-summary{display:none;}
         .result-palette-grid{display:flex;overflow-x:auto;gap:6px;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
         .result-palette-grid .qp{flex:0 0 auto;}
+    }
+    @media (max-width:600px){
+        .rs-strip{padding:16px;}
+        .rs-hero{gap:16px;}
+        .ar-card{padding:15px 14px;}
     }
 </style>
 <script>
