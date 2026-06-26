@@ -10,8 +10,28 @@
 @endphp
 
 @section('content')
-<style>[x-cloak]{display:none!important}.tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}</style>
-<div x-data="examTaker({{ $exam->question_count }}, {{ $hasLimit ? 'true' : 'false' }}, {{ $remaining ?? 'null' }}, {{ $elapsed }})" style="max-width: 760px; margin: 0 auto;">
+<style>
+[x-cloak]{display:none!important}
+.tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.take-shell{max-width:1080px;margin:0 auto;}
+.take-grid{display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:24px;align-items:start;}
+.take-aside{position:sticky;top:128px;max-height:calc(100vh - 148px);overflow:auto;}
+.take-palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;justify-items:center;}
+.tqp{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);background:var(--soft-surface);color:var(--text-soft);font-size:13px;font-weight:600;cursor:pointer;transition:box-shadow .12s,background .12s,color .12s;}
+.tqp.is-answered{background:rgba(var(--accent-rgb),0.16);border-color:var(--accent);color:var(--accent);}
+.tqp.is-current{box-shadow:0 0 0 2px var(--accent);}
+@media (max-width:900px){
+    /* minmax(0,1fr) - NOT 1fr - so a wide option table can't blow the column (and the
+       palette card) wider than the viewport. */
+    .take-grid{grid-template-columns:minmax(0,1fr);gap:16px;}
+    /* Palette is a normal in-flow block above question 1 - never sticky, so it can't pin
+       over / cover the questions while scrolling. height:auto + align-self:start stop the
+       grid from stretching it to a full row (which left a huge empty gap before Q1). */
+    .take-aside{position:static !important;top:auto !important;order:-1;max-height:none;overflow:visible;height:auto;align-self:start;}
+    .tp-summary{display:none;}
+}
+</style>
+<div x-data="examTaker({{ $exam->question_count }}, {{ $hasLimit ? 'true' : 'false' }}, {{ $remaining ?? 'null' }}, {{ $elapsed }})" class="take-shell">
 
     {{-- Sticky status bar --}}
     <div class="flex items-center justify-between" style="position: sticky; top: 64px; z-index: 5; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 14px 18px; margin-bottom: 20px;">
@@ -27,7 +47,8 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('v2.student.exams.submit', $exam) }}" x-ref="form"
+    <div class="take-grid">
+    <form method="POST" action="{{ route('v2.student.exams.submit', $exam) }}" x-ref="form" class="take-main"
           @submit.prevent="showConfirm = true">
         @csrf
 
@@ -36,7 +57,8 @@
                 $q = $eq->question;
                 $optionImages = $q->images->where('role', 'option_image')->keyBy('option_label');
             @endphp
-            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; margin-bottom: 16px;">
+            <div id="tq{{ $loop->index }}" data-take-card data-qn="{{ $loop->index }}"
+                 style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; margin-bottom: 16px; scroll-margin-top: 130px;">
                 <div class="flex items-start gap-3">
                     <span class="badge badge-emerald" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
                     <div style="flex: 1; min-width: 0;">
@@ -118,10 +140,37 @@
         @endforeach
 
         <div class="flex items-center justify-between" style="margin: 22px 0 40px;">
-            <a href="{{ route('v2.student.exams.index') }}" style="font-size: 13px; color: var(--text-soft); text-decoration: none;">Save & exit</a>
+            <button type="button" @click="showExit = true" class="btn btn-ghost"><x-icon name="chev-l" size="13"/> Exit</button>
             <button type="submit" class="btn btn-primary btn-lg"><x-icon name="check" size="15"/> Submit Test</button>
         </div>
     </form>
+
+        {{-- Live progress palette: which questions are answered vs not, and jump to any of them.
+             No answer/correctness info - just attempt tracking. --}}
+        <aside class="take-aside">
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
+                <div class="tp-summary">
+                    <div style="font-size: 13px; font-weight: 600; margin-bottom: 12px;">Your progress</div>
+                    <div class="space-y-2" style="margin-bottom: 14px;">
+                        <div class="flex items-center justify-between" style="font-size: 12.5px;">
+                            <span class="flex items-center gap-2"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block;"></span>Answered</span>
+                            <strong x-text="Object.keys(answers).length"></strong>
+                        </div>
+                        <div class="flex items-center justify-between" style="font-size: 12.5px;">
+                            <span class="flex items-center gap-2"><span style="width: 9px; height: 9px; border-radius: 50%; background: var(--text-soft); display: inline-block;"></span>Unanswered</span>
+                            <strong x-text="{{ $exam->question_count }} - Object.keys(answers).length"></strong>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text-faint); margin-bottom: 9px;">Questions</div>
+                <div class="take-palette-grid">
+                    <template x-for="i in total" :key="i">
+                        <button type="button" class="tqp" :class="{ 'is-answered': isAnswered(i - 1), 'is-current': activeIdx === (i - 1) }" @click="goTo(i - 1)" x-text="i"></button>
+                    </template>
+                </div>
+            </div>
+        </aside>
+    </div>
 
     {{-- Submit confirmation modal (replaces the native confirm dialog) - teleported so the
          content column's transform can't trap this fixed overlay off-screen. --}}
@@ -138,6 +187,22 @@
             <div class="flex items-center justify-end gap-2">
                 <button type="button" class="btn btn-ghost" @click="showConfirm = false">Keep working</button>
                 <button type="button" class="btn btn-primary" @click="confirming = true; $refs.form.submit()"><x-icon name="check" size="14"/> Submit test</button>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    {{-- Exit confirmation: leaving does NOT save answers (they only persist on Submit). --}}
+    <template x-teleport="body">
+    <div x-show="showExit" x-cloak class="tx-modal" style="display:none;" @keydown.escape.window="showExit = false">
+        <div @click="showExit = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.55);"></div>
+        <div x-show="showExit" x-transition
+             style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
+            <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Leave the test?</h3>
+            <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 22px;">Leaving will <strong style="color: var(--text);">submit your test as it is</strong> and count as your attempt - you can't redo it. Anything unanswered stays blank.</p>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" class="btn btn-ghost" @click="showExit = false">Keep working</button>
+                <button type="button" class="btn btn-primary" @click="confirming = true; $refs.form.submit()"><x-icon name="check" size="14"/> Submit &amp; leave</button>
             </div>
         </div>
     </div>
@@ -184,13 +249,34 @@
 @endif
 
 <script>
+window.__takeQids = @json($exam->examQuestions->map(fn ($eq) => $eq->question->id)->values());
 function examTaker(total, hasLimit, remaining, elapsed) {
     return {
-        total, answers: {}, confirming: false, showConfirm: false, hasLimit, remaining, elapsed, clock: '',
+        total, answers: {}, confirming: false, showConfirm: false, showExit: false, hasLimit, remaining, elapsed, clock: '',
+        qids: [], activeIdx: 0,
         init() {
+            this.qids = window.__takeQids || [];
+            this.$nextTick(() => this.observeCards());
             if (this.hasLimit && this.remaining <= 0) { this.autoSubmit(); return; }
             this.render();
             setInterval(() => this.tick(), 1000);
+        },
+        isAnswered(i) { return this.answers[this.qids[i]] !== undefined; },
+        goTo(i) {
+            var el = document.getElementById('tq' + i);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            this.activeIdx = i;
+        },
+        observeCards() {
+            var self = this;
+            var cards = document.querySelectorAll('[data-take-card]');
+            if (!cards.length) return;
+            var obs = new IntersectionObserver(function (entries) {
+                entries.forEach(function (en) {
+                    if (en.isIntersecting) self.activeIdx = parseInt(en.target.getAttribute('data-qn'), 10);
+                });
+            }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+            cards.forEach(function (c) { obs.observe(c); });
         },
         render() {
             const v = this.hasLimit ? this.remaining : this.elapsed;
