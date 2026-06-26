@@ -7,7 +7,7 @@
 <style>
     [x-cloak]{display:none!important}
     .tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
-    .ex-table{width:100%;border-collapse:collapse;}
+    .ex-table{width:100%;border-collapse:collapse;min-width:600px;}
     .ex-table th{padding:11px 16px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text-faint);}
     .ex-table td{padding:13px 16px;font-size:13px;vertical-align:middle;}
     .ex-table tbody tr{border-top:1px solid var(--border);}
@@ -37,13 +37,17 @@
     @endphp
     <div x-data="{ open: false }" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 16px; overflow: hidden;">
 
-        {{-- Container header (always visible) --}}
-        <div class="flex items-center justify-between" style="gap: 12px; padding: 16px 20px; cursor: pointer;" @click="open = !open">
-            <div class="flex items-center gap-3" style="min-width: 0; flex-wrap: wrap;">
-                <span style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--soft-surface); display: flex; align-items: center; justify-content: center; color: var(--accent);"><x-icon name="book" size="17"/></span>
-                <h3 class="serif" style="font-size: 18px; font-weight: 600;">{{ $subjectName }}</h3>
+        {{-- Container header (always visible): title + chevron on row 1, stat badges wrap on row 2.
+             Stacking keeps it readable on mobile instead of overflowing off-screen. --}}
+        <div style="padding: 16px 20px; cursor: pointer;" @click="open = !open">
+            <div class="flex items-center justify-between" style="gap: 12px;">
+                <div class="flex items-center gap-3" style="min-width: 0;">
+                    <span style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--soft-surface); display: flex; align-items: center; justify-content: center; color: var(--accent);"><x-icon name="book" size="17"/></span>
+                    <h3 class="serif" style="font-size: 18px; font-weight: 600;">{{ $subjectName }}</h3>
+                </div>
+                <span class="flex" style="flex: none; color: var(--text-soft); transition: transform .2s;" :style="open ? 'transform: rotate(180deg);' : ''"><x-icon name="chev-d" size="16"/></span>
             </div>
-            <div class="flex items-center" style="gap: 8px; flex: none; flex-wrap: wrap; justify-content: flex-end;">
+            <div class="flex items-center" style="gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                 <span class="badge badge-soft" style="font-size: 11.5px;">{{ $total }} {{ Str::plural('test', $total) }}</span>
                 <span class="badge badge-soft" style="font-size: 11.5px;"><x-icon name="check" size="11"/> {{ $attempted }} attempted</span>
                 <span class="badge badge-soft" style="font-size: 11.5px; color: {{ $missed ? 'var(--bad)' : 'var(--text-soft)' }};"><x-icon name="flag" size="11"/> {{ $missed }} missed</span>
@@ -58,7 +62,6 @@
                         <x-icon name="chart" size="13"/> Topics
                     </button>
                 @endif
-                <span class="flex" style="color: var(--text-soft); transition: transform .2s;" :style="open ? 'transform: rotate(180deg);' : ''"><x-icon name="chev-d" size="16"/></span>
             </div>
         </div>
 
