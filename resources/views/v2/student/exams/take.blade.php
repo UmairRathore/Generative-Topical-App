@@ -159,9 +159,13 @@
         .pt-body img{display:block;max-width:100%;height:auto;margin:0 auto;background:#fff;border-radius:6px;}
     </style>
     <div x-data="{ open: false }" x-cloak @keydown.escape.window="open = false">
-        <button type="button" class="pt-fab" @click="open = true" x-show="!open" x-transition.opacity>
+        {{-- Teleported to <body> so the floating button stays pinned to the viewport
+             (the content column's transform would otherwise trap this fixed button). --}}
+        <template x-teleport="body">
+        <button type="button" class="pt-fab" @click="open = true" x-show="!open" x-transition.opacity x-cloak>
             <x-icon name="grid" size="16"/> Periodic Table
         </button>
+        </template>
         <template x-teleport="body">
         <div class="pt-modal" x-show="open" x-cloak style="display:none;">
             <div class="pt-backdrop" @click="open = false"></div>
