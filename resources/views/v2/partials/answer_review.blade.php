@@ -1,8 +1,11 @@
 {{-- Question-by-question review of a submitted attempt: each option marked
-     correct (green) / the picked-but-wrong option (red). Shared by the student
-     result page and the teacher's per-student paper view.
+     correct (green) / the picked-but-wrong option (red) / unattempted (neutral).
+     Shared by the student result page and the teacher's per-student paper view.
      Props: $exam (with examQuestions.question.options/images loaded),
-            $answers (ExamAnswer collection keyed by question_id). --}}
+            $answers (ExamAnswer collection keyed by question_id),
+            $revealCorrect (bool, default true) - when false the correct option is
+            never revealed (the student still sees their own answer + marks). --}}
+@php $revealCorrect = $revealCorrect ?? true; @endphp
 @foreach ($exam->examQuestions as $eq)
     @php
         $q = $eq->question;
@@ -10,12 +13,30 @@
         $optionImages = $q->images->where('role', 'option_image')->keyBy('option_label');
         $correct = $ans?->correct_option;
         $selected = $ans?->selected_option;
+        $isVoided = (bool) $eq->is_voided;
+        $attempted = $ans && $selected !== null;
+        // Only reveal the correct option's identity when allowed.
+        $reveal = $revealCorrect && $correct !== null;
+
+        // Number badge: voided / correct / wrong / unattempted (neutral grey).
+        $badgeClass = '';
+        $badgeStyle = 'flex: none; font-weight: 700;';
+        if ($isVoided) {
+            $badgeClass = 'badge-soft';
+        } elseif (! $attempted) {
+            $badgeStyle .= ' background: var(--soft-surface); color: var(--text-soft);';
+        } elseif ($ans && $ans->is_correct) {
+            $badgeClass = 'badge-pass';
+        } else {
+            $badgeClass = 'badge-blocker';
+        }
     @endphp
-    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px; {{ $eq->is_voided ? 'opacity: .72;' : '' }}">
+    <div id="q{{ $eq->sort_order }}" data-result-question-card data-question-number="{{ $eq->sort_order }}"
+         style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px; margin-bottom: 14px; scroll-margin-top: 84px; {{ $isVoided ? 'opacity: .72;' : '' }}">
         <div class="flex items-start gap-3">
-            <span class="badge {{ $eq->is_voided ? 'badge-soft' : ($ans && $ans->is_correct ? 'badge-pass' : 'badge-blocker') }}" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
+            <span class="badge {{ $badgeClass }}" style="{{ $badgeStyle }}">{{ $eq->sort_order }}</span>
             <div style="flex: 1; min-width: 0;">
-                @if ($eq->is_voided)
+                @if ($isVoided)
                     <div class="flex items-center gap-2" style="margin-bottom: 10px; padding: 7px 11px; border: 1px dashed var(--border); border-radius: 8px; background: var(--soft-surface);">
                         <x-icon name="flag" size="13" />
                         @if ($eq->void_source === 'quality_review')
@@ -56,9 +77,13 @@
                         <div class="picks">
                             <span class="hdr"></span>
                             @foreach ($q->options as $opt)
-                                @php $c = 'v2-opt-circle'.($correct && $opt->label === $correct ? ' is-correct'
-                                       : ($selected && $opt->label === $selected && $opt->label !== $correct ? ' is-wrong' : '')); @endphp
-                                <label><span class="{{ $c }}">{{ $opt->label }}</span></label>
+                                @php
+                                    $isCorrect = $reveal && $opt->label === $correct;
+                                    $isWrongPick = $reveal && $selected && $opt->label === $selected && $opt->label !== $correct;
+                                    $isPicked = ! $reveal && $selected && $opt->label === $selected;
+                                    $c = 'v2-opt-circle'.($isCorrect ? ' is-correct' : ($isWrongPick ? ' is-wrong' : ''));
+                                @endphp
+                                <label><span class="{{ $c }}" @if ($isPicked) style="border-color: var(--accent); color: var(--accent);" @endif>{{ $opt->label }}</span></label>
                             @endforeach
                         </div>
                         <div class="v2-table-wrap">
@@ -66,19 +91,16 @@
                                  @if ($tw) style="width:{{ $tw }}px;" @endif>
                         </div>
                     </div>
-                    @if ($correct)
-                        <div style="text-align: center; font-size: 12px; color: var(--text-soft); margin-top: 9px;">
-                            Correct answer: <strong style="color: var(--ok);">{{ $correct }}</strong>@if ($selected && $selected !== $correct) · You chose: <strong style="color: var(--bad);">{{ $selected }}</strong>@endif
-                        </div>
-                    @endif
                 @else
                 <div class="{{ $hasOptImgs ? 'v2-opt-grid' : 'space-y-2' }}">
                     @foreach ($q->options as $opt)
                         @php
-                            $isCorrect = $correct && $opt->label === $correct;
-                            $isWrongPick = $selected && $opt->label === $selected && ! $isCorrect;
+                            $isCorrect = $reveal && $opt->label === $correct;
+                            $isWrongPick = $reveal && $selected && $opt->label === $selected && ! $isCorrect;
+                            $isPicked = ! $reveal && $selected && $opt->label === $selected;
                             $style = $isCorrect ? 'border-color:var(--ok); background:var(--ok-soft);'
-                                   : ($isWrongPick ? 'border-color:var(--bad); background:var(--bad-soft);' : 'border-color:var(--border);');
+                                   : ($isWrongPick ? 'border-color:var(--bad); background:var(--bad-soft);'
+                                   : ($isPicked ? 'border-color:var(--accent); background:var(--soft-surface);' : 'border-color:var(--border);'));
                             $oi = $optionImages[$opt->label] ?? null;
                             $circle = 'v2-opt-circle'.($isCorrect ? ' is-correct' : ($isWrongPick ? ' is-wrong' : ''));
                         @endphp
@@ -88,25 +110,40 @@
                                     <span class="{{ $circle }}">{{ $opt->label }}</span>
                                     @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct</span>@endif
                                     @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Selected</span>@endif
+                                    @if ($isPicked)<span class="badge badge-soft" style="font-size:10px;">Your answer</span>@endif
                                 </span>
                                 <img src="{{ simg($oi->image_path) }}" alt="option {{ $opt->label }}" onerror="this.style.display='none'" class="v2-opt-img">
                             </div>
                         @else
                             <div class="flex items-center gap-3" style="padding: 9px 13px; border: 1px solid; border-radius: 8px; {{ $style }}">
-                                <span class="{{ $circle }}">{{ $opt->label }}</span>
+                                <span class="{{ $circle }}" @if ($isPicked) style="border-color: var(--accent); color: var(--accent);" @endif>{{ $opt->label }}</span>
                                 @if (trim((string) $opt->text) !== '')<span style="font-size: 13.5px;">{!! sci($opt->text) !!}</span>@endif
                                 <span style="flex: 1;"></span>
                                 @if ($isCorrect)<span class="badge badge-pass" style="font-size:10px;">Correct answer</span>@endif
                                 @if ($isWrongPick)<span class="badge badge-blocker" style="font-size:10px;">Selected</span>@endif
+                                @if ($isPicked)<span class="badge badge-soft" style="font-size:10px;">Your answer</span>@endif
                             </div>
                         @endif
                     @endforeach
                 </div>
                 @endif
 
-                @unless ($correct)
+                {{-- Standardized result footer (shared across all 4 layouts) --}}
+                <div class="flex items-center" style="flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12.5px;">
+                    <span style="color: var(--text-soft);">Your answer:
+                        @if ($attempted)<strong style="color: var(--text);">{{ $selected }}</strong>@else<strong style="color: var(--text-faint);">Not answered</strong>@endif
+                    </span>
+                    @if ($reveal)
+                        <span style="color: var(--text-soft);">Correct answer: <strong style="color: var(--ok);">{{ $correct }}</strong></span>
+                    @endif
+                    <span style="color: var(--text-soft);">Marks:
+                        <strong style="color: var(--text);">@if ($isVoided) Excluded @else {{ $ans && $ans->is_correct ? 1 : 0 }} / 1 @endif</strong>
+                    </span>
+                </div>
+
+                @if ($revealCorrect && ! $correct && ! $isVoided)
                     <p style="font-size: 12px; color: var(--text-faint); margin-top: 8px;">Answer key for this question is pending import.</p>
-                @endunless
+                @endif
 
                 {{-- Students may report an issue while reviewing (higher-quality signal,
                      they can see the marked answer). Hidden on the teacher's paper view. --}}
