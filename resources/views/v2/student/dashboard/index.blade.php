@@ -9,6 +9,9 @@
 @endphp
 
 @section('content')
+<style>[x-cloak]{display:none!important}.tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
+.topic-chip{display:inline-flex;align-items:center;gap:5px;border:0;background:none;cursor:pointer;font:inherit;}</style>
+
 <div style="margin-bottom: 24px;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint);">Student Dashboard</div>
     <h2 class="serif" style="font-size: 30px; font-weight: 600; margin-top: 4px;">Welcome, {{ $user?->name }}</h2>
@@ -21,30 +24,42 @@
         <a href="{{ route('v2.student.exams.index') }}" class="btn btn-primary btn-sm" style="margin-top: 14px;"><x-icon name="play" size="12"/> Go to My Exams</a>
     </div>
 @else
-    {{-- Overall stat cards --}}
-    <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px;">
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
-            <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;">
-                <x-icon name="clipboard" size="13"/> Total tests
+    {{-- Combined overview hero: totals + overall-average donut --}}
+    @php
+        $avg = $overall['avg'];
+        $r = 52; $c = 2 * M_PI * $r; $dash = $c * $avg / 100; $avgColor = $barColor($avg);
+    @endphp
+    <div class="flex items-center" style="gap: 28px; flex-wrap: wrap; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px 26px; margin-bottom: 24px;">
+        <div class="flex" style="gap: 44px; flex-wrap: wrap;">
+            <div>
+                <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;">
+                    <x-icon name="clipboard" size="13"/> Total tests
+                </div>
+                <div class="serif" style="font-size: 34px; font-weight: 600; margin-top: 6px; line-height: 1;">{{ $overall['total'] }}</div>
+                <div style="font-size: 11.5px; color: var(--text-soft); margin-top: 6px;">{{ $overall['completed'] }} completed · {{ $overall['missed'] }} missed</div>
             </div>
-            <div class="serif" style="font-size: 24px; font-weight: 600; margin-top: 6px;">{{ $overall['total'] }}</div>
-            <div style="font-size: 11.5px; color: var(--text-soft); margin-top: 2px;">{{ $overall['completed'] }} completed · {{ $overall['missed'] }} missed</div>
+            <div>
+                <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;">
+                    <x-icon name="book" size="13"/> Subjects
+                </div>
+                <div class="serif" style="font-size: 34px; font-weight: 600; margin-top: 6px; line-height: 1;">{{ $overall['subjects'] }}</div>
+                <div style="font-size: 11.5px; color: var(--text-soft); margin-top: 6px;">enrolled</div>
+            </div>
         </div>
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
-            <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;">
-                <x-icon name="chart" size="13"/> Overall average
-            </div>
-            <div class="serif" style="font-size: 24px; font-weight: 600; margin-top: 6px;">{{ $overall['avg'] }}%</div>
-            <div style="font-size: 11.5px; color: var(--text-soft); margin-top: 2px;">across completed tests</div>
-        </div>
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px;">
-            <div class="flex items-center gap-2" style="color: var(--text-faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em;">
-                <x-icon name="book" size="13"/> Subjects
-            </div>
-            <div class="serif" style="font-size: 24px; font-weight: 600; margin-top: 6px;">{{ $overall['subjects'] }}</div>
-            <div style="font-size: 11.5px; color: var(--text-soft); margin-top: 2px;">enrolled</div>
+        <div class="flex items-center gap-3">
+            <svg width="124" height="124" viewBox="0 0 130 130">
+                <circle cx="65" cy="65" r="{{ $r }}" fill="none" stroke="var(--soft-surface)" stroke-width="13"/>
+                @if ($avg > 0)
+                    <circle cx="65" cy="65" r="{{ $r }}" fill="none" stroke="{{ $avgColor }}" stroke-width="13" stroke-linecap="round"
+                            stroke-dasharray="{{ $dash }} {{ $c }}" transform="rotate(-90 65 65)"/>
+                @endif
+                <text x="65" y="63" text-anchor="middle" style="font-size: 27px; font-weight: 700; fill: var(--text);">{{ $avg }}%</text>
+                <text x="65" y="82" text-anchor="middle" style="font-size: 10px; fill: var(--text-faint); text-transform: uppercase; letter-spacing: .06em;">avg score</text>
+            </svg>
         </div>
     </div>
+
+    <div x-data="{ tOpen: false, tTitle: '', tTopics: [] }">
 
     {{-- Upcoming / due exams --}}
     @if (! empty($stats['upcoming']))
@@ -56,19 +71,31 @@
             </div>
             <div class="space-y-2">
                 @foreach ($stats['upcoming'] as $u)
-                    <div class="flex items-center justify-between" style="gap: 12px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px;">
+                    @php
+                        $topics = $u['topics'] ?? [];
+                        $topicLabel = count($topics) === 1 ? $topics[0] : (count($topics) > 1 ? 'Mixed' : 'Mixed');
+                    @endphp
+                    <div class="flex items-center justify-between" style="gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px;">
                         <div style="min-width: 0;">
-                            <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-2" style="flex-wrap: wrap;">
                                 <span style="font-size: 13.5px; font-weight: 600;">{{ $u['title'] }}</span>
                                 @if ($u['status'] === 'live')
                                     <span style="font-size: 10px; font-weight: 700; color: var(--ok); border: 1px solid var(--ok); border-radius: 999px; padding: 1px 7px;">OPEN NOW</span>
                                 @else
                                     <span style="font-size: 10px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 7px;">SCHEDULED</span>
                                 @endif
+                                @if (count($topics))
+                                    <button type="button" class="topic-chip badge badge-emerald" style="font-size: 10.5px;"
+                                            @click="tTitle = @js($u['title']); tTopics = @js($topics); tOpen = true" title="View topics">
+                                        {{ $topicLabel }}@if (count($topics) > 1) <span style="opacity:.8;">· {{ count($topics) }}</span>@endif
+                                        <x-icon name="list" size="10"/>
+                                    </button>
+                                @endif
                             </div>
-                            <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 2px;">
+                            <div style="font-size: 11.5px; color: var(--text-faint); margin-top: 4px;">
                                 {{ $u['subject'] }}@if (! empty($u['teacher'])) · {{ $u['teacher'] }}@endif
-                                @if ($u['status'] === 'live' && $u['due']) · due {{ $u['due']->format('j M, g:i A') }}
+                                · {{ $u['questions'] ?? 0 }} questions
+                                @if ($u['status'] === 'live' && $u['due']) · expires {{ $u['due']->format('j M, g:i A') }}
                                 @elseif ($u['status'] === 'scheduled' && $u['available_from']) · opens {{ $u['available_from']->format('j M, g:i A') }}
                                 @endif
                             </div>
@@ -90,21 +117,23 @@
             $rowH = 46;
             $scrollTests = $subject['tests_count'] > $subject['total_topics'] && $subject['total_topics'] > 0;
             $testsMaxH = max($subject['total_topics'], 1) * $rowH;
+            $subjColor = $barColor($subject['avg']);
         @endphp
         <div x-data="{ open: false }" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 20px 22px; margin-bottom: 16px;">
 
             {{-- Header (always visible) --}}
             <button type="button" @click="open = !open" class="flex items-center justify-between" style="width: 100%; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; gap: 12px;">
-                <div class="flex items-center gap-3" style="min-width: 0;">
+                <div class="flex items-center gap-3" style="min-width: 0; flex-wrap: wrap;">
+                    <span style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--soft-surface); display: flex; align-items: center; justify-content: center; color: var(--accent);"><x-icon name="book" size="17"/></span>
                     <h3 class="serif" style="font-size: 19px; font-weight: 600;">{{ $subject['subject'] }}</h3>
                     @if (! empty($subject['teacher']))
-                        <span style="font-size: 12px; color: var(--text-faint);"><x-icon name="user" size="11"/> {{ $subject['teacher'] }}</span>
+                        <span class="flex items-center gap-1" style="font-size: 12px; color: var(--text-faint);"><x-icon name="user" size="11"/> {{ $subject['teacher'] }}</span>
                     @endif
                 </div>
                 <div class="flex items-center gap-3" style="flex: none;">
                     <span class="badge badge-soft">{{ $subject['tests_count'] }} {{ Str::plural('test', $subject['tests_count']) }}</span>
                     <span style="font-size: 12px; color: var(--text-faint);">avg</span>
-                    <span class="badge badge-emerald" style="font-size: 13px; font-weight: 700;">{{ $subject['avg'] }}%</span>
+                    <span class="badge" style="font-size: 13px; font-weight: 700; color: {{ $subjColor }}; border: 1px solid {{ $subjColor }};">{{ $subject['avg'] }}%</span>
                     <span class="flex" style="color: var(--text-soft); transition: transform .2s;" :style="open ? 'transform: rotate(180deg);' : ''"><x-icon name="chev-d" size="16"/></span>
                 </div>
             </button>
@@ -152,17 +181,20 @@
                         @endforelse
                     </div>
 
-                    {{-- Tests - scrollable once they exceed the topic-count reference --}}
+                    {{-- Tests - numbered, newest first, scrollable once they exceed the topic-count reference --}}
                     <div>
                         <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-bottom: 12px;">Tests</div>
                         <div class="space-y-2" @if ($scrollTests) style="max-height: {{ $testsMaxH }}px; overflow-y: auto; padding-right: 6px;" @endif>
                             @forelse ($subject['tests'] as $test)
                                 <a href="{{ route('v2.student.exams.result', hid($test['exam_id'])) }}"
-                                   class="flex items-center justify-between" style="text-decoration: none; color: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;">
-                                    <div style="min-width: 0;">
-                                        <div style="font-size: 13px; font-weight: 500;">{{ $test['title'] }}</div>
-                                        <div style="font-size: 11.5px; color: var(--text-faint);">
-                                            {{ $test['date']?->diffForHumans() }}@unless ($test['results']) · result pending @endunless
+                                   class="flex items-center justify-between" style="text-decoration: none; color: inherit; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; gap: 10px;">
+                                    <div class="flex items-center" style="gap: 10px; min-width: 0;">
+                                        <span style="flex: none; width: 22px; height: 22px; border-radius: 6px; background: var(--soft-surface); color: var(--text-faint); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">{{ $loop->iteration }}</span>
+                                        <div style="min-width: 0;">
+                                            <div style="font-size: 13px; font-weight: 500;">{{ $test['title'] }}</div>
+                                            <div style="font-size: 11.5px; color: var(--text-faint);">
+                                                {{ $test['date']?->diffForHumans() }}@unless ($test['results']) · result pending @endunless
+                                            </div>
                                         </div>
                                     </div>
                                     <div style="text-align: right; flex: none;">
@@ -183,5 +215,30 @@
             </div>
         </div>
     @endforeach
+
+    {{-- Topics modal (shared) - teleported so the content column's transform can't trap it --}}
+    <template x-teleport="body">
+    <div x-show="tOpen" x-cloak class="tx-modal" @keydown.escape.window="tOpen = false" style="display:none;">
+        <div @click="tOpen = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.5);"></div>
+        <div x-show="tOpen" x-transition
+             style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; width: 100%; max-width: 420px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
+            <div class="flex items-center justify-between" style="margin-bottom: 4px;">
+                <h3 class="serif" style="font-size: 17px; font-weight: 600;">Topics covered</h3>
+                <button type="button" @click="tOpen = false" style="border: 0; background: none; cursor: pointer; color: var(--text-soft); padding: 4px;"><x-icon name="x" size="16"/></button>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px;" x-text="tTitle"></p>
+            <div style="max-height: 320px; overflow-y: auto;">
+                <template x-for="(t, i) in tTopics" :key="i">
+                    <div class="flex items-center gap-2" style="padding: 9px 0; border-top: 1px solid var(--border);">
+                        <span style="flex: none; width: 20px; height: 20px; border-radius: 6px; background: var(--soft-surface); color: var(--text-faint); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;" x-text="i + 1"></span>
+                        <span style="font-size: 13px;" x-text="t"></span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    </div>
 @endunless
 @endsection

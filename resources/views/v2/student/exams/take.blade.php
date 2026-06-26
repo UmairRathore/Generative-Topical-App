@@ -10,6 +10,7 @@
 @endphp
 
 @section('content')
+<style>[x-cloak]{display:none!important}.tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}</style>
 <div x-data="examTaker({{ $exam->question_count }}, {{ $hasLimit ? 'true' : 'false' }}, {{ $remaining ?? 'null' }}, {{ $elapsed }})" style="max-width: 760px; margin: 0 auto;">
 
     {{-- Sticky status bar --}}
@@ -27,7 +28,7 @@
     </div>
 
     <form method="POST" action="{{ route('v2.student.exams.submit', $exam) }}" x-ref="form"
-          @submit="if(!confirming){ $event.preventDefault(); if(confirm('Submit your test? You cannot change answers afterwards.')){ confirming=true; $refs.form.submit(); } }">
+          @submit.prevent="showConfirm = true">
         @csrf
 
         @foreach ($exam->examQuestions as $eq)
@@ -121,6 +122,26 @@
             <button type="submit" class="btn btn-primary btn-lg"><x-icon name="check" size="15"/> Submit Test</button>
         </div>
     </form>
+
+    {{-- Submit confirmation modal (replaces the native confirm dialog) - teleported so the
+         content column's transform can't trap this fixed overlay off-screen. --}}
+    <template x-teleport="body">
+    <div x-show="showConfirm" x-cloak class="tx-modal" style="display:none;" @keydown.escape.window="showConfirm = false">
+        <div @click="showConfirm = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.55);"></div>
+        <div x-show="showConfirm" x-transition
+             style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
+            <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Submit your test?</h3>
+            <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 6px;">
+                You've answered <span style="font-weight: 600; color: var(--text);" x-text="Object.keys(answers).length"></span> of {{ $exam->question_count }} questions.
+            </p>
+            <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 22px;">Once submitted, you can't change your answers.</p>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" class="btn btn-ghost" @click="showConfirm = false">Keep working</button>
+                <button type="button" class="btn btn-primary" @click="confirming = true; $refs.form.submit()"><x-icon name="check" size="14"/> Submit test</button>
+            </div>
+        </div>
+    </div>
+    </template>
 </div>
 
 @if ($periodicTable)
@@ -168,7 +189,7 @@
 <script>
 function examTaker(total, hasLimit, remaining, elapsed) {
     return {
-        total, answers: {}, confirming: false, hasLimit, remaining, elapsed, clock: '',
+        total, answers: {}, confirming: false, showConfirm: false, hasLimit, remaining, elapsed, clock: '',
         init() {
             if (this.hasLimit && this.remaining <= 0) { this.autoSubmit(); return; }
             this.render();

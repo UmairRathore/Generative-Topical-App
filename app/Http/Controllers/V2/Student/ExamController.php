@@ -8,6 +8,7 @@ use App\Models\V2\ExamAttempt;
 use App\Services\V2\AuditLogger;
 use App\Services\V2\ExamService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
 {
@@ -16,7 +17,7 @@ class ExamController extends Controller
         return auth('v2_student')->user();
     }
 
-    public function index()
+    public function index(ExamService $service)
     {
         $student  = $this->student();
         $classIds = $student->classes()->wherePivot('status', 'active')->pluck('v2_classes.id');
@@ -32,7 +33,73 @@ class ExamController extends Controller
             ->get()
             ->keyBy('exam_id');
 
-        return view('v2.student.exams.index', compact('exams', 'attempts'));
+        // Distinct topic titles per exam - drives the "view topics" modal (Mixed exams list several).
+        $topicMap = DB::table('v2_exam_questions as eq')
+            ->join('v2_questions as q', 'q.id', '=', 'eq.question_id')
+            ->join('v2_topics as t', 't.id', '=', 'q.topic_id')
+            ->whereIn('eq.exam_id', $exams->pluck('id'))
+            ->where('eq.is_voided', false)
+            ->select('eq.exam_id', 't.title')
+            ->distinct()
+            ->get()
+            ->groupBy('exam_id')
+            ->map(fn ($rows) => $rows->pluck('title')->sort(SORT_NATURAL)->values()->all());
+
+        // Per-exam, per-topic performance for the student - only for exams that are both
+        // submitted AND released (so unreleased scores never leak). Other exams fall back to
+        // a plain topic list (coverage only).
+        $releasedExamIds = $exams->filter(function ($e) use ($attempts) {
+            $att = $attempts[$e->id] ?? null;
+
+            return $att && $att->status === 'submitted' && $e->resultsReleased();
+        })->pluck('id');
+
+        $perExamTopic = collect();
+        if ($releasedExamIds->isNotEmpty()) {
+            $perExamTopic = DB::table('v2_exam_answers as a')
+                ->join('v2_exam_attempts as at', 'at.id', '=', 'a.attempt_id')
+                ->join('v2_questions as q', 'q.id', '=', 'a.question_id')
+                ->join('v2_topics as t', 't.id', '=', 'q.topic_id')
+                ->join('v2_exam_questions as veq', fn ($j) => $j->on('veq.exam_id', '=', 'at.exam_id')->on('veq.question_id', '=', 'a.question_id'))
+                ->where('veq.is_voided', false)
+                ->where('at.student_id', $student->id)
+                ->where('at.status', 'submitted')
+                ->whereIn('at.exam_id', $releasedExamIds)
+                ->selectRaw('at.exam_id, t.title, count(*) total, sum(a.is_correct) correct')
+                ->groupBy('at.exam_id', 't.title')
+                ->get()
+                ->groupBy('exam_id');
+        }
+
+        // Topic payload per exam for the row modal: scored bars where released, else names only.
+        $examTopics = [];
+        foreach ($exams as $e) {
+            if ($perExamTopic->has($e->id)) {
+                $examTopics[$e->id] = $perExamTopic->get($e->id)
+                    ->map(fn ($r) => [
+                        'topic'     => $r->title,
+                        'attempted' => true,
+                        'correct'   => (int) $r->correct,
+                        'total'     => (int) $r->total,
+                        'percent'   => $r->total ? (int) round($r->correct / $r->total * 100) : 0,
+                    ])
+                    ->sortBy('topic')->values()->all();
+            } else {
+                $examTopics[$e->id] = collect($topicMap[$e->id] ?? [])
+                    ->map(fn ($title) => ['topic' => $title, 'attempted' => false, 'correct' => 0, 'total' => 0, 'percent' => 0])
+                    ->all();
+            }
+        }
+
+        // One table per subject, subjects A-Z.
+        $examsBySubject = $exams->groupBy(fn ($e) => $e->subject?->name ?? 'Other')
+            ->sortKeys();
+
+        // Per-subject performance (attempted / missed / avg / topic breakdown) - reuse the
+        // dashboard computation so the container headers + topics modal stay consistent.
+        $subjectStats = collect($service->studentDashboard($student)['subjects'])->keyBy('subject');
+
+        return view('v2.student.exams.index', compact('examsBySubject', 'attempts', 'topicMap', 'subjectStats', 'examTopics'));
     }
 
     public function take(Exam $exam, ExamService $service)

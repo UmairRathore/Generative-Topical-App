@@ -522,6 +522,18 @@ class ExamService
             ->with(['subject', 'creator'])
             ->get();
 
+        // Distinct topic titles per exam (drives the "topics" modal; a Mixed exam lists several).
+        $examTopicMap = DB::table('v2_exam_questions as eq')
+            ->join('v2_questions as q', 'q.id', '=', 'eq.question_id')
+            ->join('v2_topics as t', 't.id', '=', 'q.topic_id')
+            ->whereIn('eq.exam_id', $exams->pluck('id'))
+            ->where('eq.is_voided', false)
+            ->select('eq.exam_id', 't.title')
+            ->distinct()
+            ->get()
+            ->groupBy('exam_id')
+            ->map(fn ($rows) => $rows->pluck('title')->sort(SORT_NATURAL)->values()->all());
+
         // The student's submitted attempts for those exams, keyed by exam_id.
         $attempts = ExamAttempt::where('student_id', $student->id)
             ->where('status', 'submitted')
@@ -571,13 +583,15 @@ class ExamService
                 $attempt = $attempts->get($exam->id);
                 if ($attempt) {
                     $attemptedTests[] = [
-                        'exam_id' => $exam->id,
-                        'title'   => $exam->title,
-                        'score'   => $attempt->score,
-                        'total'   => $attempt->total_questions,
-                        'percent' => $attempt->percentage,
-                        'date'    => $attempt->submitted_at,
-                        'results' => $exam->resultsReleased(),
+                        'exam_id'    => $exam->id,
+                        'title'      => $exam->title,
+                        'score'      => $attempt->score,
+                        'total'      => $attempt->total_questions,
+                        'percent'    => $attempt->percentage,
+                        'date'       => $attempt->submitted_at,
+                        'created_at' => $exam->created_at,
+                        'topics'     => $examTopicMap[$exam->id] ?? [],
+                        'results'    => $exam->resultsReleased(),
                     ];
                 } elseif ($exam->isExpired()) {
                     $missedCount++;
@@ -590,11 +604,14 @@ class ExamService
                         'status'         => $exam->isLive() ? 'live' : 'scheduled',
                         'available_from' => $exam->available_from,
                         'due'            => $exam->available_until,
+                        'questions'      => $exam->question_count,
+                        'topics'         => $examTopicMap[$exam->id] ?? [],
                     ];
                 }
             }
 
-            usort($attemptedTests, fn ($a, $b) => $b['date'] <=> $a['date']);
+            // Newest exam first (by when the teacher created it), then numbered in the view.
+            usort($attemptedTests, fn ($a, $b) => $b['created_at'] <=> $a['created_at']);
 
             $completed   += count($attemptedTests);
             $missedTotal += $missedCount;
