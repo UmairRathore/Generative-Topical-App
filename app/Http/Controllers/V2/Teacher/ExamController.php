@@ -585,13 +585,19 @@ class ExamController extends Controller
         $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
         $exam->renderFrozenQuestions(); // show exactly what the student saw
         $answers = $attempt->answers()->get()->keyBy('question_id');
+        $attempt->setRelation('answers', $answers);
+
+        $result = $service->resultBreakdown($exam, $attempt);
 
         return view('v2.teacher.exams.student_paper', [
-            'exam'       => $exam,
-            'student'    => $student,
-            'attempt'    => $attempt,
-            'answers'    => $answers,
-            'topicStats' => $service->topicStatsForAttempt($attempt),
+            'exam'          => $exam,
+            'student'       => $student,
+            'attempt'       => $attempt,
+            'answers'       => $answers,
+            'topicStats'    => $service->topicStatsForAttempt($attempt),
+            'breakdown'     => $result['breakdown'],
+            'palette'       => $result['palette'],
+            'revealCorrect' => true,
         ]);
     }
 }

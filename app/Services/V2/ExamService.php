@@ -346,6 +346,65 @@ class ExamService
         );
     }
 
+    /**
+     * Display-only result breakdown for the Paper-View review page: per-attempt
+     * counts plus a per-question palette state. The frontend renders this; it
+     * never recomputes marks. Voided questions are counted on their own so
+     * breakdown.correct matches the live $attempt->score.
+     *
+     * @param  array<int>  $flaggedQids  question_ids this viewer flagged (drives amber)
+     * @return array{breakdown: array<string,int>, palette: array<int,array<string,mixed>>}
+     */
+    public function resultBreakdown(Exam $exam, ExamAttempt $attempt, array $flaggedQids = []): array
+    {
+        // Reuse the answers relation if a caller already keyed it by question_id.
+        $answers = $attempt->relationLoaded('answers')
+            ? $attempt->getRelation('answers')
+            : $attempt->answers()->get()->keyBy('question_id');
+
+        $flagged = array_flip(array_map('intval', $flaggedQids));
+
+        $correct = $wrong = $unattempted = $voided = 0;
+        $palette = [];
+
+        foreach ($exam->examQuestions as $eq) {
+            $ans = $answers->get($eq->question_id);
+
+            if ($eq->is_voided) {
+                $state = 'voided';
+                $voided++;
+            } elseif (! $ans || $ans->selected_option === null) {
+                $state = 'unattempted';
+                $unattempted++;
+            } elseif ($ans->is_correct) {
+                $state = 'correct';
+                $correct++;
+            } else {
+                $state = 'wrong';
+                $wrong++;
+            }
+
+            $palette[] = [
+                'n'       => $eq->sort_order,
+                'qid'     => $eq->question_id,
+                'state'   => $state,
+                'flagged' => isset($flagged[$eq->question_id]),
+                'voided'  => (bool) $eq->is_voided,
+            ];
+        }
+
+        return [
+            'breakdown' => [
+                'correct'     => $correct,
+                'wrong'       => $wrong,
+                'unattempted' => $unattempted,
+                'voided'      => $voided,
+                'total'       => $exam->examQuestions->count(),
+            ],
+            'palette' => $palette,
+        ];
+    }
+
     /** Per-topic breakdown across all submitted attempts of an exam (class-wide). */
     public function topicStatsForExam(Exam $exam): array
     {

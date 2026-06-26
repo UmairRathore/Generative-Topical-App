@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V2\Student;
 use App\Http\Controllers\Controller;
 use App\Models\V2\Exam;
 use App\Models\V2\ExamAttempt;
+use App\Models\V2\QuestionFlag;
 use App\Services\V2\AuditLogger;
 use App\Services\V2\ExamService;
 use Illuminate\Http\Request;
@@ -161,12 +162,24 @@ class ExamController extends Controller
         $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic']);
         $exam->renderFrozenQuestions();
         $answers = $attempt->answers()->get()->keyBy('question_id');
+        $attempt->setRelation('answers', $answers);
+
+        // Questions this student flagged - drives the amber palette state.
+        $flaggedQids = QuestionFlag::studentLevel()
+            ->where('exam_id', $exam->id)
+            ->where('flagged_by_student_id', $student->id)
+            ->pluck('question_id')->all();
+
+        $result = $service->resultBreakdown($exam, $attempt, $flaggedQids);
 
         return view('v2.student.exams.result', [
-            'exam'       => $exam,
-            'attempt'    => $attempt,
-            'answers'    => $answers,
-            'topicStats' => $service->topicStatsForAttempt($attempt),
+            'exam'          => $exam,
+            'attempt'       => $attempt,
+            'answers'       => $answers,
+            'topicStats'    => $service->topicStatsForAttempt($attempt),
+            'breakdown'     => $result['breakdown'],
+            'palette'       => $result['palette'],
+            'revealCorrect' => $exam->resultsReleased(),
         ]);
     }
 
