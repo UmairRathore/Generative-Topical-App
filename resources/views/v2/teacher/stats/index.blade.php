@@ -100,7 +100,8 @@
     {{-- Student table --}}
     <div class="sx-panel" style="padding: 0; overflow: hidden;">
         <div class="sx-ptitle" style="padding: 16px 20px 0;">Students</div>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+        <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 460px;">
             <thead><tr style="background: var(--soft-surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
                 @foreach (['Student', 'Roll', 'Exams', 'Average', ''] as $h)
                     <th style="padding: var(--pad-cell); text-align: {{ in_array($h, ['Exams','Average']) ? 'right' : 'left' }}; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint);">{{ $h }}</th>
@@ -120,6 +121,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 
     @include('v2.partials.chartjs')
