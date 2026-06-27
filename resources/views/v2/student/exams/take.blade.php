@@ -59,10 +59,10 @@
             @endphp
             <div id="tq{{ $loop->index }}" data-take-card data-qn="{{ $loop->index }}"
                  style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 22px; margin-bottom: 16px; scroll-margin-top: 130px;">
-                <div class="flex items-start gap-3">
-                    <span class="badge badge-emerald" style="flex: none; font-weight: 700;">{{ $eq->sort_order }}</span>
-                    <div style="flex: 1; min-width: 0;">
-                        @include('v2.partials.question_stem', ['q' => $q])
+                {{-- Number floats so the statement wraps under it and the options use the full width. --}}
+                <span class="badge badge-emerald" style="float: left; margin-right: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; height: 22px; padding: 0 8px; line-height: 1;">{{ $eq->sort_order }}</span>
+                @include('v2.partials.question_stem', ['q' => $q])
+                <div style="clear: both;"></div>
 
                         @include('v2.partials.options_divider', ['q' => $q])
 
@@ -133,9 +133,7 @@
                         </div>
                         @endif
 
-                        @include('v2.partials.student_flag', ['exam' => $exam, 'q' => $q])
-                    </div>
-                </div>
+                @include('v2.partials.student_flag', ['exam' => $exam, 'q' => $q])
             </div>
         @endforeach
 

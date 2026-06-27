@@ -20,7 +20,7 @@
 
         // Number badge: voided / correct / wrong / unattempted (neutral grey).
         $badgeClass = '';
-        $badgeStyle = 'flex: none; font-weight: 700;';
+        $badgeStyle = 'float: left; margin-right: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; height: 22px; padding: 0 8px; line-height: 1;';
         if ($isVoided) {
             $badgeClass = 'badge-soft';
         } elseif (! $attempted) {
@@ -33,10 +33,9 @@
     @endphp
     <div id="q{{ $eq->sort_order }}" data-result-question-card data-question-number="{{ $eq->sort_order }}" class="ar-card"
          style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); margin-bottom: 14px; scroll-margin-top: 84px; {{ $isVoided ? 'opacity: .72;' : '' }}">
-        <div class="flex items-start gap-3">
-            <span class="badge {{ $badgeClass }}" style="{{ $badgeStyle }}">{{ $eq->sort_order }}</span>
-            <div style="flex: 1; min-width: 0;">
-                @if ($isVoided)
+        {{-- Number floats so the statement wraps under it and the options use the full width. --}}
+        <span class="badge {{ $badgeClass }}" style="{{ $badgeStyle }}">{{ $eq->sort_order }}</span>
+        @if ($isVoided)
                     <div class="flex items-center gap-2" style="margin-bottom: 10px; padding: 7px 11px; border: 1px dashed var(--border); border-radius: 8px; background: var(--soft-surface);">
                         <x-icon name="flag" size="13" />
                         @if ($eq->void_source === 'quality_review')
@@ -47,6 +46,7 @@
                     </div>
                 @endif
                 @include('v2.partials.question_stem', ['q' => $q])
+                <div style="clear: both;"></div>
 
                 @include('v2.partials.options_divider', ['q' => $q])
 
@@ -150,7 +150,5 @@
                 @if (auth('v2_student')->check())
                     @include('v2.partials.student_flag', ['exam' => $exam, 'q' => $q])
                 @endif
-            </div>
-        </div>
     </div>
 @endforeach
