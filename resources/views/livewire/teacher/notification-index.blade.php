@@ -8,7 +8,7 @@
 <div style="max-width: 760px;">
 
     {{-- Tabs --}}
-    <div class="flex" style="gap: 6px; margin-bottom: 18px;">
+    <div class="flex" style="gap: 6px; margin-bottom: 18px; flex-wrap: wrap;">
         <button type="button" wire:click="$set('tab', 'attention')" class="btn btn-sm {{ $tab === 'attention' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="flag" size="13"/> Needs attention</button>
         <button type="button" wire:click="$set('tab', 'updates')" class="btn btn-sm {{ $tab === 'updates' ? 'btn-primary' : 'btn-ghost' }}"><x-icon name="bell" size="13"/> Updates</button>
         <div class="flex-1"></div>
@@ -100,7 +100,7 @@
                         @endforeach
                     </div>
 
-                    <div class="flex" style="gap: 8px;">
+                    <div class="flex" style="gap: 8px; flex-wrap: wrap;">
                         @if ($n->student)
                             <a href="{{ route('v2.teacher.students.show', $n->student) }}" class="btn btn-ghost btn-sm"><x-icon name="chart" size="13"/> View analytics</a>
                         @endif
