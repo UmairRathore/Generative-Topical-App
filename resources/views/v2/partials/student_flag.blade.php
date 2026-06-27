@@ -91,12 +91,12 @@
         <x-icon name="{{ $lockState === 'voided' ? 'flag' : 'check' }}" size="12"/> {{ $lockMessage }}
     </span>
 @else
-    <span x-show="reported" x-cloak style="font-size: 11.5px; color: var(--ok); display: inline-flex; align-items: center; gap: 5px;">
+    <span x-show="reported" x-cloak class="sf-line" style="font-size: 11.5px; color: var(--ok);">
         <x-icon name="check" size="12"/> You've already reported this question - your teacher will review it.
     </span>
 
-    <button type="button" @click="open = !open" x-show="!reported" x-cloak
-            style="background: none; border: 0; color: var(--text-faint); font-size: 11.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; padding: 0;">
+    <button type="button" @click="open = !open" x-show="!reported" x-cloak class="sf-line"
+            style="background: none; border: 0; color: var(--text-faint); font-size: 11.5px; cursor: pointer; padding: 0;">
         <x-icon name="flag" size="12"/> <span x-text="open ? 'Cancel report' : 'Report a problem'"></span>
     </button>
 
@@ -152,6 +152,9 @@
 </div>
 
 @once
+    {{-- Display lives in a class, not inline: x-show toggles inline `display`, which would
+         otherwise strip an inline `display:inline-flex` and let the (block) svg stack above the text. --}}
+    <style>.sf-line{display:inline-flex;align-items:center;gap:5px;}</style>
     <span id="v2-student-csrf" data-token="{{ csrf_token() }}" style="display:none;"></span>
     <script>
         function studentFlag(url, reported) {
