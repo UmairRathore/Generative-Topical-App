@@ -10,7 +10,9 @@
 
 @section('content')
 <style>[x-cloak]{display:none!important}.tx-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:20px}
-.topic-chip{display:inline-flex;align-items:center;gap:5px;border:0;background:none;cursor:pointer;font:inherit;}</style>
+.topic-chip{display:inline-flex;align-items:center;gap:5px;border:0;background:none;cursor:pointer;font:inherit;}
+.subj-detail{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;}
+@media (max-width:700px){.subj-detail{grid-template-columns:1fr;gap:20px;}}</style>
 
 <div style="margin-bottom: 24px;">
     <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint);">Student Dashboard</div>
@@ -148,7 +150,7 @@
 
             {{-- Detail (expanded) --}}
             <div x-show="open" x-cloak x-transition.opacity style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border);">
-                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px; align-items: start;">
+                <div class="subj-detail">
 
                     {{-- By topic - every syllabus topic (the coverage reference) --}}
                     <div>
