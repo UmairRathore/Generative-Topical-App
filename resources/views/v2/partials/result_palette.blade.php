@@ -41,7 +41,7 @@
     .result-shell{max-width:1180px;margin:0 auto;}
     .result-grid{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:24px;align-items:start;}
     .result-aside{position:sticky;top:84px;max-height:calc(100vh - 100px);overflow:auto;}
-    .result-palette-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;}
+    .result-palette-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px;justify-items:center;}
     .rs-strip{padding:22px 26px;}
     .ar-card{padding:20px;}
     .qp{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;text-decoration:none;color:var(--text);cursor:pointer;transition:box-shadow .12s;}
@@ -53,11 +53,12 @@
     .qp.is-active{box-shadow:0 0 0 2px var(--accent);}
     .qp.is-flagged.is-active{box-shadow:0 0 0 2px var(--accent),0 0 0 4px var(--warn);}
     @media (max-width:900px){
-        .result-grid{grid-template-columns:1fr;}
-        .result-aside{position:static;order:-1;max-height:none;overflow:visible;}
+        /* minmax(0,1fr) so wide tables can't blow out the column; aside not sticky and
+           height:auto so it doesn't stretch to a full-height empty block above the paper. */
+        .result-grid{grid-template-columns:minmax(0,1fr);}
+        .result-aside{position:static;order:-1;max-height:none;overflow:visible;height:auto;align-self:start;}
         .rp-summary{display:none;}
-        .result-palette-grid{display:flex;overflow-x:auto;gap:6px;padding-bottom:6px;-webkit-overflow-scrolling:touch;}
-        .result-palette-grid .qp{flex:0 0 auto;}
+        /* palette wraps into rows (no horizontal scroll off-screen) - it already uses auto-fill. */
     }
     @media (max-width:600px){
         .rs-strip{padding:16px;}
@@ -76,16 +77,17 @@
         function setActive(num) {
             navs.forEach(function (n) { n.classList.remove('is-active'); });
             var el = byNum[num];
-            if (el) { el.classList.add('is-active'); el.scrollIntoView({block: 'nearest', inline: 'nearest'}); }
+            // Only highlight - do NOT scrollIntoView the chip. The palette wraps (and is sticky
+            // on desktop) so chips are reachable; scrolling an off-screen chip into view would
+            // yank the whole page back up to the palette.
+            if (el) el.classList.add('is-active');
         }
 
         navs.forEach(function (n) {
-            n.addEventListener('click', function (e) {
-                e.preventDefault();
-                var num = n.getAttribute('data-qnav');
-                var card = document.getElementById('q' + num);
-                if (card) card.scrollIntoView({behavior: 'smooth', block: 'start'});
-                setActive(num);
+            n.addEventListener('click', function () {
+                // Let the native anchor (#qN) do the scroll: reliable in every browser, honours
+                // scroll-margin-top, and never yanks the page. JS only updates the highlight.
+                setActive(n.getAttribute('data-qnav'));
             });
         });
 
