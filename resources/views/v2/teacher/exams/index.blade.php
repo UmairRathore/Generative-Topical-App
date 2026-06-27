@@ -32,7 +32,8 @@
 
 <div x-data="{ relOpen: false, relAction: '', relTitle: '', mode: 'now' }">
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
-    <table style="width: 100%; border-collapse: collapse;">
+    <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; min-width: 720px;">
         <thead>
             <tr style="border-bottom: 1px solid var(--border); background: var(--soft-surface);">
                 @foreach (['Test', 'Class', 'Topic', 'Status', 'Questions', 'Submitted', 'Avg', ''] as $h)
@@ -95,10 +96,12 @@
             @endforelse
         </tbody>
     </table>
+    </div>
 </div>
 
-{{-- Release modal (shared) --}}
-<div x-show="relOpen" x-cloak class="tx-modal" @keydown.escape.window="relOpen = false">
+{{-- Release modal (shared) - teleported past the layout's transformed wrapper so it centers. --}}
+<template x-teleport="body">
+<div x-show="relOpen" x-cloak class="tx-modal" style="display:none;" @keydown.escape.window="relOpen = false">
     <div @click="relOpen = false" style="position: absolute; inset: 0; background: rgba(0,0,0,.55);"></div>
     <form method="POST" :action="relAction" x-show="relOpen" x-transition
           style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 24px; width: 100%; max-width: 460px; box-shadow: 0 24px 64px rgba(0,0,0,.35);">
@@ -133,5 +136,6 @@
         </div>
     </form>
 </div>
+</template>
 </div>
 @endsection
