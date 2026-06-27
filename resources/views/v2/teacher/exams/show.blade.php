@@ -180,7 +180,8 @@
     <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;"
          x-data="{ page: 1, perPage: 5, total: {{ $students->count() }}, get pages() { return Math.max(1, Math.ceil(this.total / this.perPage)); } }">
         <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600;">Student results</div>
-        <table style="width: 100%; border-collapse: collapse;">
+        <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 480px;">
             <thead>
                 <tr style="background: var(--soft-surface); border-bottom: 1px solid var(--border);">
                     @foreach (['Student', 'Roll', 'Status', 'Time', 'Score'] as $h)
@@ -233,6 +234,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
         @if ($students->count() > 5)
             <div class="flex items-center justify-between" style="padding: 11px 18px; border-top: 1px solid var(--border); font-size: 12px;">
                 <span style="color: var(--text-soft);">
