@@ -30,7 +30,16 @@
     <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--ok-rgb,95,160,82),.12); border: 1px solid var(--ok); border-radius: 8px; font-size: 13px; color: var(--ok); font-weight: 600;">{{ session('success') }}</div>
 @endif
 
-<div x-data="{ relOpen: false, relAction: '', relTitle: '', open: 'now', relDur: 30, relHasDur: true }">
+<div x-data="{
+    relOpen: false, relAction: '', relTitle: '', open: 'now', relDur: 30, relHasDur: true,
+    pad(n) { return ('' + n).padStart(2, '0'); },
+    // Wall-clock now (+min) in the app timezone (UTC), matching the server's
+    // now()->format() so the value carries the same meaning whichever opens it.
+    inputAt(min) { const d = new Date(Date.now() + (min || 0) * 60000); return d.getUTCFullYear() + '-' + this.pad(d.getUTCMonth() + 1) + '-' + this.pad(d.getUTCDate()) + 'T' + this.pad(d.getUTCHours()) + ':' + this.pad(d.getUTCMinutes()); },
+    // Recompute min/default whenever the schedule field is (re)shown, so a page
+    // left open never offers a default that has already slipped into the past.
+    freshSched() { const el = this.$refs.schedAt; if (! el) return; el.min = this.inputAt(0); if (! el.value || el.value < el.min) { el.value = this.inputAt(5); } },
+}">
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
     <div style="overflow-x: auto;">
     <table style="width: 100%; border-collapse: collapse; min-width: 720px;">
@@ -80,7 +89,7 @@
                     <td style="padding: var(--pad-cell); text-align: right; white-space: nowrap;">
                         @if ($exam->isDraft())
                             <button type="button" class="btn btn-primary btn-sm"
-                                    @click="relAction = '{{ route('v2.teacher.exams.release', $exam) }}'; relTitle = @js($exam->title); open = 'now'; relDur = {{ (int) ($exam->duration_minutes ?: 30) }}; relHasDur = {{ $exam->duration_minutes ? 'true' : 'false' }}; relOpen = true">
+                                    @click="relAction = '{{ route('v2.teacher.exams.release', $exam) }}'; relTitle = @js($exam->title); open = 'now'; relDur = {{ (int) ($exam->duration_minutes ?: 30) }}; relHasDur = {{ $exam->duration_minutes ? 'true' : 'false' }}; relOpen = true; $nextTick(() => freshSched())">
                                 <x-icon name="play" size="12"/> Release
                             </button>
                         @endif
@@ -116,12 +125,12 @@
             <button type="button" :class="open==='now' ? 'on' : ''" @click="open='now'">Open now</button>
             <button type="button" :class="open==='in_5' ? 'on' : ''" @click="open='in_5'">In 5 min</button>
             <button type="button" :class="open==='in_10' ? 'on' : ''" @click="open='in_10'">In 10 min</button>
-            <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'">Schedule</button>
+            <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'; freshSched()">Schedule</button>
         </div>
 
         <div x-show="open === 'schedule'" x-cloak style="margin-bottom: 14px;">
             <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Opens at</label>
-            <input type="datetime-local" name="release_at" :required="open==='schedule'" min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
+            <input type="datetime-local" name="release_at" x-ref="schedAt" :required="open==='schedule'" min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
 
         <div x-show="!relHasDur" x-cloak style="margin-bottom: 14px;">

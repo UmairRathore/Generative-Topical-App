@@ -83,7 +83,12 @@
                 This test is a <strong>draft</strong> - students can't see it yet. Release it now or schedule it; it closes automatically once its duration runs out.
             </p>
             <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}"
-                  x-data="{ open: 'now', dur: {{ (int) ($exam->duration_minutes ?: 30) }} }">
+                  x-data="{
+                      open: 'now', dur: {{ (int) ($exam->duration_minutes ?: 30) }},
+                      pad(n) { return ('' + n).padStart(2, '0'); },
+                      inputAt(min) { const d = new Date(Date.now() + (min || 0) * 60000); return d.getUTCFullYear() + '-' + this.pad(d.getUTCMonth() + 1) + '-' + this.pad(d.getUTCDate()) + 'T' + this.pad(d.getUTCHours()) + ':' + this.pad(d.getUTCMinutes()); },
+                      freshSched() { const el = this.$refs.schedAt; if (! el) return; el.min = this.inputAt(0); if (! el.value || el.value < el.min) { el.value = this.inputAt(5); } },
+                  }">
                 @csrf @method('PATCH')
                 <input type="hidden" name="open" :value="open">
                 <input type="hidden" name="duration_minutes" :value="dur">
@@ -92,12 +97,12 @@
                     <button type="button" :class="open==='now' ? 'on' : ''" @click="open='now'">Open now</button>
                     <button type="button" :class="open==='in_5' ? 'on' : ''" @click="open='in_5'">In 5 min</button>
                     <button type="button" :class="open==='in_10' ? 'on' : ''" @click="open='in_10'">In 10 min</button>
-                    <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'">Schedule</button>
+                    <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'; freshSched()">Schedule</button>
                 </div>
                 <div class="space-y-3">
                     <div x-show="open==='schedule'" x-cloak>
                         <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Opens at</label>
-                        <input type="datetime-local" name="release_at" :required="open==='schedule'"
+                        <input type="datetime-local" name="release_at" x-ref="schedAt" :required="open==='schedule'"
                                min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}"
                                style="{{ $fieldStyle }} width:100%;">
                     </div>
