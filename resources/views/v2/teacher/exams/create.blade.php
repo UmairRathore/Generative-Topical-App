@@ -8,7 +8,9 @@
 
 @section('content')
 <style>
-    .ex-wrap{max-width:760px;margin:0 auto;}
+    .ex-wrap{width:100%;}
+    /* The form/header stay in a readable centered column; the preview gallery below breaks out to full content width. */
+    .ex-col{max-width:760px;margin:0 auto;}
     .ex-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px;}
     .ex-tabs a{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;font-size:13.5px;font-weight:600;text-decoration:none;color:var(--text-soft);background:var(--surface);}
     .ex-tabs a.on{background:var(--primary,#061C30);color:#fff;}
@@ -29,6 +31,10 @@
     .gen-bar{position:sticky;bottom:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 -6px 24px rgba(0,0,0,.08);padding:13px 18px;margin-top:10px;}
     /* Gallery cards (shared markup with the custom drawer) */
     .selq-card{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;margin-bottom:12px;}
+    /* Preview as a responsive gallery grid (matches the custom page), not a single-column paper. */
+    .gen-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start;}
+    .gen-gallery .selq-card{margin-bottom:0;}
+    @media(max-width:560px){.gen-gallery{grid-template-columns:1fr;}}
     .selq-card.is-chosen{border-color:var(--accent,#0097d3);box-shadow:0 0 0 1px var(--accent,#0097d3) inset;}
     .selq-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--bg);}
     .selq-body{padding:14px 16px;}
@@ -156,6 +162,7 @@
         onFlagged(e){ const id = e.detail && e.detail.id; if (id != null && this.previewIds.indexOf(id) > -1){ this.swap(id); } }
      }"
      @question-flagged.window="onFlagged($event)">
+    <div class="ex-col">
     <a href="{{ route('v2.teacher.exams.index') }}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-soft); text-decoration: none; margin-bottom: 16px;">
         <x-icon name="chev-l" size="14"/> Back to Exams
     </a>
@@ -166,12 +173,14 @@
         <a href="{{ route('v2.teacher.exams.create') }}" class="on"><x-icon name="sparkle" size="15"/> Random generator</a>
         <a href="{{ route('v2.teacher.exams.custom') }}"><x-icon name="list" size="15"/> Custom selection</a>
     </div>
+    </div>{{-- /.ex-col header --}}
 
     @if ($classes->isEmpty())
-        <div style="padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); color: var(--text-soft); font-size: 14px;">
+        <div class="ex-col"><div style="padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); color: var(--text-soft); font-size: 14px;">
             You are not assigned to any class yet. Ask your school admin to assign you to a class.
-        </div>
+        </div></div>
     @else
+        <div class="ex-col">
         <form @submit.prevent="preview()" class="gen-form">
             <div>
                 <label style="{{ $lbl }}">Test title</label>
@@ -246,8 +255,9 @@
             <input type="hidden" name="duration_minutes" :value="duration">
             <input type="hidden" name="question_ids" x-ref="qids">
         </form>
+        </div>{{-- /.ex-col form --}}
 
-        {{-- Inline preview: the drawn questions render right here on the page. --}}
+        {{-- Inline preview: the drawn questions render right here on the page (full content width). --}}
         <div x-ref="genPreview" x-show="previewOpen" x-cloak style="margin-top: 22px;">
             <div class="flex items-center justify-between" style="gap: 10px; flex-wrap: wrap; margin-bottom: 12px;">
                 <div>
@@ -260,7 +270,7 @@
             <p x-show="previewLoading" style="font-size:13px;color:var(--text-faint);text-align:center;padding:18px 0;">Drawing questions…</p>
             <p x-show="previewError" x-text="previewError" x-cloak style="font-size:13px;color:var(--bad);text-align:center;padding:18px 0;"></p>
 
-            <div x-ref="previewList" @click="onPreviewClick($event)" @change="onPreviewChange($event)" x-show="previewIds.length" x-html="previewHtml"></div>
+            <div x-ref="previewList" class="gen-gallery" @click="onPreviewClick($event)" @change="onPreviewChange($event)" x-show="previewIds.length" x-html="previewHtml"></div>
 
             <div class="gen-bar" x-show="previewIds.length">
                 <div style="font-size:14px; font-weight:700; white-space:nowrap;"><span x-text="chosen.length"></span> of <span x-text="previewIds.length"></span> kept</div>
