@@ -140,6 +140,12 @@ class AnalyticsController extends BaseController
     {
         abort_unless($student->branch_id === $this->branchId(), 403);
         abort_unless($exam->school_id === $this->schoolId(), 403);
+        // Exam has no branch global scope, so assert its class is in THIS branch -
+        // school-level alone would let a branch admin open another branch's paper.
+        abort_unless(
+            SchoolClass::where('id', $exam->class_id)->where('branch_id', $this->branchId())->exists(),
+            403
+        );
         abort_unless(
             StudentEnrollment::where('class_id', $exam->class_id)->where('student_id', $student->id)->exists(),
             403
