@@ -21,7 +21,7 @@
 <div class="flex items-center justify-between" style="margin-bottom: 24px;">
     <div>
         <h2 class="serif" style="font-size: 26px; font-weight: 600;">Exams</h2>
-        <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Generate topic tests, then release them to students - now or at a scheduled time, with an optional expiry.</p>
+        <p style="color: var(--text-soft); font-size: 13px; margin-top: 2px;">Generate topic tests, then release them to students - now or at a scheduled time; each test closes automatically when its duration runs out.</p>
     </div>
     <a href="{{ route('v2.teacher.exams.create') }}" class="btn btn-primary"><x-icon name="plus" size="14"/> Create Exam</a>
 </div>
@@ -30,7 +30,7 @@
     <div style="margin-bottom: 16px; padding: 11px 16px; background: rgba(var(--ok-rgb,95,160,82),.12); border: 1px solid var(--ok); border-radius: 8px; font-size: 13px; color: var(--ok); font-weight: 600;">{{ session('success') }}</div>
 @endif
 
-<div x-data="{ relOpen: false, relAction: '', relTitle: '', mode: 'now' }">
+<div x-data="{ relOpen: false, relAction: '', relTitle: '', open: 'now', relDur: 30, relHasDur: true }">
 <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;">
     <div style="overflow-x: auto;">
     <table style="width: 100%; border-collapse: collapse; min-width: 720px;">
@@ -80,7 +80,7 @@
                     <td style="padding: var(--pad-cell); text-align: right; white-space: nowrap;">
                         @if ($exam->isDraft())
                             <button type="button" class="btn btn-primary btn-sm"
-                                    @click="relAction = '{{ route('v2.teacher.exams.release', $exam) }}'; relTitle = @js($exam->title); mode = 'now'; relOpen = true">
+                                    @click="relAction = '{{ route('v2.teacher.exams.release', $exam) }}'; relTitle = @js($exam->title); open = 'now'; relDur = {{ (int) ($exam->duration_minutes ?: 30) }}; relHasDur = {{ $exam->duration_minutes ? 'true' : 'false' }}; relOpen = true">
                                 <x-icon name="play" size="12"/> Release
                             </button>
                         @endif
@@ -109,26 +109,29 @@
         <h3 class="serif" style="font-size: 18px; font-weight: 600; margin-bottom: 4px;">Release test</h3>
         <p style="font-size: 13px; color: var(--text-soft); margin-bottom: 18px;" x-text="'“' + relTitle + '” - choose when students can take it.'"></p>
 
-        <input type="hidden" name="mode" :value="mode">
-        <div class="seg" style="margin-bottom:16px;">
-            <button type="button" :class="mode==='now' ? 'on' : ''" @click="mode='now'">Release now</button>
-            <button type="button" :class="mode==='schedule' ? 'on' : ''" @click="mode='schedule'">Schedule</button>
+        <input type="hidden" name="open" :value="open">
+        <input type="hidden" name="duration_minutes" :value="relDur">
+        <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">When does it open?</label>
+        <div class="seg" style="margin-bottom:14px;flex-wrap:wrap;">
+            <button type="button" :class="open==='now' ? 'on' : ''" @click="open='now'">Open now</button>
+            <button type="button" :class="open==='in_5' ? 'on' : ''" @click="open='in_5'">In 5 min</button>
+            <button type="button" :class="open==='in_10' ? 'on' : ''" @click="open='in_10'">In 10 min</button>
+            <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'">Schedule</button>
         </div>
 
-        <div x-show="mode === 'schedule'" style="margin-bottom: 14px;">
+        <div x-show="open === 'schedule'" x-cloak style="margin-bottom: 14px;">
             <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Opens at</label>
-            <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
+            <input type="datetime-local" name="release_at" :required="open==='schedule'" min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
 
-        <div style="margin-bottom: 14px;">
-            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Expires at <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-faint);">- optional; no access after this</span></label>
-            <input type="datetime-local" name="expires_at" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
+        <div x-show="!relHasDur" x-cloak style="margin-bottom: 14px;">
+            <label style="display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-bottom:6px;">Duration (minutes)</label>
+            <input type="number" x-model.number="relDur" min="1" max="240" style="width:100%;max-width:180px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:14px;color:var(--text);">
         </div>
 
-        <label class="flex items-center gap-2" style="font-size:12.5px;color:var(--text-soft);cursor:pointer;margin-bottom:20px;">
-            <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
-            Release results immediately - students see their score as they submit
-        </label>
+        <p style="font-size:12px;color:var(--text-soft);margin-bottom:20px;display:flex;align-items:center;gap:6px;">
+            <x-icon name="clock" size="12"/> Closes automatically <strong x-text="relDur"></strong> min after it opens. Results unlock once it closes.
+        </p>
 
         <div class="flex items-center justify-end gap-2">
             <button type="button" class="btn btn-ghost" @click="relOpen = false">Cancel</button>

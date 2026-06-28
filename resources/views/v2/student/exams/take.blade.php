@@ -2,11 +2,15 @@
 @section('page_title', $exam->title)
 
 @php
-    // Elapsed/remaining derived from the attempt's started_at so the clock is
-    // correct across page reloads (it does not restart).
+    // The exam runs in one shared window: it opens at available_from and auto-closes
+    // at available_until (= open + duration). The countdown is to that shared close, so
+    // it's the same for everyone and survives reloads. Falls back to a per-attempt
+    // duration clock only when there's no close set (legacy / no-expiry exams).
     $elapsed = (int) abs($attempt->started_at?->diffInSeconds(now()) ?? 0);
-    $hasLimit = (bool) $exam->duration_minutes;
-    $remaining = $hasLimit ? max(0, $exam->duration_minutes * 60 - $elapsed) : null;
+    $hasLimit = (bool) ($exam->available_until || $exam->duration_minutes);
+    $remaining = $exam->available_until
+        ? max(0, (int) round(now()->diffInSeconds($exam->available_until, false)))
+        : ($exam->duration_minutes ? max(0, $exam->duration_minutes * 60 - $elapsed) : null);
 @endphp
 
 @section('content')

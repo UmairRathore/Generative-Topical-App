@@ -80,28 +80,36 @@
 
         @if ($exam->isDraft())
             <p style="font-size: 12.5px; color: var(--text-soft); margin-bottom: 14px; line-height: 1.5;">
-                This test is a <strong>draft</strong> - students can't see it yet. Release it now or schedule it, with an optional expiry after which no student can access it.
+                This test is a <strong>draft</strong> - students can't see it yet. Release it now or schedule it; it closes automatically once its duration runs out.
             </p>
-            <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}" x-data="{ mode: 'now' }">
+            <form method="POST" action="{{ route('v2.teacher.exams.release', $exam) }}"
+                  x-data="{ open: 'now', dur: {{ (int) ($exam->duration_minutes ?: 30) }} }">
                 @csrf @method('PATCH')
-                <input type="hidden" name="mode" :value="mode">
-                <div class="seg" style="margin-bottom:14px;">
-                    <button type="button" :class="mode==='now' ? 'on' : ''" @click="mode='now'">Release now</button>
-                    <button type="button" :class="mode==='schedule' ? 'on' : ''" @click="mode='schedule'">Schedule</button>
+                <input type="hidden" name="open" :value="open">
+                <input type="hidden" name="duration_minutes" :value="dur">
+                <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:6px;">When does it open?</label>
+                <div class="seg" style="margin-bottom:14px; flex-wrap:wrap;">
+                    <button type="button" :class="open==='now' ? 'on' : ''" @click="open='now'">Open now</button>
+                    <button type="button" :class="open==='in_5' ? 'on' : ''" @click="open='in_5'">In 5 min</button>
+                    <button type="button" :class="open==='in_10' ? 'on' : ''" @click="open='in_10'">In 10 min</button>
+                    <button type="button" :class="open==='schedule' ? 'on' : ''" @click="open='schedule'">Schedule</button>
                 </div>
                 <div class="space-y-3">
-                    <div x-show="mode==='schedule'">
+                    <div x-show="open==='schedule'" x-cloak>
                         <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Opens at</label>
-                        <input type="datetime-local" name="release_at" :required="mode==='schedule'" style="{{ $fieldStyle }} width:100%;">
+                        <input type="datetime-local" name="release_at" :required="open==='schedule'"
+                               min="{{ now()->format('Y-m-d\TH:i') }}" value="{{ now()->addMinutes(5)->format('Y-m-d\TH:i') }}"
+                               style="{{ $fieldStyle }} width:100%;">
                     </div>
-                    <div>
-                        <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Expires at <span style="color:var(--text-faint);">- optional</span></label>
-                        <input type="datetime-local" name="expires_at" style="{{ $fieldStyle }} width:100%;">
-                    </div>
-                    <label class="flex items-center gap-2" style="font-size:12.5px; color:var(--text-soft); cursor:pointer;">
-                        <input type="checkbox" name="release_results" value="1" style="width:15px;height:15px;">
-                        Release results immediately - students see their score as they submit
-                    </label>
+                    @unless ($exam->duration_minutes)
+                        <div>
+                            <label style="display:block; font-size:11px; color:var(--text-faint); margin-bottom:4px;">Duration (minutes)</label>
+                            <input type="number" x-model.number="dur" min="1" max="240" required style="{{ $fieldStyle }} max-width:160px;">
+                        </div>
+                    @endunless
+                    <p style="font-size:12px; color:var(--text-soft); display:flex; align-items:center; gap:6px;">
+                        <x-icon name="clock" size="12"/> Closes automatically <strong x-text="dur"></strong> min after it opens. Results unlock once it closes.
+                    </p>
                 </div>
                 <button type="submit" class="btn btn-primary" style="margin-top:14px;"><x-icon name="play" size="13"/> Release test</button>
             </form>
@@ -148,11 +156,17 @@
             </form>
         @else
             <div style="font-size: 13px; color: var(--text-soft); margin-bottom: 14px;">Results are currently <strong>hidden</strong> - submitted students see only “awaiting results”.</div>
-            <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
-                @csrf @method('PATCH')
-                <input type="hidden" name="release" value="1">
-                <button type="submit" class="btn btn-primary"><x-icon name="check" size="13"/> Release results to students</button>
-            </form>
+            @if ($exam->isExpired())
+                <form method="POST" action="{{ route('v2.teacher.exams.release_results', $exam) }}">
+                    @csrf @method('PATCH')
+                    <input type="hidden" name="release" value="1">
+                    <button type="submit" class="btn btn-primary"><x-icon name="check" size="13"/> Release results to students</button>
+                </form>
+            @else
+                {{-- Results can only be revealed after the test closes - no peeking mid-test. --}}
+                <button type="button" class="btn btn-primary" disabled style="opacity:.55; cursor:not-allowed;"><x-icon name="check" size="13"/> Release results to students</button>
+                <p style="font-size:12px; color:var(--text-faint); margin-top:8px;">Available once the test closes{{ $exam->available_until ? ' ('.$exam->available_until->diffForHumans().')' : '' }}.</p>
+            @endif
         @endif
     </div>
 </div>

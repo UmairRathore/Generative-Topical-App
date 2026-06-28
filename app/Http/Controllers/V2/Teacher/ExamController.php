@@ -47,7 +47,10 @@ class ExamController extends Controller
         $teacher = $this->teacher();
         $classes = $teacher->classes()->with(['subject', 'grade'])->where('is_active', true)->get();
 
+        // Only topics that actually have a drawable question (matches drawRandomIds:
+        // active + has options) - so a teacher can't pick a topic that yields nothing.
         $topicsBySubject = Topic::whereIn('subject_id', $classes->pluck('subject_id')->unique())
+            ->whereHas('questions', fn ($q) => $q->active()->has('options'))
             ->orderBy('sort_order')
             ->get(['id', 'external_id', 'title', 'subject_id'])
             ->groupBy('subject_id');
@@ -117,7 +120,9 @@ class ExamController extends Controller
             : null;
 
         $topics = $class
-            ? Topic::where('subject_id', $class->subject_id)->orderBy('sort_order')->get(['id', 'external_id', 'title'])
+            ? Topic::where('subject_id', $class->subject_id)
+                ->whereHas('questions', fn ($q) => $q->active()->has('options'))
+                ->orderBy('sort_order')->get(['id', 'external_id', 'title'])
             : collect();
 
         return view('v2.teacher.exams.custom', compact('classes', 'class', 'classId', 'topics', 'topicIds', 'questions', 'view'));
@@ -307,23 +312,33 @@ class ExamController extends Controller
         return Topic::where('subject_id', $subjectId)->whereIn('id', $ids)->pluck('id')->all();
     }
 
-    /** Release a draft test - immediately or at a scheduled time, with optional expiry. */
+    /**
+     * Release a draft test. The teacher only chooses WHEN it opens (now / +5 /
+     * +10 / a scheduled time); the test then auto-closes `duration` minutes
+     * after it opens. No manual expiry - the window IS the duration. Results
+     * stay hidden until the test closes (released separately).
+     */
     public function release(Exam $exam, Request $request, NotificationService $notifications)
     {
         $teacher = $this->teacher();
         abort_unless($exam->created_by === $teacher->id, 403);
 
         $data = $request->validate([
-            'mode'            => ['required', Rule::in(['now', 'schedule'])],
-            'release_at'      => ['nullable', 'required_if:mode,schedule', 'date'],
-            'expires_at'      => ['nullable', 'date'],
-            'release_results' => ['nullable', 'boolean'],
+            'open'             => ['required', Rule::in(['now', 'in_5', 'in_10', 'schedule'])],
+            // datetime-local is naive wall-clock; Carbon::parse reads it in the app tz.
+            'release_at'       => ['nullable', 'required_if:open,schedule', 'date', 'after_or_equal:now'],
+            'duration_minutes' => ['required', 'integer', 'min:1', 'max:240'],
         ]);
 
-        $from  = $data['mode'] === 'schedule' ? Carbon::parse($data['release_at']) : now();
-        $until = ! empty($data['expires_at']) ? Carbon::parse($data['expires_at']) : null;
-
-        abort_if($until && $until->lessThanOrEqualTo($from), 422, 'Expiry must be after the release time.');
+        $duration = (int) $data['duration_minutes'];
+        $from = match ($data['open']) {
+            'in_5'     => now()->addMinutes(5),
+            'in_10'    => now()->addMinutes(10),
+            'schedule' => Carbon::parse($data['release_at']),
+            default    => now(),
+        };
+        // Auto-close: the whole window is `duration` minutes from when it opens.
+        $until = $from->copy()->addMinutes($duration);
 
         // Brand guard: a question flagged after this exam was frozen is no longer
         // 'active'. Hiding it only stops future generation - it still rides along
@@ -337,27 +352,24 @@ class ExamController extends Controller
         }
 
         $exam->update([
-            'status'              => 'released',
-            'released_at'         => now(),
-            'available_from'      => $from,
-            'available_until'     => $until,
-            // Optionally make results visible the moment students submit.
-            'results_released_at' => $request->boolean('release_results') ? now() : $exam->results_released_at,
+            'status'           => 'released',
+            'released_at'      => now(),
+            'available_from'   => $from,
+            'available_until'  => $until,
+            'duration_minutes' => $duration,
         ]);
 
         AuditLogger::record('exam.released', $exam, [
-            'from'    => $from->toDateTimeString(),
-            'until'   => $until?->toDateTimeString(),
-            'results' => $request->boolean('release_results'),
+            'from'  => $from->toDateTimeString(),
+            'until' => $until->toDateTimeString(),
         ]);
 
         // Notify the class's students that a new (or scheduled) test is available.
         $notifications->announceExamRelease($exam);
 
-        $msg = $exam->isScheduled() ? 'Test scheduled to open '.$from->diffForHumans().'.' : 'Test released - students can take it now.';
-        if ($request->boolean('release_results')) {
-            $msg .= ' Results will be visible to students as they submit.';
-        }
+        $msg = $exam->isScheduled()
+            ? 'Test scheduled to open '.$from->diffForHumans().' - it closes '.$duration.' min after it opens.'
+            : 'Test is live - students can take it now. It closes '.$until->diffForHumans().'.';
 
         return back()->with('success', $msg);
     }
@@ -369,6 +381,10 @@ class ExamController extends Controller
         abort_unless($exam->created_by === $teacher->id, 403);
 
         $release = $request->boolean('release', true);
+        // Results can only be revealed once the test has CLOSED - never while it is
+        // still open / in progress. (Re-hiding stays allowed any time.)
+        abort_if($release && ! $exam->isExpired(), 422, 'You can release results once the test has closed.');
+
         $alreadyReleased = $exam->results_released_at !== null;
         $exam->update(['results_released_at' => $release ? ($exam->results_released_at ?? now()) : null]);
 
