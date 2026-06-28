@@ -77,7 +77,10 @@ class StudentController extends BaseController
         $request->validate([
             'students'              => 'required|array|min:1|max:100',
             'students.*.name'       => 'required|string|max:200',
-            'students.*.email'      => 'required|email',
+            // Reject in-payload duplicates AND emails already taken, so a bad CSV
+            // fails validation with a friendly error instead of blowing up the
+            // create transaction (or silently creating accounts on a shared email).
+            'students.*.email'      => 'required|email|distinct:ignore_case|unique:v2_students,email',
             'students.*.roll_number'=> 'nullable|string|max:50',
         ]);
 

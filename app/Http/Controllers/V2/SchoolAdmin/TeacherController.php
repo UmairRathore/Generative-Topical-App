@@ -65,7 +65,10 @@ class TeacherController extends BaseController
         $request->validate([
             'teachers'              => 'required|array|min:1|max:50',
             'teachers.*.name'       => 'required|string|max:200',
-            'teachers.*.email'      => 'required|email',
+            // Reject in-payload duplicates AND emails already taken, so a bad CSV
+            // fails validation with a friendly error instead of blowing up the
+            // create transaction (or silently creating accounts on a shared email).
+            'teachers.*.email'      => 'required|email|distinct:ignore_case|unique:v2_teachers,email',
             'teachers.*.employee_id'=> 'nullable|string|max:50',
         ]);
 
