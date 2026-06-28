@@ -217,7 +217,6 @@
         <button type="button" class="btn btn-ghost btn-sm" @click="openPanel()" x-show="selected.length"><x-icon name="eye" size="13"/> Review</button>
         <button type="button" class="btn btn-ghost btn-sm" @click="clear()" x-show="selected.length">Clear</button>
         <input type="text" name="title" value="{{ old('title', 'Custom Test') }}" required maxlength="120" placeholder="Test title" style="{{ $fld }} flex:1; min-width:180px;">
-        <input type="number" name="duration_minutes" min="1" max="240" placeholder="Time (min)" style="{{ $fld }} width:120px;">
         <button type="submit" class="btn btn-primary" :disabled="selected.length === 0" :style="selected.length === 0 ? 'opacity:.5;cursor:not-allowed;' : ''"><x-icon name="check" size="14"/> Create test</button>
     </form>
 

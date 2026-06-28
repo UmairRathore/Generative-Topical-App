@@ -64,7 +64,6 @@
         classId: '{{ old('class_id', $classes->first()->id ?? '') }}',
         title: @js(old('title', 'Random Test')),
         count: {{ (int) old('question_count', 20) }},
-        duration: '{{ old('duration_minutes') }}',
         selected: [],
         open: false,
         search: '',
@@ -235,11 +234,6 @@
             </div>
 
             <div>
-                <label style="{{ $lbl }}">Time limit <span style="font-weight:400;color:var(--text-faint);">(minutes, optional)</span></label>
-                <input type="number" x-model="duration" min="1" max="240" style="{{ $fld }} max-width: 220px;">
-            </div>
-
-            <div>
                 <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; justify-content: center;">
                     <x-icon name="eye" size="15"/> <span x-text="previewOpen ? 'Draw a fresh set' : 'Preview questions'"></span>
                 </button>
@@ -252,7 +246,6 @@
             @csrf
             <input type="hidden" name="class_id" :value="classId">
             <input type="hidden" name="title" :value="title">
-            <input type="hidden" name="duration_minutes" :value="duration">
             <input type="hidden" name="question_ids" x-ref="qids">
         </form>
         </div>{{-- /.ex-col form --}}
