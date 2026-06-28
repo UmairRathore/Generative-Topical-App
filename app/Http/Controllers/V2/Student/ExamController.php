@@ -125,16 +125,37 @@ class ExamController extends Controller
         return view('v2.student.exams.take', compact('exam', 'attempt', 'periodicTable'));
     }
 
+    /**
+     * Finalize an attempt. The deadline is enforced HERE, server-side - the page
+     * timer that auto-submits at the close is only a convenience, never the
+     * authority. A submission is accepted while the test is open, plus a short
+     * grace (SUBMIT_GRACE_SECONDS) that covers the auto-submit network round-trip
+     * and minor client-timer drift. Anything later is rejected, so a student can't
+     * keep the tab open (or disable the timer) and submit after available_until.
+     */
     public function submit(Exam $exam, Request $request, ExamService $service)
     {
         $student = $this->student();
-        $this->ensureCanTake($exam, $student);
+        abort_unless($student->classes()->where('v2_classes.id', $exam->class_id)->exists(), 403);
+
+        $attempt = ExamAttempt::where('exam_id', $exam->id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        // Already submitted -> idempotent; just resolve to the result.
+        if ($attempt?->isSubmitted()) {
+            return redirect()->route('v2.student.exams.result', $exam);
+        }
+
+        // Hard, server-side close: reject anything past the window (+ grace).
+        if (! $this->submissionOpen($exam)) {
+            return redirect()->route('v2.student.exams.index')
+                ->with('error', 'This test has closed - submissions after the deadline are not accepted.');
+        }
 
         $attempt = $service->startAttempt($exam, $student);
-        if (! $attempt->isSubmitted()) {
-            $attempt = $service->submit($attempt, (array) $request->input('answers', []));
-            AuditLogger::record('exam.submitted', $exam, ['student_id' => $student->id, 'score' => $attempt->score]);
-        }
+        $attempt = $service->submit($attempt, (array) $request->input('answers', []));
+        AuditLogger::record('exam.submitted', $exam, ['student_id' => $student->id, 'score' => $attempt->score]);
 
         return redirect()->route('v2.student.exams.result', $exam)->with('success', 'Your test has been submitted.');
     }
@@ -181,6 +202,33 @@ class ExamController extends Controller
             'palette'       => $result['palette'],
             'revealCorrect' => $exam->resultsReleased(),
         ]);
+    }
+
+    /**
+     * Small grace after available_until in which a still-open attempt may still
+     * POST its answers. This ONLY absorbs the auto-submit network round-trip and
+     * minor client-timer drift so a buzzer-beater submission isn't lost - it is
+     * NOT extra exam time and is not surfaced to students. Tune with care: larger
+     * values widen the window in which a late submission is accepted.
+     */
+    private const SUBMIT_GRACE_SECONDS = 120;
+
+    /**
+     * May a submission be ACCEPTED right now? Released, opened (not scheduled), and
+     * within the window plus the grace. An exam with no available_until stays open
+     * until the teacher closes it (legacy / open-ended). This is the server-side
+     * authority for the deadline - independent of the client countdown.
+     */
+    private function submissionOpen(Exam $exam): bool
+    {
+        if (! $exam->isReleased() || $exam->isScheduled()) {
+            return false;
+        }
+        if ($exam->available_until === null) {
+            return true;
+        }
+
+        return now()->lessThanOrEqualTo($exam->available_until->copy()->addSeconds(self::SUBMIT_GRACE_SECONDS));
     }
 
     /**
