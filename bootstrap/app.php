@@ -23,5 +23,27 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Each portal has its own login page. Send an unauthenticated guest to the
+        // login for the guard they actually failed - not the generic /login.
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 401);
+            }
+
+            $logins = [
+                'v2_super_admin'  => 'v2.super_admin.login',
+                'v2_school_admin' => 'v2.school.login',
+                'v2_branch_admin' => 'v2.branch.login',
+                'v2_teacher'      => 'v2.teacher.login',
+                'v2_student'      => 'v2.student.login',
+            ];
+
+            foreach ($e->guards() as $guard) {
+                if (isset($logins[$guard]) && \Illuminate\Support\Facades\Route::has($logins[$guard])) {
+                    return redirect()->guest(route($logins[$guard]));
+                }
+            }
+
+            return redirect()->guest(\Illuminate\Support\Facades\Route::has('login') ? route('login') : '/');
+        });
     })->create();
