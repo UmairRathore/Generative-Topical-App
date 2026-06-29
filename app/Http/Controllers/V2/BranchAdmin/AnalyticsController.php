@@ -154,14 +154,24 @@ class AnalyticsController extends BaseController
         $attempt = $exam->attempts()->where('student_id', $student->id)
             ->where('status', 'submitted')->firstOrFail();
 
-        $exam->load(['examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+        // Same frozen-question render + breakdown the teacher/student paper views use,
+        // so this page reuses the shared result UI (score strip + sticky palette + review).
+        $exam->load(['examQuestions.questionVersion', 'examQuestions.question.options', 'examQuestions.question.images', 'topic', 'schoolClass']);
+        $exam->renderFrozenQuestions();
+        $answers = $attempt->answers()->get()->keyBy('question_id');
+        $attempt->setRelation('answers', $answers);
+
+        $result = $service->resultBreakdown($exam, $attempt);
 
         return view('v2.branch_admin.analytics.paper', [
-            'exam'       => $exam,
-            'student'    => $student,
-            'attempt'    => $attempt,
-            'answers'    => $attempt->answers()->get()->keyBy('question_id'),
-            'topicStats' => $service->topicStatsForAttempt($attempt),
+            'exam'          => $exam,
+            'student'       => $student,
+            'attempt'       => $attempt,
+            'answers'       => $answers,
+            'topicStats'    => $service->topicStatsForAttempt($attempt),
+            'breakdown'     => $result['breakdown'],
+            'palette'       => $result['palette'],
+            'revealCorrect' => true,
         ]);
     }
 }
