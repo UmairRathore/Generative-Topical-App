@@ -181,7 +181,7 @@ class ExamService
             ->with(['examQuestions.question:id,correct_answer', 'examQuestions.questionVersion:id,correct_answer'])
             ->firstOrFail();
 
-        return DB::transaction(function () use ($attempt, $exam, $responses) {
+        $result = DB::transaction(function () use ($attempt, $exam, $responses) {
             $score = 0;
 
             foreach ($exam->examQuestions as $eq) {
@@ -215,6 +215,16 @@ class ExamService
 
             return $attempt->fresh();
         });
+
+        // Fold the wrong answers into the Mistake Bank (Learning Hub). Isolated so a
+        // capture failure can NEVER break the submission itself.
+        try {
+            app(MistakeBankService::class)->syncFromAttempt($result);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Mistake bank sync failed for attempt '.$result->id.': '.$e->getMessage());
+        }
+
+        return $result;
     }
 
     /*
