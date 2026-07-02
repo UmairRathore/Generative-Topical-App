@@ -16,6 +16,7 @@ use App\Http\Controllers\V2\BranchAdmin\ReportController as BranchReport;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
+use App\Http\Controllers\V2\Student\LearningHubController as StudentLearningHub;
 use App\Http\Controllers\V2\Student\QuestionFlagController as StudentQuestionFlag;
 use App\Http\Controllers\V2\Student\StatsController as StudentStats;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
@@ -332,8 +333,24 @@ Route::prefix('v2')->name('v2.')->group(function () {
             // Report a problem with a question (soft flag → routed to the exam's teacher).
             Route::post('exams/{exam}/questions/{question}/flag', [StudentQuestionFlag::class, 'store'])->name('exams.flag');
 
+            // Learning Hub - "My Mistakes": every wrong answer becomes a revision item.
+            Route::get('learning-hub', [StudentLearningHub::class, 'index'])->name('learning_hub.index');
+            Route::get('learning-hub/mistakes/{mistake}', [StudentLearningHub::class, 'review'])->name('learning_hub.review');
+            Route::patch('learning-hub/mistakes/{mistake}/status', [StudentLearningHub::class, 'updateStatus'])->name('learning_hub.status');
+            Route::get('learning-hub/mistakes/{mistake}/asset/{type}', [StudentLearningHub::class, 'asset'])->name('learning_hub.asset');
+
             // Notifications (bell links here; full paginated list)
             Route::view('notifications', 'v2.student.notifications')->name('notifications.index');
         });
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Temp / Demo - standalone question showcases (no auth, self-contained)
+    |----------------------------------------------------------------------
+    */
+    Route::prefix('temp')->name('temp.')->group(function () {
+        Route::view('9702-m25-q13', 'temp.physics-showcase')->name('physics-showcase');
+        Route::view('9700-w15-q39', 'temp.biology-showcase')->name('biology-showcase');
     });
 });
