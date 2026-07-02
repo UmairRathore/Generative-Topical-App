@@ -91,6 +91,12 @@ class Question extends Model
         return $this->hasMany(QuestionFlag::class, 'question_id');
     }
 
+    /** Reusable learning content (worked solutions, explanations, ...) for the Learning Hub. */
+    public function learningAssets(): HasMany
+    {
+        return $this->hasMany(QuestionLearningAsset::class, 'question_id');
+    }
+
     /** Full immutable content history (newest first). */
     public function versions(): HasMany
     {
