@@ -71,37 +71,20 @@
             <div style="font-size: 14px; font-weight: 600; margin: 0 2px 12px;">The question</div>
             @include('v2.partials.answer_review', ['exam' => $exam, 'answers' => $answers, 'revealCorrect' => true])
 
-            {{-- Worked solution (display-only; fetched on demand, never generated this phase) --}}
-            <div x-data="{
-                    open: false, loaded: false, available: {{ $solution ? 'true' : 'false' }}, title: @js($solution?->title), content: @js($solution?->content),
-                    toggle() {
-                        this.open = ! this.open;
-                        if (this.open && ! this.loaded) {
-                            this.loaded = true;
-                            fetch(@js(route('v2.student.learning_hub.asset', ['mistake' => $mistake, 'type' => 'worked_solution'])), { headers: { 'X-Requested-With': 'fetch' } })
-                                .then(r => r.json()).then(d => { this.available = d.available; this.title = d.title; this.content = d.content; }).catch(() => {});
-                        }
-                    }
-                 }"
-                 style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; margin-top: 14px;">
+            {{-- Worked solution → opens in the Learning Studio (React). The full
+                 step-by-step solution + the interactive widget for this question
+                 live there; this is the gateway button into that section. --}}
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; margin-top: 14px;">
                 <div class="flex items-center justify-between" style="gap: 10px;">
                     <div class="flex items-center gap-2" style="font-size: 14px; font-weight: 600;"><x-icon name="sparkle" size="15"/> Worked solution</div>
                     @if ($solution)
-                        <button type="button" class="btn btn-ghost btn-sm" @click="toggle()"><span x-text="open ? 'Hide' : 'Show'"></span></button>
+                        <a href="{{ route('v2.student.learning_hub.studio', $mistake) }}" class="btn btn-ghost btn-sm">Open in Learning Studio &rarr;</a>
                     @else
                         <span style="font-size: 12px; color: var(--text-faint);">Not available yet</span>
                     @endif
                 </div>
                 @if ($solution)
-                    <div x-show="open" x-cloak style="margin-top: 12px;">
-                        <template x-if="available">
-                            <div>
-                                <div x-show="title" x-text="title" style="font-weight: 600; font-size: 13px; margin-bottom: 6px;"></div>
-                                <div x-text="content" style="font-size: 13.5px; line-height: 1.6; color: var(--text-soft); white-space: pre-wrap;"></div>
-                            </div>
-                        </template>
-                        <template x-if="! available"><div style="font-size: 13px; color: var(--text-faint);">Learning asset not available yet.</div></template>
-                    </div>
+                    <div style="font-size: 12.5px; color: var(--text-soft); margin-top: 8px;">Step-by-step explanation and interactive practice, in the Learning Studio.</div>
                 @endif
             </div>
         </div>

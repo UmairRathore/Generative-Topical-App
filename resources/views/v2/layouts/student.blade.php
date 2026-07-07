@@ -15,6 +15,7 @@
         ['id' => 'v2.student.dashboard', 'icon' => 'home', 'label' => 'Dashboard', 'href' => route('v2.student.dashboard')],
         ['id' => 'v2.student.exams', 'icon' => 'clipboard', 'label' => 'My Exams', 'href' => route('v2.student.exams.index')],
         ['id' => 'v2.student.learning_hub', 'icon' => 'target', 'label' => 'Learning Hub', 'href' => route('v2.student.learning_hub.index')],
+        ['id' => 'v2.student.notes', 'icon' => 'book', 'label' => 'My Notes', 'href' => route('v2.student.notes.index')],
         ['id' => 'v2.student.stats', 'icon' => 'chart', 'label' => 'My Performance', 'href' => route('v2.student.stats')],
         ['id' => 'v2.student.notifications', 'icon' => 'bell', 'label' => 'Notifications', 'href' => route('v2.student.notifications.index')],
     ];

@@ -212,7 +212,13 @@ class LearningHubMistakeBankTest extends TestCase
         $this->assertNull($this->svc->visibleAsset($q, 'worked_solution')); // draft is hidden
 
         $asset->update(['status' => 'generated']);
-        $this->assertNotNull($this->svc->visibleAsset($q, 'worked_solution')); // now visible
+        $this->assertNull($this->svc->visibleAsset($q, 'worked_solution')); // legacy pending is hidden too
+
+        $asset->update(['status' => 'approved']);
+        $this->assertNotNull($this->svc->visibleAsset($q, 'worked_solution')); // super-admin blessed -> visible
+
+        $asset->update(['status' => 'edited']);
+        $this->assertNotNull($this->svc->visibleAsset($q, 'worked_solution')); // admin-edited stays visible
 
         $this->assertNull($this->svc->visibleAsset($q, 'bogus_type')); // type whitelist
     }

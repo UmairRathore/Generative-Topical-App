@@ -17,6 +17,12 @@ use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
 use App\Http\Controllers\V2\Student\LearningHubController as StudentLearningHub;
+use App\Http\Controllers\V2\Student\NotesController as StudentNotes;
+use App\Http\Controllers\V2\Student\NotesImportController as StudentNotesImport;
+use App\Http\Controllers\V2\Student\NotesPageController as StudentNotesPage;
+use App\Http\Controllers\V2\Student\NotesTreeController as StudentNotesTree;
+use App\Http\Controllers\V2\Student\NotesUploadController as StudentNotesUpload;
+use App\Http\Controllers\V2\Student\NotesVersionController as StudentNotesVersion;
 use App\Http\Controllers\V2\Student\QuestionFlagController as StudentQuestionFlag;
 use App\Http\Controllers\V2\Student\StatsController as StudentStats;
 use App\Http\Controllers\V2\SuperAdmin\AuthController as SuperAdminAuth;
@@ -26,6 +32,7 @@ use App\Http\Controllers\V2\SuperAdmin\DashboardController as SuperAdminDashboar
 use App\Http\Controllers\V2\SuperAdmin\StatsController as SuperAdminStats;
 use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
+use App\Http\Controllers\V2\SuperAdmin\QuestionAssetReviewController as SuperAdminQuestionAssetReview;
 use App\Http\Controllers\V2\SuperAdmin\QuestionFlagController as SuperAdminQuestionFlag;
 use App\Http\Controllers\V2\SuperAdmin\QuestionPropagationController as SuperAdminQuestionPropagation;
 use App\Http\Controllers\V2\SuperAdmin\SchoolController as SuperAdminSchool;
@@ -41,6 +48,7 @@ use App\Http\Controllers\V2\Teacher\QuestionFlagController as TeacherQuestionFla
 use App\Http\Controllers\V2\Teacher\StatsController as TeacherStats;
 use App\Http\Controllers\V2\SecureImageController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::prefix('v2')->name('v2.')->group(function () {
 
@@ -108,6 +116,12 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::delete('question-bank/{question}', [SuperAdminQuestionBank::class, 'destroy'])->name('question_bank.destroy');
                 Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');
                 Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
+
+                // AI learning-asset review + approval (generation is external / Claude Code).
+                Route::get('question-bank/{question}/learning-assets', [SuperAdminQuestionAssetReview::class, 'review'])->name('question_bank.learning_assets');
+                Route::post('question-bank/{question}/learning-assets/approve-all', [SuperAdminQuestionAssetReview::class, 'approveAll'])->name('learning_assets.approve_all');
+                Route::patch('learning-assets/{asset}/status', [SuperAdminQuestionAssetReview::class, 'updateStatus'])->name('learning_assets.status');
+                Route::patch('learning-assets/{asset}', [SuperAdminQuestionAssetReview::class, 'update'])->name('learning_assets.update');
 
                 // Quality Review queue - reported questions grouped into one review each.
                 Route::get('question-flags', [SuperAdminQuestionFlag::class, 'index'])->name('question_flags.index');
@@ -336,8 +350,28 @@ Route::prefix('v2')->name('v2.')->group(function () {
             // Learning Hub - "My Mistakes": every wrong answer becomes a revision item.
             Route::get('learning-hub', [StudentLearningHub::class, 'index'])->name('learning_hub.index');
             Route::get('learning-hub/mistakes/{mistake}', [StudentLearningHub::class, 'review'])->name('learning_hub.review');
+            Route::get('learning-hub/mistakes/{mistake}/studio', [StudentLearningHub::class, 'studio'])->name('learning_hub.studio');
             Route::patch('learning-hub/mistakes/{mistake}/status', [StudentLearningHub::class, 'updateStatus'])->name('learning_hub.status');
             Route::get('learning-hub/mistakes/{mistake}/asset/{type}', [StudentLearningHub::class, 'asset'])->name('learning_hub.asset');
+
+            // Notes - Notion-style block pages; learning assets & mistakes import into here.
+            Route::prefix('notes')->name('notes.')->group(function () {
+                Route::get('/', [StudentNotes::class, 'index'])->name('index');
+                Route::get('tree', [StudentNotesTree::class, 'index'])->name('tree');
+                Route::get('search', [StudentNotesTree::class, 'search'])->name('search');
+                Route::post('pages', [StudentNotesPage::class, 'store'])->name('pages.store');
+                Route::get('pages/{page}', [StudentNotes::class, 'show'])->name('pages.show');
+                Route::put('pages/{page}', [StudentNotesPage::class, 'update'])->name('pages.update');
+                Route::patch('pages/{page}/meta', [StudentNotesPage::class, 'meta'])->name('pages.meta');
+                Route::delete('pages/{page}', [StudentNotesPage::class, 'destroy'])->name('pages.destroy');
+                Route::post('pages/{page}/import', [StudentNotesImport::class, 'store'])->name('pages.import');
+                Route::get('pages/{page}/outline', [StudentNotesPage::class, 'outline'])->name('pages.outline');
+                Route::get('pages/{page}/versions', [StudentNotesVersion::class, 'index'])->name('pages.versions');
+                Route::post('pages/{page}/versions/{version}/restore', [StudentNotesVersion::class, 'restore'])->name('pages.versions.restore');
+                // Images pasted/uploaded into notes (private disk, owner-only serving).
+                Route::post('uploads', [StudentNotesUpload::class, 'store'])->middleware('throttle:30,1')->name('uploads.store');
+                Route::get('images/{student}/{file}', [StudentNotesUpload::class, 'show'])->name('images.show');
+            });
 
             // Notifications (bell links here; full paginated list)
             Route::view('notifications', 'v2.student.notifications')->name('notifications.index');
@@ -352,5 +386,54 @@ Route::prefix('v2')->name('v2.')->group(function () {
     Route::prefix('temp')->name('temp.')->group(function () {
         Route::view('9702-m25-q13', 'temp.physics-showcase')->name('physics-showcase');
         Route::view('9700-w15-q39', 'temp.biology-showcase')->name('biology-showcase');
+        Route::view('5090-w22-q7', 'temp.photosynthesis-showcase')->name('photosynthesis-showcase');
+        Route::view('widget-lab', 'temp.widget-lab')->name('widget-lab');
+        Route::view('learn-gateway', 'temp.learn-gateway')->name('learn-gateway');
+    });
+
+    /*
+    |----------------------------------------------------------------------
+    | Learning Studio (React / Inertia) — the interactive learning layer
+    |----------------------------------------------------------------------
+    | The Mistake Bank (Livewire) hands off into here via a gateway button.
+    | Auth guard is added when this is wired to the real student portal.
+    */
+    Route::prefix('learn')->name('learn.')->group(function () {
+        Route::get('/', fn () => Inertia::render('Home', [
+            'appName' => config('app.name'),
+        ]))->name('home');
+
+        // Dev-only preview of the worked-solution page with sample data (the real
+        // page is auth-gated at v2.student.learning_hub.studio). Remove before ship.
+        Route::get('solution-demo', fn () => Inertia::render('Solution', [
+            'mistake'  => ['subject' => 'Chemistry · 9701', 'topic' => 'The mole'],
+            'solution' => [
+                'title'   => 'Amount of substance in 8.0 g of NaOH',
+                'content' => "The amount of substance **n** comes from the mass **m** and the molar mass **Mᵣ**:\n\n`n = m / Mᵣ`\n\n## Step 1 — molar mass of NaOH\nAdd the relative atomic masses: Na 23 + O 16 + H 1 = **40 g mol⁻¹**.\n\n## Step 2 — substitute\n- m = 8.0 g\n- Mᵣ = 40 g mol⁻¹\n\n`n = 8.0 / 40 = 0.20 mol`\n\nSo the answer is **0.20 mol** (option B). A common mistake is to *multiply* mass by Mᵣ, which gives 320 — always check the units cancel to give mol.",
+                'format'  => 'markdown',
+            ],
+            'widget'   => [
+                'type'   => 'calculator',
+                'config' => [
+                    'subject' => 'Chemistry · 9701',
+                    'prompt'  => 'What amount, in moles, is present in 8.0 g of NaOH? (Mᵣ = 40)',
+                    'symbol'  => 'n',
+                    'formula' => 'mass / mr',
+                    'inputs'  => [
+                        ['key' => 'mass', 'label' => 'Mass', 'unit' => 'g', 'value' => 8.0, 'min' => 0, 'max' => 40, 'step' => 0.5, 'editable' => true],
+                        ['key' => 'mr', 'label' => 'Mᵣ (NaOH)', 'value' => 40, 'editable' => false],
+                    ],
+                    'result'  => ['label' => 'Amount of substance', 'unit' => 'mol', 'precision' => 3],
+                    'options' => [
+                        ['label' => '0.10 mol', 'value' => 0.10],
+                        ['label' => '0.20 mol', 'value' => 0.20],
+                        ['label' => '0.40 mol', 'value' => 0.40],
+                        ['label' => '5.0 mol', 'value' => 5.0],
+                    ],
+                    'answer'  => 1,
+                ],
+            ],
+            'backUrl'  => route('v2.temp.learn-gateway'),
+        ]))->name('solution-demo');
     });
 });

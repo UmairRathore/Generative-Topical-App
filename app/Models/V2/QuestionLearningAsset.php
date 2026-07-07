@@ -26,13 +26,26 @@ class QuestionLearningAsset extends Model
         'worked_solution', 'option_explanation', 'revision_notes', 'common_mistakes',
     ];
 
-    public const STATUS_DRAFT = 'draft';
+    // ── Review lifecycle ─────────────────────────────────────────────────────
+    // AI generation happens OUTSIDE the app (Claude Code / workflow) and writes
+    // assets as `draft`. A super-admin then approves / edits / rejects / hides
+    // each one. Students ONLY ever see super-admin-blessed content.
+    public const STATUS_DRAFT = 'draft';          // ai_generated_pending_review
+    public const STATUS_APPROVED = 'approved';    // approved_by_superadmin
+    public const STATUS_EDITED = 'edited';        // edited_by_superadmin (student-visible)
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_HIDDEN = 'hidden';
+    public const STATUS_FAILED = 'failed_validation';
+
+    // Legacy statuses in older rows — treated as pending; kept only for mapping.
     public const STATUS_GENERATED = 'generated';
     public const STATUS_REVIEWED = 'reviewed';
-    public const STATUS_APPROVED = 'approved';
 
-    /** Statuses a student is allowed to see (draft is never shown). */
-    public const VISIBLE_STATUSES = [self::STATUS_GENERATED, self::STATUS_REVIEWED, self::STATUS_APPROVED];
+    /** The ONLY statuses a student may ever see (super-admin blessed). */
+    public const VISIBLE_STATUSES = [self::STATUS_APPROVED, self::STATUS_EDITED];
+
+    /** Awaiting super-admin review. */
+    public const PENDING_STATUSES = [self::STATUS_DRAFT, self::STATUS_GENERATED, self::STATUS_REVIEWED];
 
     protected $fillable = [
         'question_id', 'asset_type', 'asset_key', 'title', 'content', 'payload_json',

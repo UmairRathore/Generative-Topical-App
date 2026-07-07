@@ -5,11 +5,14 @@ namespace App\Http\Controllers\V2\Student;
 use App\Http\Controllers\Controller;
 use App\Models\V2\ExamAnswer;
 use App\Models\V2\ExamQuestion;
+use App\Models\V2\Question;
 use App\Models\V2\QuestionLearningAsset;
 use App\Models\V2\StudentMistake;
 use App\Services\V2\MistakeBankService;
+use App\Support\SignedImage;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
 
 /**
  * Learning Hub - "My Mistakes". Thin controller; all logic lives in
@@ -74,6 +77,91 @@ class LearningHubController extends Controller
             'exam'     => $exam,
             'answers'  => $answers,
             'solution' => $service->visibleAsset($mistake->question_id, 'worked_solution'),
+        ]);
+    }
+
+    /**
+     * The React "Learning Studio" for one mistake (Inertia). The Mistake Bank's
+     * "Worked solution" button lands here. It surfaces EVERY release-gated
+     * learning asset the question has — worked solution, why-each-option-is-wrong,
+     * the interactive simulation, flashcards, memcards and a solution flow —
+     * as tabs. Tabs auto-appear as assets are imported; no code change needed.
+     */
+    public function studio(StudentMistake $mistake, MistakeBankService $service)
+    {
+        $this->authorizeMistake($mistake);
+        abort_unless($mistake->latestExam && $mistake->latestExam->resultsReleased(), 404);
+
+        $mistake->load(['subject:id,name', 'topic:id,title']);
+        $qid = $mistake->question_id;
+
+        // Text / structured assets, keyed by type.
+        $types = ['worked_solution', 'option_explanation', 'flashcards', 'memcards',
+            'mermaid', 'revision_notes', 'common_mistakes'];
+        $assets = [];
+        foreach ($types as $t) {
+            if ($a = $service->visibleAsset($qid, $t)) {
+                $assets[$t] = ['title' => $a->title, 'content' => $a->content, 'format' => $a->format, 'payload' => $a->payload_json];
+            }
+        }
+
+        $widget = $service->visibleAsset($qid, 'interactive_widget');
+        $wp = $widget?->payload_json;
+
+        // Opening the studio counts as a review + records what was shown.
+        $service->markReviewed($mistake);
+        foreach (array_keys($assets) as $t) {
+            $service->recordAssetViewed($mistake, $t);
+        }
+        if ($widget) {
+            $service->recordAssetViewed($mistake, 'interactive_widget');
+        }
+
+        $q = Question::withoutGlobalScopes()->with('images')->find($qid);
+
+        // The actual exam figure(s) — the question diagram, not option/table crops.
+        // Served through the signed, viewer-bound secure-image endpoint.
+        $figures = $q ? $q->images
+            ->filter(fn ($im) => $im->option_label === null && preg_match('/question|diagram|figure/i', (string) $im->role))
+            ->sortBy('sort_order')
+            ->map(fn ($im) => [
+                'url'     => SignedImage::url($im->image_path, ['question_id' => $qid]),
+                'caption' => $im->caption,
+            ])->values()->all() : [];
+
+        return Inertia::render('Solution', [
+            'mistake' => [
+                'id'      => $mistake->id,
+                'subject' => $mistake->subject?->name,
+                'topic'   => $mistake->topic?->title,
+            ],
+            'question' => $q ? [
+                'stem'        => $q->question_text,
+                'correct'     => $q->correct_answer,
+                'yourAnswer'  => $mistake->selected_option,
+                'sourcePaper' => $q->source_paper,
+                'images'      => $figures,
+            ] : null,
+            'assets' => $assets,
+            'widget' => $wp ? [
+                'type'   => $wp['widget'] ?? $widget->asset_key,
+                'config' => $wp['config'] ?? $wp,
+            ] : null,
+            'backUrl' => route('v2.student.learning_hub.review', $mistake),
+            // "Add to notes" bridge: the picker needs the tree + create endpoints,
+            // and every import is anchored to this mistake. suggest = the
+            // subject/topic home the picker should preselect (or offer to create).
+            'notes' => [
+                'mistakeId'  => $mistake->getRouteKey(),
+                'tree'       => route('v2.student.notes.tree'),
+                'createPage' => route('v2.student.notes.pages.store'),
+                'suggest'    => [
+                    'subjectId'   => $mistake->subject_id,
+                    'topicId'     => $mistake->topic_id,
+                    'subjectName' => $mistake->subject?->name,
+                    'topicName'   => $mistake->topic?->title,
+                ],
+            ],
         ]);
     }
 

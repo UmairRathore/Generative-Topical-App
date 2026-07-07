@@ -1,0 +1,168 @@
+/* ── Learning Studio shell ────────────────────────────────────────────────────
+   Page chrome for the React learning zone. Widgets bring their own scoped .cw-*
+   styles (widgets.css) and pull these frame tokens with dark fallbacks, so the
+   studio and every widget share one palette. */
+:root {
+    --bg: #06110C; --bg-2: #08160F; --bg-3: #0B1E15;
+    --panel: rgba(255, 255, 255, .035); --panel-2: rgba(255, 255, 255, .055);
+    --line: rgba(160, 200, 175, .14);
+    --ink: #EAF6EE; --ink-soft: #A6C4B3; --ink-faint: #68877A;
+}
+html[data-mode="light"] {
+    --bg: #EDF4EF; --bg-3: #FFFFFF; --panel: rgba(255, 255, 255, .78);
+    --line: rgba(15, 60, 35, .12); --ink: #0B2318; --ink-soft: #3C5A49; --ink-faint: #6E8877;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+    font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink);
+    -webkit-font-smoothing: antialiased; line-height: 1.6;
+}
+body::before {
+    content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+        radial-gradient(900px 520px at 78% -8%, rgba(52, 211, 153, .14), transparent 60%),
+        radial-gradient(760px 500px at 6% 6%, rgba(251, 191, 36, .08), transparent 62%);
+}
+
+.ls-shell { position: relative; z-index: 1; max-width: 1040px; margin: 0 auto; padding: 30px 22px 110px; }
+.ls-serif { font-family: 'Fraunces', serif; }
+
+/* top bar */
+.ls-top { display: flex; align-items: center; gap: 14px; margin-bottom: 34px; }
+.ls-mark { width: 44px; height: 44px; border-radius: 13px; background: linear-gradient(140deg, #34D399, #059669); color: #04150d; display: grid; place-items: center; font-weight: 800; font-size: 19px; box-shadow: 0 8px 30px -8px rgba(52, 211, 153, .5); flex: none; }
+.ls-brand { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
+.ls-brand span { display: block; font-weight: 500; font-size: 12px; color: var(--ink-faint); letter-spacing: .02em; }
+.ls-top .sp { flex: 1; }
+.ls-back { text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink-soft); border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 14px; transition: .15s; }
+.ls-back:hover { color: var(--ink); border-color: rgba(52, 211, 153, .4); }
+
+/* hero */
+.ls-hero { margin-bottom: 40px; }
+.ls-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #34D399; margin-bottom: 12px; }
+.ls-hero h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(30px, 5vw, 46px); letter-spacing: -.02em; margin: 0 0 12px; }
+.ls-hero p { margin: 0; max-width: 62ch; font-size: 16px; color: var(--ink-soft); }
+
+/* sections */
+.ls-sec { margin-top: 46px; }
+.ls-lbl { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #34D399; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+.ls-lbl::before { content: ""; width: 24px; height: 2px; background: linear-gradient(90deg, #34D399, transparent); }
+.ls-sec h2 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 24px; margin: 0 0 6px; letter-spacing: -.01em; }
+.ls-sec .lead { margin: 0 0 20px; color: var(--ink-soft); font-size: 15px; max-width: 68ch; }
+.ls-sec .lead code { font-family: 'JetBrains Mono', monospace; color: #34D399; font-size: 13px; }
+
+.ls-stack { display: flex; flex-direction: column; gap: 20px; }
+.ls-widget-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px; backdrop-filter: blur(14px); }
+
+.ls-foot { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13px; }
+.ls-foot b { color: var(--ink-soft); font-weight: 600; }
+
+/* worked-solution prose */
+.ls-prose { font-size: 15.5px; line-height: 1.7; color: var(--ink-soft); max-width: 72ch; }
+.ls-prose h2, .ls-prose h3, .ls-prose h4 { font-family: 'Fraunces', serif; color: var(--ink); margin: 1.4em 0 .5em; line-height: 1.25; }
+.ls-prose h2 { font-size: 21px; } .ls-prose h3 { font-size: 17px; } .ls-prose h4 { font-size: 15px; }
+.ls-prose p { margin: .7em 0; }
+.ls-prose strong { color: var(--ink); font-weight: 700; }
+.ls-prose em { color: var(--ink); font-style: italic; }
+.ls-prose code { font-family: 'JetBrains Mono', monospace; font-size: .9em; color: #34D399; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
+.ls-prose ul, .ls-prose ol { margin: .7em 0; padding-left: 1.3em; }
+.ls-prose li { margin: .35em 0; }
+
+/* ── Studio tabs ─────────────────────────────────────────────────────────── */
+.ls-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.ls-tab { display: inline-flex; align-items: center; gap: 8px; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink-soft); background: transparent; border: 0; border-radius: 9px; padding: 9px 14px; cursor: pointer; transition: .14s; }
+.ls-tab:hover { color: var(--ink); background: rgba(255,255,255,.04); }
+.ls-tab.is-active { color: var(--ink); background: rgba(52,211,153,.12); box-shadow: inset 0 0 0 1px rgba(52,211,153,.3); }
+.ls-tab-ic { font-size: 13px; color: #34D399; }
+
+.ls-panel { min-height: 260px; }
+.ls-panel .ls-widget-card { padding: 14px; }
+
+/* generic studio button */
+.ls-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; cursor: pointer; transition: .14s; }
+.ls-btn:hover { color: var(--ink); border-color: rgba(52,211,153,.4); }
+
+/* ── Question figure(s) ──────────────────────────────────────────────────── */
+.ls-figures { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
+.ls-figure { margin: 0; background: #fbfbf8; border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; justify-content: center; }
+.ls-figure img { max-width: 100%; height: auto; display: block; }
+
+/* ── Question tab ────────────────────────────────────────────────────────── */
+.ls-stem { font-size: 16.5px; line-height: 1.65; color: var(--ink); max-width: 74ch; margin-bottom: 22px; }
+.ls-opts-lead { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #34D399; margin-bottom: 12px; }
+.ls-opts { display: flex; flex-direction: column; gap: 10px; }
+.ls-opt { display: grid; grid-template-columns: 40px minmax(0, 1.6fr) minmax(0, 1.1fr); align-items: center; gap: 16px; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+.ls-opt-text { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 14.5px; color: var(--ink); line-height: 1.45; }
+.ls-opt-key { width: 34px; height: 34px; display: grid; place-items: center; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--ink-soft); background: var(--bg-3); border: 1px solid var(--line); border-radius: 9px; }
+.ls-opt-vals { display: flex; gap: 18px; font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 600; color: var(--ink); }
+.ls-opt-vals span { display: flex; flex-direction: column; gap: 3px; }
+.ls-opt-vals em { font-family: 'Inter', sans-serif; font-style: normal; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); }
+.ls-opt-why { font-size: 13.5px; line-height: 1.5; color: var(--ink-faint); text-align: right; }
+.ls-opt.is-correct { border-color: rgba(52,211,153,.5); background: rgba(52,211,153,.08); }
+.ls-opt.is-correct .ls-opt-key { color: #04150d; background: #34D399; border-color: transparent; }
+.ls-opt.is-yours { border-color: rgba(251,113,133,.45); background: rgba(251,113,133,.06); }
+.ls-ok { color: #34D399; font-weight: 700; }
+.ls-yours-tag { color: #fb7185; font-weight: 600; }
+@media (max-width: 680px) { .ls-opt { grid-template-columns: 34px 1fr; } .ls-opt-why { grid-column: 1 / -1; text-align: left; } }
+
+/* ── Flashcard / memcard grid (all visible) ──────────────────────────────── */
+.ls-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.ls-qa { background: var(--bg-3); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.ls-qa-q { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.35; margin-bottom: 9px; }
+.ls-qa-q::before { content: ""; display: block; width: 22px; height: 2px; background: linear-gradient(90deg, #34D399, transparent); margin-bottom: 10px; }
+.ls-qa-a { font-size: 14px; line-height: 1.6; color: var(--ink-soft); }
+
+/* ── Flow (mermaid) + JSON ───────────────────────────────────────────────── */
+.ls-flow { display: flex; justify-content: center; padding: 12px; overflow-x: auto; }
+.ls-flow svg { max-width: 100%; height: auto; }
+.ls-code { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--ink-soft); background: var(--bg-3); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+
+/* ── Super-admin asset review ────────────────────────────────────────────── */
+.ar-question { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 18px; }
+.ar-opts { display: flex; flex-direction: column; gap: 7px; margin-top: 14px; }
+.ar-opt { display: flex; align-items: center; gap: 12px; padding: 9px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-3); font-size: 14px; color: var(--ink-soft); }
+.ar-opt-key { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--ink-faint); width: 18px; }
+.ar-opt.is-correct { border-color: rgba(52,211,153,.5); background: rgba(52,211,153,.08); color: var(--ink); }
+.ar-opt.is-correct .ar-opt-key { color: #34D399; }
+.ar-opt-ans { margin-left: auto; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #34D399; }
+
+.ar-bar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; font-size: 14px; color: var(--ink-soft); }
+.ar-bar b { color: var(--ink); }
+.ar-sp { flex: 1; }
+
+.ar-card { border: 1px solid var(--line); border-radius: 16px; background: var(--panel); margin-bottom: 16px; overflow: hidden; }
+.ar-card.ar-ok { border-color: rgba(52,211,153,.35); }
+.ar-card.ar-bad { border-color: rgba(251,113,133,.3); opacity: .8; }
+.ar-card.ar-muted { opacity: .6; }
+.ar-head { display: flex; align-items: center; gap: 10px; padding: 13px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.ar-type { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--ink); }
+.ar-by { font-size: 11.5px; color: var(--ink-faint); font-family: 'JetBrains Mono', monospace; }
+.ar-badge { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid; }
+.ar-badge-pending { color: #fbbf24; border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.1); }
+.ar-badge-ok { color: #34D399; border-color: rgba(52,211,153,.4); background: rgba(52,211,153,.1); }
+.ar-badge-bad { color: #fb7185; border-color: rgba(251,113,133,.4); background: rgba(251,113,133,.1); }
+.ar-badge-muted { color: var(--ink-faint); border-color: var(--line); background: var(--bg-3); }
+.ar-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ar-actions .ls-btn { padding: 6px 12px; font-size: 12.5px; }
+.ar-approve { color: #04150d !important; background: #34D399 !important; border-color: transparent !important; }
+.ar-approve:hover { filter: brightness(1.06); }
+.ar-reject { color: #fb7185 !important; border-color: rgba(251,113,133,.4) !important; }
+
+.ar-warnings { display: flex; flex-wrap: wrap; gap: 7px; padding: 12px 16px 0; }
+.ar-warn { font-size: 12px; color: #fbbf24; background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.3); border-radius: 8px; padding: 4px 10px; }
+.ar-body { padding: 16px; }
+
+.ar-edit { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.ar-input { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg-3); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px; }
+.ar-textarea { font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.6; color: var(--ink); background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; resize: vertical; }
+.ar-input:focus, .ar-textarea:focus { outline: none; border-color: rgba(52,211,153,.5); }
+.ar-edit-actions { display: flex; align-items: center; gap: 8px; }
+.ar-edit-hint { font-size: 12px; color: var(--ink-faint); }
+.ar-empty { padding: 30px; text-align: center; color: var(--ink-faint); font-size: 14px; border: 1px dashed var(--line); border-radius: 12px; }
+
+/* ── KaTeX maths (shared: markdown, equation block, cards) ── */
+.cw-tex { color: var(--ink); }
+.cw-tex-block { display: block; margin: 12px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.cw-tex-block > .katex-display { margin: 0; }
+.katex { font-size: 1.05em; }
+.katex .base { color: var(--ink); }

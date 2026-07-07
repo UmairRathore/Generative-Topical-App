@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Inertia (Learning Studio / React). Passes through non-Inertia
+        // requests untouched, so the Livewire side of the app is unaffected.
+        $middleware->web(append: [
+            \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
+
         $middleware->alias([
             'admin'                  => \App\Http\Middleware\EnsureUserIsAdmin::class,
             'teacher'                => \App\Http\Middleware\EnsureUserIsTeacher::class,

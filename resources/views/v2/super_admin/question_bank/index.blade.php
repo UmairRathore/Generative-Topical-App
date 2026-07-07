@@ -292,6 +292,7 @@
                     </form>
                 @else
                     <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm" data-qb-edit><x-icon name="edit" size="12"/> Edit</a>
+                    <a href="{{ route('v2.super_admin.question_bank.learning_assets', $q) }}" class="btn btn-ghost btn-sm" title="Review AI learning assets" data-qb-return><x-icon name="sparkle" size="12"/> AI Assets</a>
                     <select title="Change status"
                             data-status-url="{{ route('v2.super_admin.question_bank.status', $q) }}" data-id="{{ $q->id }}" data-prev="{{ $q->status }}"
                             style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
@@ -386,6 +387,7 @@
                                 </form>
                             @else
                                 <a href="{{ route('v2.super_admin.question_bank.edit', $q) }}" class="btn btn-ghost btn-sm" data-qb-edit><x-icon name="edit" size="12"/> Edit</a>
+                    <a href="{{ route('v2.super_admin.question_bank.learning_assets', $q) }}" class="btn btn-ghost btn-sm" title="Review AI learning assets" data-qb-return><x-icon name="sparkle" size="12"/> AI Assets</a>
                                 <select title="Change status"
                                         data-status-url="{{ route('v2.super_admin.question_bank.status', $q) }}" data-id="{{ $q->id }}" data-prev="{{ $q->status }}"
                                         style="padding: 5px 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg); font-size: 12px; color: var(--text);">
@@ -583,9 +585,9 @@
         var a = e.target.closest('a[href]');
         if (!a || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank') return;
 
-        // Edit/create links carry the current (possibly filtered) URL so the editor
-        // can send the admin back to exactly this list. They navigate normally.
-        if (a.dataset.qbEdit !== undefined) {
+        // Edit / AI-review links carry the current (possibly filtered) URL so the
+        // destination can send the admin back to exactly this list. Normal nav.
+        if (a.dataset.qbEdit !== undefined || a.dataset.qbReturn !== undefined) {
             var u = new URL(a.href, window.location.origin);
             u.searchParams.set('return', window.location.href);
             a.href = u.toString();
