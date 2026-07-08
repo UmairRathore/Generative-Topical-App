@@ -5,6 +5,7 @@ import Markdown from '../lib/markdown.jsx';
 import Flashcards from '../studio/Flashcards.jsx';
 import Flow from '../studio/Flow.jsx';
 import AddToNotePicker from '../notes/AddToNotePicker.jsx';
+import TutorPanel from '../tutor/TutorPanel.jsx';
 
 // ── Learning Studio · one mistake, every angle ───────────────────────────────
 // The Mistake Bank's "Worked solution" button lands here. Tabs are built from
@@ -57,7 +58,12 @@ function QuestionPanel({ question, optionExp }) {
     );
 }
 
-export default function Solution({ mistake = {}, question = null, assets = {}, widget = null, backUrl = '/', notes = null }) {
+// URL aliases: pretty param values ↔ internal tab keys. We accept both and
+// emit the pretty form when syncing the URL.
+const TAB_ALIASES = { 'ai-tutor': 'tutor', simulator: 'sim' };
+const TAB_EMIT = { tutor: 'ai-tutor', sim: 'simulator' };
+
+export default function Solution({ mistake = {}, question = null, assets = {}, widget = null, backUrl = '/', notes = null, tutor = null, debug = false }) {
     const tabs = useMemo(() => [
         { key: 'question', label: 'Question', icon: '◆', show: !!(question?.stem || assets.option_explanation) },
         { key: 'sim', label: 'Simulator', icon: '▲', show: !!widget?.type },
@@ -65,12 +71,36 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
         { key: 'flashcards', label: 'Flashcards', icon: '◑', show: !!assets.flashcards },
         { key: 'memcards', label: 'Memcards', icon: '▤', show: !!assets.memcards },
         { key: 'flow', label: 'Flow', icon: '⋔', show: !!assets.mermaid },
-        { key: 'json', label: 'JSON', icon: '{}', show: true },
-    ].filter((t) => t.show), [question, assets, widget]);
+        { key: 'tutor', label: 'AI Tutor', icon: '✦', show: !!tutor },
+        // Raw-payload inspector: local developer aid only, never for students.
+        { key: 'json', label: 'JSON', icon: '{}', show: !!debug },
+    ].filter((t) => t.show), [question, assets, widget, tutor, debug]);
 
-    const [active, setActive] = useState(tabs[0]?.key || 'json');
+    // ?tab= deep-links (e.g. ?tab=solution, ?tab=ai-tutor) - any visible tab.
+    const [active, setActive] = useState(() => {
+        const raw = typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('tab')
+            : null;
+        const wanted = TAB_ALIASES[raw] || raw;
+        if (wanted && tabs.some((t) => t.key === wanted)) return wanted;
+        return tabs[0]?.key || 'question';
+    });
+
+    // Keep the URL in sync so reload restores the tab. replaceState (not push):
+    // Back should leave the studio, not unwind every tab click.
+    const selectTab = (key) => {
+        setActive(key);
+        if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', TAB_EMIT[key] || key);
+            window.history.replaceState(window.history.state, '', url);
+        }
+    };
     const eyebrow = [mistake.subject, mistake.topic].filter(Boolean).join(' · ') || 'Worked solution';
     const title = assets.worked_solution?.title || 'Worked solution';
+
+    // Mobile: the section rail lives in a slide-in drawer behind the ☰ button.
+    const [navOpen, setNavOpen] = useState(false);
 
     // ── "Add to notes" bridge ─────────────────────────────────────────────────
     // pick = the pending import payload; widgets ALSO emit the framework-agnostic
@@ -107,8 +137,9 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
     return (
         <>
             <Head title="Worked solution" />
-            <div className="ls-shell">
+            <div className="ls-shell ls-shell--app">
                 <div className="ls-top">
+                    <button type="button" className="ls-menu-btn" onClick={() => setNavOpen(true)} aria-label="Open sections">☰</button>
                     <div className="ls-mark">◆</div>
                     <div className="ls-brand">Learning Studio<span>{eyebrow}</span></div>
                     <div className="sp" />
@@ -120,22 +151,28 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
                     <a className="ls-back" href={backUrl}>← Back to mistake</a>
                 </div>
 
-                <div className="ls-hero" style={{ marginBottom: 24 }}>
-                    <div className="ls-eyebrow">{eyebrow}</div>
-                    <h1 className="ls-serif">{title}</h1>
-                </div>
+                {/* Chat-app layout: left rail of sections (a slide-in drawer on
+                    mobile), main pane on the right. */}
+                <div className="ls-app">
+                    {navOpen && <div className="ls-side-veil" onClick={() => setNavOpen(false)} />}
+                    <aside className={'ls-side' + (navOpen ? ' is-open' : '')}>
+                        <div className="ls-side-hero">
+                            <div className="ls-eyebrow">{eyebrow}</div>
+                            <div className="ls-side-title ls-serif">{title}</div>
+                        </div>
+                        <nav className="ls-nav" role="tablist" aria-orientation="vertical">
+                            {tabs.map((t) => (
+                                <button key={t.key} role="tab" aria-selected={active === t.key}
+                                    className={'ls-nav-item' + (active === t.key ? ' is-active' : '')}
+                                    onClick={() => { selectTab(t.key); setNavOpen(false); }}>
+                                    <span className="ls-tab-ic">{t.icon}</span>{t.label}
+                                </button>
+                            ))}
+                        </nav>
+                        <div className="ls-side-foot"><b>Learning Studio</b> · built from your own mistake</div>
+                    </aside>
 
-                <div className="ls-tabs" role="tablist">
-                    {tabs.map((t) => (
-                        <button key={t.key} role="tab" aria-selected={active === t.key}
-                            className={'ls-tab' + (active === t.key ? ' is-active' : '')}
-                            onClick={() => setActive(t.key)}>
-                            <span className="ls-tab-ic">{t.icon}</span>{t.label}
-                        </button>
-                    ))}
-                </div>
-
-                <div className="ls-panel">
+                    <div className={'ls-main' + (active === 'tutor' ? ' is-chat' : '')}>
                     {notes && TAB_SAVE[active] && (
                         <div className="ls-panel-actions">{noteBtn(...TAB_SAVE[active])}</div>
                     )}
@@ -153,10 +190,10 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
                     {active === 'flashcards' && <Flashcards cards={assets.flashcards?.payload || []} />}
                     {active === 'memcards' && <Flashcards cards={assets.memcards?.payload || []} />}
                     {active === 'flow' && <Flow source={assets.mermaid?.content || ''} />}
+                    {active === 'tutor' && tutor && <TutorPanel tutor={tutor} />}
                     {active === 'json' && <pre className="ls-code">{jsonView}</pre>}
+                    </div>
                 </div>
-
-                <div className="ls-foot"><b>Learning Studio</b> · everything for this question, built from your own mistake.</div>
             </div>
 
             {pick && notes && (

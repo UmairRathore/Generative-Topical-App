@@ -49,7 +49,7 @@ class LearningHubController extends Controller
     }
 
     /** One mistake: the frozen question review (shared answer_review) + any worked solution. */
-    public function review(StudentMistake $mistake, MistakeBankService $service)
+    public function review(StudentMistake $mistake, MistakeBankService $service, \App\Services\AI\StudentTutorService $tutor)
     {
         $this->authorizeMistake($mistake);
 
@@ -77,6 +77,8 @@ class LearningHubController extends Controller
             'exam'     => $exam,
             'answers'  => $answers,
             'solution' => $service->visibleAsset($mistake->question_id, 'worked_solution'),
+            // Status aggregates only (counts/dates/scores) - never chat content.
+            'ai'       => $tutor->mistakeAiSummary($mistake),
         ]);
     }
 
@@ -121,17 +123,23 @@ class LearningHubController extends Controller
 
         // The actual exam figure(s) — the question diagram, not option/table crops.
         // Served through the signed, viewer-bound secure-image endpoint.
+        // Shorter TTL than the exam default: a studio visit is minutes, not a
+        // whole sitting - leaked URLs die fast (viewer-binding still applies).
         $figures = $q ? $q->images
             ->filter(fn ($im) => $im->option_label === null && preg_match('/question|diagram|figure/i', (string) $im->role))
             ->sortBy('sort_order')
             ->map(fn ($im) => [
-                'url'     => SignedImage::url($im->image_path, ['question_id' => $qid]),
+                'url'     => SignedImage::url($im->image_path, ['question_id' => $qid, 'ttl' => 900]),
                 'caption' => $im->caption,
             ])->values()->all() : [];
 
         return Inertia::render('Solution', [
+            // Gates the raw-JSON inspector tab: explicit opt-in (STUDIO_DEBUG=true)
+            // AND local environment. Off by default everywhere - a student never
+            // sees it, even on a developer/demo machine running APP_ENV=local.
+            'debug'   => app()->environment('local') && (bool) config('app.studio_debug'),
             'mistake' => [
-                'id'      => $mistake->id,
+                'id'      => $mistake->getRouteKey(), // hashid - never the internal numeric id
                 'subject' => $mistake->subject?->name,
                 'topic'   => $mistake->topic?->title,
             ],
@@ -148,6 +156,11 @@ class LearningHubController extends Controller
                 'config' => $wp['config'] ?? $wp,
             ] : null,
             'backUrl' => route('v2.student.learning_hub.review', $mistake),
+            // AI Tutor entry point: the panel opens/resumes a chat via this URL
+            // and receives all further per-chat URLs in the open response.
+            'tutor' => [
+                'open' => route('v2.student.tutor.open', $mistake),
+            ],
             // "Add to notes" bridge: the picker needs the tree + create endpoints,
             // and every import is anchored to this mistake. suggest = the
             // subject/topic home the picker should preselect (or offer to create).

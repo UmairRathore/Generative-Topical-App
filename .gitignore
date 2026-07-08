@@ -36,6 +36,11 @@ CLAUDE.md
 /screenshots
 /servedata
 
+# python-ai internal service
+/python-ai/.env
+/python-ai/.venv
+__pycache__/
+
 # Generative-Topical: keep the scripts, never commit generated images / PDFs / data.
 # (The folder's own .gitignore also enforces this; these are belt-and-suspenders.)
 /storage/Generative-Topical/input/

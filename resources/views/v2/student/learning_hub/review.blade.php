@@ -78,13 +78,35 @@
                 <div class="flex items-center justify-between" style="gap: 10px;">
                     <div class="flex items-center gap-2" style="font-size: 14px; font-weight: 600;"><x-icon name="sparkle" size="15"/> Worked solution</div>
                     @if ($solution)
-                        <a href="{{ route('v2.student.learning_hub.studio', $mistake) }}" class="btn btn-ghost btn-sm">Open in Learning Studio &rarr;</a>
+                        <a href="{{ route('v2.student.learning_hub.studio', $mistake) }}?tab=solution" class="btn btn-ghost btn-sm">Open in Learning Studio &rarr;</a>
                     @else
                         <span style="font-size: 12px; color: var(--text-faint);">Not available yet</span>
                     @endif
                 </div>
                 @if ($solution)
                     <div style="font-size: 12.5px; color: var(--text-soft); margin-top: 8px;">Step-by-step explanation and interactive practice, in the Learning Studio.</div>
+                @endif
+            </div>
+
+            {{-- AI Tutor → the tutor tab of the Learning Studio. Socratic chat
+                 grounded in this question's real answer + approved solution, plus
+                 mini practice quizzes. Status = aggregates only, never content. --}}
+            @php $aiMsgs = (int) ($ai['message_count'] ?? 0); @endphp
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 18px; margin-top: 14px;">
+                <div class="flex items-center justify-between" style="gap: 10px;">
+                    <div class="flex items-center gap-2" style="font-size: 14px; font-weight: 600;"><x-icon name="sparkle" size="15"/> AI Tutor</div>
+                    <a href="{{ route('v2.student.learning_hub.studio', $mistake) }}?tab=ai-tutor" class="btn btn-ghost btn-sm">
+                        {{ $aiMsgs > 0 ? 'Continue AI Tutor' : 'Ask the AI Tutor' }} &rarr;
+                    </a>
+                </div>
+                @if ($aiMsgs > 0)
+                    <div class="flex items-center" style="gap: 6px 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-soft); margin-top: 8px;">
+                        <span>AI discussed · {{ $aiMsgs }} {{ \Illuminate\Support\Str::plural('message', $aiMsgs) }}</span>
+                        @if ($ai['last_message_at'])<span>· Last asked {{ \Illuminate\Support\Carbon::parse($ai['last_message_at'])->diffForHumans() }}</span>@endif
+                        @if ($ai['latest_quiz_score'] !== null)<span>· Latest quiz: {{ $ai['latest_quiz_score'] }}/{{ $ai['latest_quiz_total'] }}</span>@endif
+                    </div>
+                @else
+                    <div style="font-size: 12.5px; color: var(--text-soft); margin-top: 8px;">Status: Not started - talk through why your answer was wrong, step by step, then check yourself with a quick practice quiz.</div>
                 @endif
             </div>
         </div>

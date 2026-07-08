@@ -43,6 +43,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Learning Studio debug inspector
+    |--------------------------------------------------------------------------
+    | Explicit opt-in for the raw-JSON tab in the student Learning Studio.
+    | OFF by default everywhere (including local) so a student can never see
+    | it by accident - a developer sets STUDIO_DEBUG=true when they need it,
+    | and it only ever takes effect in the local environment.
+    */
+    'studio_debug' => (bool) env('STUDIO_DEBUG', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

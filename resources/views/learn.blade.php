@@ -13,6 +13,8 @@
     {{-- App design tokens (brand: --ok, --accent, --bad, --paper …) --}}
     @include('v2.partials.theme')
 
+    {{-- Required for React under the Vite DEV server (no-op in built mode). --}}
+    @viteReactRefresh
     @vite(['resources/js/learn/app.jsx'])
     @inertiaHead
 </head>

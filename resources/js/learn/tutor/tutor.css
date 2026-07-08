@@ -1,0 +1,216 @@
+/* ── AI Tutor panel — chat-app layout inside the studio's main pane ────────
+   The panel fills .ls-main.is-chat: the bar sits on top, only .tut-scroll
+   scrolls (Notes-style scrollbar, defined in learn.css), the composer stays
+   pinned at the bottom, and the minimap rides the right edge. */
+
+.tut-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 12px; padding: 14px 14px 16px; }
+
+.tut-bar { display: flex; align-items: center; gap: 10px; flex: none; }
+.tut-modes { display: inline-flex; border: 1px solid var(--ls-line, #2a2a33); border-radius: 999px; overflow: hidden; }
+.tut-mode {
+    appearance: none; background: transparent; border: 0; cursor: pointer;
+    padding: 6px 14px; font: inherit; font-size: 13px; color: inherit; opacity: .65;
+}
+.tut-mode.is-active { opacity: 1; background: rgba(127, 127, 160, .16); font-weight: 600; }
+.tut-quizbtn {
+    appearance: none; background: transparent; cursor: pointer; font: inherit; font-size: 13px;
+    border: 1px solid var(--ls-line, #2a2a33); border-radius: 999px; padding: 6px 14px; color: inherit;
+}
+.tut-quizbtn:disabled { opacity: .4; cursor: default; }
+
+/* Scroll region — the ONLY thing that scrolls in the chat */
+.tut-scrollwrap { position: relative; flex: 1; min-height: 0; display: flex; }
+.tut-scroll { flex: 1; min-width: 0; overflow-y: auto; padding: 4px 14px 12px 4px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ChatGPT-style centered conversation column on wide screens */
+.tut-thread, .tut-hello, .tut-scroll > .tut-error { width: min(100%, 880px); margin-inline: auto; }
+.tut-bar, .tut-composer { width: min(100%, 880px); margin-inline: auto; }
+
+.tut-thread { display: flex; flex-direction: column; gap: 10px; }
+.tut-msg {
+    max-width: 82%; min-width: 0; border-radius: 14px; padding: 10px 14px;
+    font-size: 14.5px; line-height: 1.55;
+    overflow-wrap: anywhere; word-break: break-word; /* unbroken strings must wrap inside the bubble */
+}
+/* Only STUDENT prompts get a bubble; tutor replies flow as plain text (ChatGPT-style). */
+.tut-msg.is-user { align-self: flex-end; background: rgba(99, 132, 255, .18); border: 1px solid rgba(99, 132, 255, .28); white-space: pre-wrap; }
+.tut-msg.is-assistant { align-self: flex-start; background: transparent; border: 0; padding: 4px 2px; max-width: 100%; }
+.tut-msg-body > :first-child { margin-top: 0; }
+.tut-msg-body > :last-child { margin-bottom: 0; }
+
+.tut-typing { display: inline-flex; gap: 5px; padding: 12px 4px; }
+.tut-typing span { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .35; animation: tutBlink 1.2s infinite; }
+.tut-typing span:nth-child(2) { animation-delay: .2s; }
+.tut-typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes tutBlink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: .9; } }
+
+.tut-hello { border: 1px dashed var(--ls-line, #2a2a33); border-radius: 14px; padding: 16px; font-size: 14px; opacity: .9; }
+.tut-hello p { margin: 0 0 10px; }
+.tut-chip {
+    appearance: none; cursor: pointer; font: inherit; font-size: 13px; color: inherit;
+    border: 1px solid var(--ls-line, #2a2a33); border-radius: 999px; padding: 6px 14px; background: rgba(127, 127, 160, .10);
+}
+
+.tut-empty { padding: 40px 0; text-align: center; opacity: .6; font-size: 14px; }
+
+.tut-error {
+    display: flex; align-items: center; gap: 12px; font-size: 13.5px;
+    border: 1px solid rgba(255, 99, 99, .4); background: rgba(255, 99, 99, .08);
+    border-radius: 10px; padding: 10px 14px;
+}
+.tut-error button {
+    appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; color: inherit;
+    border: 1px solid currentColor; border-radius: 999px; padding: 3px 12px; background: transparent;
+}
+
+/* Composer — pinned below the scroll region. ChatGPT-style pill: compact =
+   one row with the send circle inline; grown (2+ lines) = a column where the
+   scrollable text region ends ABOVE the send button, so the scrollbar never
+   runs behind the icon. */
+.tut-composer { flex: none; display: flex; }
+.tut-input {
+    position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+    background: rgba(127, 127, 160, .09); border: 1px solid var(--ls-line, #2a2a33);
+    border-radius: 22px; padding: 5px 6px 5px 16px; cursor: text; transition: border-color .15s;
+}
+.tut-input:focus-within { border-color: rgba(52, 211, 153, .45); }
+.tut-input textarea,
+.tut-input textarea:focus {
+    flex: 1; min-width: 0; resize: none; appearance: none; font: inherit; font-size: 14.5px; line-height: 1.5; color: inherit;
+    background: transparent; border: 0; outline: none; box-shadow: none; border-radius: 0;
+    padding: 6px 2px; max-height: 285px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: rgba(160, 200, 175, .22) transparent;
+}
+.tut-input textarea::-webkit-scrollbar { width: 8px; }
+.tut-input textarea::-webkit-scrollbar-thumb { background: rgba(160, 200, 175, .18); border-radius: 8px; }
+/* The v2 theme partial forces an accent focus ring on EVERY textarea with
+   !important - inside the composer the PILL owns the focus style, so the
+   inner field must stay invisible. !important is required to win that fight. */
+.tut-input textarea:focus {
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    background: transparent !important;
+}
+/* Grown: text on top (all of it visible until the cap - the measured inline
+   height drives the field, so flex must NOT resize it), send row below. */
+.tut-input.is-grown { flex-direction: column; align-items: stretch; padding: 10px 10px 8px 16px; }
+.tut-input.is-grown textarea { flex: none; width: 100%; padding-right: 6px; }
+.tut-input.is-grown .tut-send { align-self: flex-end; margin-top: 6px; }
+
+.tut-expand {
+    display: none; /* mobile-only feature */
+    position: absolute; top: 9px; right: 12px; appearance: none; cursor: pointer; border: 0;
+    background: transparent; color: inherit; opacity: .55; font: inherit; font-size: 15px; padding: 2px 4px;
+    border-radius: 6px; line-height: 1; z-index: 2;
+}
+.tut-expand:hover { opacity: 1; background: rgba(255, 255, 255, .06); }
+
+.tut-send {
+    flex: none; appearance: none; cursor: pointer; padding: 0; margin: 0;
+    width: 34px; height: 34px; min-width: 34px; min-height: 34px; aspect-ratio: 1;
+    border-radius: 999px; border: 0; display: grid; place-items: center;
+    background: #34D399; color: #04150d; transition: .15s;
+}
+.tut-send svg { display: block; }
+.tut-send:hover { filter: brightness(1.1); }
+.tut-send:disabled { opacity: .35; cursor: default; filter: none; }
+
+/* Expanded compose view (mobile only) — takes over the chat panel. */
+.tut-panel { position: relative; }
+.tut-composer.is-expanded {
+    position: absolute; inset: 0; z-index: 45; width: auto; max-width: none; margin: 0;
+    background: var(--bg-2, #0a1410); border-radius: 16px;
+}
+.tut-composer.is-expanded .tut-input { height: 100%; border-radius: 16px; }
+.tut-composer.is-expanded .tut-input textarea {
+    height: auto !important; flex: 1; max-height: none; padding: 4px 30px 4px 2px;
+}
+.tut-composer.is-expanded .tut-expand { top: 12px; right: 12px; }
+
+@media (max-width: 920px) {
+    .tut-expand { display: block; }
+    .tut-input.is-grown textarea { padding-right: 30px; } /* clear the ⤢ toggle */
+    .tut-input textarea { max-height: 112px; }
+}
+
+/* ── Conversation minimap — pinned INSIDE the chat container, at its right
+      edge and vertically centered (ChatGPT style). Always reachable, no
+      scrolling needed. Hovering the strip opens the preview panel listing
+      every prompt/quiz; clicking jumps the thread. */
+.tut-minimap {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%); z-index: 30;
+    display: flex; align-items: center; padding: 10px 6px;
+}
+.tut-minimarks {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+    max-height: 58vh; overflow: hidden;
+}
+.tut-minimark {
+    width: 14px; height: 3px; flex: none; border-radius: 2px;
+    background: rgba(160, 200, 175, .32); border: 0; padding: 0; cursor: pointer;
+    transition: width .15s, background .15s;
+}
+.tut-minimark.is-quiz { height: 5px; background: rgba(251, 191, 36, .45); }
+.tut-minimark:hover { width: 20px; background: rgba(52, 211, 153, .85); }
+.tut-minimark.is-active { width: 20px; background: #34D399; box-shadow: 0 0 6px rgba(52, 211, 153, .55); }
+.tut-minimark.is-quiz.is-active, .tut-minimark.is-quiz:hover { background: #FBBF24; box-shadow: 0 0 6px rgba(251, 191, 36, .5); }
+
+.tut-minipanel {
+    position: absolute; right: calc(100% + 2px); top: 50%; transform: translateY(-50%);
+    width: 320px; max-height: 60vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 2px;
+    background: var(--bg-2, #0c0c14); border: 1px solid var(--ls-line, #2a2a33);
+    border-radius: 14px; padding: 8px; box-shadow: 0 18px 50px -18px rgba(0, 0, 0, .6);
+    scrollbar-width: thin; scrollbar-color: rgba(160, 200, 175, .22) transparent;
+}
+.tut-minipanel::-webkit-scrollbar { width: 9px; }
+.tut-minipanel::-webkit-scrollbar-thumb { background: rgba(160, 200, 175, .18); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+.tut-minirow {
+    appearance: none; background: none; border: 0; font: inherit; text-align: left; cursor: pointer;
+    font-size: 12.5px; color: var(--ink-soft, #aab); padding: 7px 10px; border-radius: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.tut-minirow:hover { background: rgba(255, 255, 255, .05); color: var(--ink, #eef); }
+.tut-minirow.is-active { color: #34D399; }
+
+@media (max-width: 920px) {
+    .tut-minimap { display: none; }
+    .tut-panel { padding: 4px 0 8px; }
+    .tut-scroll { padding: 4px 4px 10px 2px; }
+    .tut-msg { max-width: 92%; }
+}
+
+/* ── Mini quiz — a checkpoint inside the thread ───────────────────────────── */
+.tut-quiz { flex: none; border: 1px solid var(--ls-line, #2a2a33); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 14px; }
+.tut-quiz.is-collapsed { padding: 10px 16px; gap: 0; }
+.tut-quiz-head { display: flex; align-items: center; gap: 10px; font-size: 14.5px; }
+.tut-quiz-head[role="button"] { cursor: pointer; }
+.tut-quiz-gate {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    color: #FBBF24; border: 1px solid rgba(251, 191, 36, .4); border-radius: 999px; padding: 2px 10px;
+}
+.tut-quiz-fold { font-size: 12px; opacity: .6; }
+.tut-score { font-weight: 700; border: 1px solid var(--ls-line, #2a2a33); border-radius: 999px; padding: 2px 10px; }
+.tut-score.is-perfect { border-color: rgba(80, 200, 120, .6); color: #50c878; }
+.tut-quiz-q { display: flex; flex-direction: column; gap: 8px; }
+.tut-quiz-stem { font-size: 14px; }
+.tut-quiz-stem span { opacity: .55; margin-right: 4px; }
+.tut-quiz-opts { display: flex; flex-direction: column; gap: 6px; }
+.tut-quiz-opt {
+    display: flex; align-items: baseline; gap: 10px; cursor: pointer; font-size: 13.5px;
+    border: 1px solid var(--ls-line, #2a2a33); border-radius: 10px; padding: 8px 12px;
+}
+.tut-quiz-opt input { position: absolute; opacity: 0; pointer-events: none; }
+.tut-quiz-opt.is-picked { border-color: rgba(99, 132, 255, .55); background: rgba(99, 132, 255, .10); }
+.tut-quiz-opt.is-correct { border-color: rgba(80, 200, 120, .6); background: rgba(80, 200, 120, .08); }
+.tut-quiz-opt.is-wrong { border-color: rgba(255, 99, 99, .5); background: rgba(255, 99, 99, .07); }
+.tut-quiz-key { font-weight: 700; opacity: .8; }
+.tut-quiz-why { font-size: 13px; opacity: .85; border-left: 2px solid rgba(255, 99, 99, .5); padding-left: 10px; }
+.tut-quiz-why.is-ok { border-left-color: rgba(80, 200, 120, .6); }
+.tut-quiz-submit {
+    align-self: flex-start; appearance: none; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 600;
+    color: inherit; border: 1px solid var(--ls-line, #2a2a33); border-radius: 999px; padding: 8px 18px;
+    background: rgba(99, 132, 255, .18);
+}
+.tut-quiz-submit:disabled { opacity: .4; cursor: default; }

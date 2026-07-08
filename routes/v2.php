@@ -13,6 +13,7 @@ use App\Http\Controllers\V2\BranchAdmin\AnalyticsController as BranchAnalytics;
 use App\Http\Controllers\V2\BranchAdmin\AuthController as BranchAuth;
 use App\Http\Controllers\V2\BranchAdmin\FlaggedQuestionController as BranchFlaggedQuestion;
 use App\Http\Controllers\V2\BranchAdmin\ReportController as BranchReport;
+use App\Http\Controllers\V2\Student\AiTutorController as StudentAiTutor;
 use App\Http\Controllers\V2\Student\AuthController as StudentAuth;
 use App\Http\Controllers\V2\Student\DashboardController as StudentDashboard;
 use App\Http\Controllers\V2\Student\ExamController as StudentExam;
@@ -348,11 +349,29 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::post('exams/{exam}/questions/{question}/flag', [StudentQuestionFlag::class, 'store'])->name('exams.flag');
 
             // Learning Hub - "My Mistakes": every wrong answer becomes a revision item.
+            // review/studio reveal a FULL question, so they carry the anti-scraping
+            // throttle (burst 30/10min + 120/hour per student) - see AppServiceProvider.
             Route::get('learning-hub', [StudentLearningHub::class, 'index'])->name('learning_hub.index');
-            Route::get('learning-hub/mistakes/{mistake}', [StudentLearningHub::class, 'review'])->name('learning_hub.review');
-            Route::get('learning-hub/mistakes/{mistake}/studio', [StudentLearningHub::class, 'studio'])->name('learning_hub.studio');
+            Route::get('learning-hub/mistakes/{mistake}', [StudentLearningHub::class, 'review'])
+                ->middleware('throttle:mistake-view')->name('learning_hub.review');
+            Route::get('learning-hub/mistakes/{mistake}/studio', [StudentLearningHub::class, 'studio'])
+                ->middleware('throttle:mistake-view')->name('learning_hub.studio');
             Route::patch('learning-hub/mistakes/{mistake}/status', [StudentLearningHub::class, 'updateStatus'])->name('learning_hub.status');
-            Route::get('learning-hub/mistakes/{mistake}/asset/{type}', [StudentLearningHub::class, 'asset'])->name('learning_hub.asset');
+            Route::get('learning-hub/mistakes/{mistake}/asset/{type}', [StudentLearningHub::class, 'asset'])
+                ->middleware('throttle:mistake-asset')->name('learning_hub.asset');
+
+            // AI Tutor - mistake-anchored Socratic chat + mini quizzes. Laravel
+            // authorizes + assembles context; the internal python-ai service only
+            // formats prompts and calls the provider (never reads the DB).
+            Route::post('learning-hub/mistakes/{mistake}/tutor/chats', [StudentAiTutor::class, 'open'])
+                ->middleware('throttle:20,1')->name('tutor.open');
+            Route::get('tutor/chats/{chat}', [StudentAiTutor::class, 'show'])->name('tutor.chats.show');
+            Route::post('tutor/chats/{chat}/messages', [StudentAiTutor::class, 'message'])
+                ->middleware('throttle:ai-message')->name('tutor.chats.message');
+            Route::post('tutor/chats/{chat}/quiz', [StudentAiTutor::class, 'quiz'])
+                ->middleware('throttle:ai-quiz')->name('tutor.chats.quiz');
+            Route::post('tutor/quizzes/{quiz}/attempts', [StudentAiTutor::class, 'quizAttempt'])
+                ->middleware('throttle:20,1')->name('tutor.quizzes.attempt');
 
             // Notes - Notion-style block pages; learning assets & mistakes import into here.
             Route::prefix('notes')->name('notes.')->group(function () {
@@ -382,7 +401,12 @@ Route::prefix('v2')->name('v2.')->group(function () {
     |----------------------------------------------------------------------
     | Temp / Demo - standalone question showcases (no auth, self-contained)
     |----------------------------------------------------------------------
+    | LOCAL ONLY: these are unauthenticated developer showcases. Registering
+    | them only in the local environment means they 404 everywhere else
+    | (anti-scraping audit, P0 - never expose demo payloads in prod/demo).
     */
+    if (app()->environment('local')) {
+
     Route::prefix('temp')->name('temp.')->group(function () {
         Route::view('9702-m25-q13', 'temp.physics-showcase')->name('physics-showcase');
         Route::view('9700-w15-q39', 'temp.biology-showcase')->name('biology-showcase');
@@ -436,4 +460,6 @@ Route::prefix('v2')->name('v2.')->group(function () {
             'backUrl'  => route('v2.temp.learn-gateway'),
         ]))->name('solution-demo');
     });
+
+    } // end local-only demo routes
 });

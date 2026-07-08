@@ -78,6 +78,77 @@ body::before {
 .ls-panel { min-height: 260px; }
 .ls-panel .ls-widget-card { padding: 14px; }
 
+/* ── Chat-app studio layout: left rail + main pane ───────────────────────────
+   .ls-shell--app pins the viewport height so the AI Tutor chat can keep its
+   composer fixed while only the thread scrolls (scrollbars match Notes). */
+.ls-shell--app { max-width: none; width: 100%; display: flex; flex-direction: column; height: 100vh; padding: 24px 26px; }
+.ls-shell--app .ls-top { margin-bottom: 18px; }
+.ls-app { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; }
+
+.ls-side { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px 12px; }
+.ls-side-hero { padding: 4px 10px 14px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.ls-side-hero .ls-eyebrow { margin-bottom: 8px; }
+.ls-side-title { font-size: 16.5px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
+.ls-nav { display: flex; flex-direction: column; gap: 4px; }
+.ls-nav-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-soft); background: transparent; border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer; transition: .14s; }
+.ls-nav-item:hover { color: var(--ink); background: rgba(255, 255, 255, .04); }
+.ls-nav-item.is-active { color: var(--ink); background: rgba(52, 211, 153, .12); box-shadow: inset 0 0 0 1px rgba(52, 211, 153, .3); }
+.ls-side-foot { margin-top: auto; padding: 12px 10px 2px; font-size: 11.5px; color: var(--ink-faint); border-top: 1px solid var(--line); }
+.ls-side-foot b { color: var(--ink-soft); font-weight: 600; }
+
+.ls-main { min-height: 0; overflow-y: auto; padding: 4px 8px 40px 2px; }
+.ls-main.is-chat { overflow: hidden; display: flex; flex-direction: column; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; }
+.ls-main .ls-widget-card { padding: 14px; }
+
+/* Notes-style themed scrollbars for the studio panes + chat thread. */
+.ls-side, .ls-main, .tut-scroll { scrollbar-width: thin; scrollbar-color: rgba(160, 200, 175, .22) transparent; }
+.ls-side::-webkit-scrollbar, .ls-main::-webkit-scrollbar, .tut-scroll::-webkit-scrollbar { width: 9px; height: 9px; }
+.ls-side::-webkit-scrollbar-track, .ls-main::-webkit-scrollbar-track, .tut-scroll::-webkit-scrollbar-track { background: transparent; }
+.ls-side::-webkit-scrollbar-thumb, .ls-main::-webkit-scrollbar-thumb, .tut-scroll::-webkit-scrollbar-thumb { background: rgba(160, 200, 175, .18); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+.ls-side::-webkit-scrollbar-thumb:hover, .ls-main::-webkit-scrollbar-thumb:hover, .tut-scroll::-webkit-scrollbar-thumb:hover { background-color: rgba(52, 211, 153, .45); }
+
+/* ☰ opens the section drawer on mobile; hidden on desktop where the rail is inline. */
+.ls-menu-btn {
+    display: none; appearance: none; cursor: pointer; font: inherit; font-size: 17px;
+    color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 12px; line-height: 1;
+}
+.ls-side-veil { display: none; }
+
+@media (max-width: 920px) {
+    .ls-shell--app { height: auto; min-height: 100dvh; padding: 14px 12px 20px; }
+    .ls-menu-btn { display: inline-flex; }
+
+    /* Top bar on two clean rows: brand line, then the action buttons.
+       The spacer breaks the flex row; nowrap keeps each button one line. */
+    .ls-shell--app .ls-top { flex-wrap: wrap; row-gap: 10px; margin-bottom: 12px; }
+    .ls-shell--app .ls-top .sp { flex: 0 0 100%; height: 0; }
+    .ls-brand { min-width: 0; }
+    .ls-brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ls-back { white-space: nowrap; }
+
+    /* Borderless, full-bleed content on small screens. */
+    .ls-app { display: block; }
+    .ls-main { overflow: visible; padding: 0; }
+    .ls-main.is-chat { overflow: hidden; border: 0; background: transparent; border-radius: 0; }
+
+    /* When the chat is open, lock the shell to the viewport so the composer
+       stays pinned; other tabs keep natural page scroll. */
+    .ls-shell--app:has(.ls-main.is-chat) { height: 100dvh; min-height: 0; display: flex; flex-direction: column; }
+    .ls-shell--app:has(.ls-main.is-chat) .ls-app { flex: 1; min-height: 0; }
+    .ls-main.is-chat { height: 100%; }
+
+    /* The section rail becomes a slide-in drawer (mirrors the Notes drawer). */
+    .ls-side {
+        position: fixed; top: 0; left: 0; bottom: 0; width: min(300px, 84vw); z-index: 51;
+        transform: translateX(-105%); transition: transform .22s ease;
+        border-radius: 0 18px 18px 0; background: var(--bg-2); border-left: 0;
+        box-shadow: 0 0 60px rgba(0, 0, 0, .5); padding: 20px 14px;
+    }
+    .ls-side.is-open { transform: none; }
+    .ls-side-veil { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(2, 10, 6, .72); backdrop-filter: blur(2px); }
+}
+
 /* generic studio button */
 .ls-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; cursor: pointer; transition: .14s; }
 .ls-btn:hover { color: var(--ink); border-color: rgba(52,211,153,.4); }

@@ -67,6 +67,8 @@ class StudentMistake extends Model
     }
 
     public function student(): BelongsTo { return $this->belongsTo(Student::class, 'student_id'); }
+    public function aiChats(): HasMany { return $this->hasMany(AiTutorChat::class, 'student_mistake_id'); }
+    public function aiQuizzes(): HasMany { return $this->hasMany(AiTutorQuiz::class, 'student_mistake_id'); }
     public function question(): BelongsTo { return $this->belongsTo(Question::class, 'question_id'); }
     public function subject(): BelongsTo { return $this->belongsTo(Subject::class, 'subject_id'); }
     public function topic(): BelongsTo { return $this->belongsTo(Topic::class, 'topic_id'); }

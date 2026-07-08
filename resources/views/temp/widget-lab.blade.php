@@ -11,6 +11,7 @@
     @include('v2.partials.theme')
 
     {{-- React island runtime (built by Vite). Mounts every [data-widget] on the page. --}}
+    @viteReactRefresh
     @vite(['resources/js/widgets/index.jsx'])
 </head>
 <body>

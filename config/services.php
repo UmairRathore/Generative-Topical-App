@@ -33,6 +33,14 @@ return [
         'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
     ],
 
+    // Internal Python AI service (python-ai/). Laravel is the only caller; the
+    // shared token must match INTERNAL_TOKEN in python-ai/.env.
+    'python_ai' => [
+        'url'     => env('PYTHON_AI_URL', 'http://127.0.0.1:9001'),
+        'token'   => env('PYTHON_AI_TOKEN'),
+        'timeout' => (int) env('PYTHON_AI_TIMEOUT', 90),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

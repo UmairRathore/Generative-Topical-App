@@ -2,6 +2,10 @@
 
 namespace App\Services\V2;
 
+use App\Models\V2\AiTutorChat;
+use App\Models\V2\AiTutorMessage;
+use App\Models\V2\AiTutorQuiz;
+use App\Models\V2\AiTutorQuizAttempt;
 use App\Models\V2\ExamAttempt;
 use App\Models\V2\QuestionLearningAsset;
 use App\Models\V2\Student;
@@ -15,7 +19,8 @@ use Illuminate\Support\Facades\DB;
 /**
  * The Mistake Bank (Learning Hub). Captures every incorrect, non-voided answer
  * as ONE persistent row per (student, question), records history, and serves the
- * release-gated, filtered list + analytics the Learning Hub renders. No AI here.
+ * release-gated, filtered list + analytics the Learning Hub renders. No AI calls
+ * here - only read-only AI *status* aggregates for the hub cards.
  */
 class MistakeBankService
 {
@@ -142,15 +147,48 @@ class MistakeBankService
     {
         $q = $this->releasedQuery($student)
             ->with([
-                'question:id,question_text,text_before,difficulty,year,source_paper',
+                // ANTI-SCRAPING: the list is summary-first. Only a ~120-char
+                // slice of the stem ever leaves the database - the full
+                // question_text must NEVER be selected here, so even a future
+                // JSON/Inertia conversion of this list cannot expose stems.
+                // (Blade truncates further to 100 visible chars; a slice that
+                // ends inside an HTML tag just yields a shorter teaser.)
+                'question' => fn ($qq) => $qq->select(
+                    'id',
+                    DB::raw('SUBSTR(question_text, 1, 120) as question_text'),
+                    DB::raw('SUBSTR(text_before, 1, 120) as text_before'),
+                ),
                 'subject:id,name', 'topic:id,external_id,title', 'subtopic:id,title',
                 'latestExam:id,title',
             ]);
 
+        $this->addAiSummarySelects($q);
         $this->applyFilters($q, $filters);
         $this->applySort($q, $sort);
 
         return $q->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Per-row AI Tutor aggregates for the hub cards (status only - never chat
+     * content). Correlated subselects, so no N+1 at page size 20.
+     */
+    protected function addAiSummarySelects(Builder $q): void
+    {
+        $chatIds = fn () => AiTutorChat::query()->select('id')
+            ->whereColumn('v2_ai_tutor_chats.student_mistake_id', 'v2_student_mistakes.id');
+        $quizIds = fn () => AiTutorQuiz::query()->select('id')
+            ->whereColumn('v2_ai_tutor_quizzes.student_mistake_id', 'v2_student_mistakes.id');
+
+        $q->addSelect([
+            'ai_message_count'      => AiTutorMessage::selectRaw('COUNT(*)')->whereIn('chat_id', $chatIds()),
+            'ai_last_message_at'    => AiTutorMessage::select('created_at')->whereIn('chat_id', $chatIds())->orderByDesc('id')->limit(1),
+            'ai_quiz_attempt_count' => AiTutorQuizAttempt::selectRaw('COUNT(*)')->whereIn('quiz_id', $quizIds()),
+            'ai_latest_quiz_score'  => AiTutorQuizAttempt::select('score')->whereIn('quiz_id', $quizIds())->orderByDesc('id')->limit(1),
+            'ai_latest_quiz_total'  => AiTutorQuizAttempt::select('total')->whereIn('quiz_id', $quizIds())->orderByDesc('id')->limit(1),
+            'ai_best_quiz_score'    => AiTutorQuizAttempt::select('score')->whereIn('quiz_id', $quizIds())->orderByDesc('score')->orderByDesc('id')->limit(1),
+            'ai_best_quiz_total'    => AiTutorQuizAttempt::select('total')->whereIn('quiz_id', $quizIds())->orderByDesc('score')->orderByDesc('id')->limit(1),
+        ]);
     }
 
     /** Base query: this student's mistakes whose latest source exam has released results. */
@@ -248,8 +286,8 @@ class MistakeBankService
                 DB::raw('SUM(mistake_count) as attempts'),
             ]);
 
+        // Count only - never load question text into the analytics card.
         $mostRepeated = (clone $base())
-            ->with('question:id,question_text,text_before')
             ->orderByDesc('mistake_count')
             ->first();
 

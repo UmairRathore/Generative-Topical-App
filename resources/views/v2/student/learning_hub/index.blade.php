@@ -11,7 +11,10 @@
         'archived'  => ['badge-soft', 'Archived'],
     ];
     $diffTone = fn ($d) => $d === 'hard' ? 'var(--bad)' : ($d === 'medium' ? 'var(--warn)' : 'var(--ok)');
-    $snippet = fn ($q) => \Illuminate\Support\Str::limit(trim(strip_tags((string) ($q->question_text ?: $q->text_before))) ?: 'Question', 150);
+    // Teaser only (anti-scraping): the query already truncates the stem at
+    // source; cap the rendered text at 100 chars so the list never becomes
+    // a bulk question browser.
+    $snippet = fn ($q) => \Illuminate\Support\Str::limit(trim(strip_tags((string) ($q->question_text ?: $q->text_before))) ?: 'Question', 100);
     $grouped = $sort === 'grouped';
     $curSubject = null; $curTopic = null;
 @endphp
@@ -135,8 +138,23 @@
                 @if ($m->review_count > 0)<span>· reviewed {{ $m->review_count }}&times;</span>@endif
             </div>
 
+            {{-- AI Tutor status - aggregates only, never chat content. --}}
+            @php $aiMsgs = (int) ($m->ai_message_count ?? 0); @endphp
+            <div class="flex items-center" style="gap: 6px 12px; flex-wrap: wrap; margin-top: 9px; font-size: 11.5px;">
+                @if ($aiMsgs > 0)
+                    <span class="badge badge-review">AI discussed · {{ $aiMsgs }} {{ \Illuminate\Support\Str::plural('message', $aiMsgs) }}</span>
+                    @if ($m->ai_last_message_at)<span style="color: var(--text-faint);">Last asked {{ \Illuminate\Support\Carbon::parse($m->ai_last_message_at)->diffForHumans() }}</span>@endif
+                    @if ($m->ai_latest_quiz_score !== null)<span class="badge badge-soft">Quiz {{ $m->ai_latest_quiz_score }}/{{ $m->ai_latest_quiz_total }}</span>@endif
+                @else
+                    <span class="badge badge-soft" style="color: var(--text-faint);">AI not discussed yet</span>
+                @endif
+            </div>
+
             <div class="flex items-center" style="gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                 <a href="{{ route('v2.student.learning_hub.review', $m) }}" class="btn btn-primary btn-sm"><x-icon name="eye" size="13"/> Review</a>
+                <a href="{{ route('v2.student.learning_hub.studio', $m) }}?tab=ai-tutor" class="btn btn-ghost btn-sm">
+                    <x-icon name="sparkle" size="13"/> {{ $aiMsgs > 0 ? 'Continue AI' : 'Ask AI Tutor' }}
+                </a>
                 @if (in_array($m->status, StudentMistake::RESOLVED_STATUSES, true))
                     <form method="POST" action="{{ route('v2.student.learning_hub.status', $m) }}">@csrf @method('PATCH')<input type="hidden" name="action" value="reset"><button type="submit" class="btn btn-ghost btn-sm"><x-icon name="refresh" size="13"/> Move back to revise</button></form>
                 @else
