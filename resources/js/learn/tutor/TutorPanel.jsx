@@ -3,6 +3,7 @@ import axios from 'axios';
 import MessageList from './MessageList.jsx';
 import Composer from './Composer.jsx';
 import Minimap from './Minimap.jsx';
+import { detectTutorAction } from './detectTutorAction.js';
 import './tutor.css';
 
 // ── AI Tutor panel ───────────────────────────────────────────────────────────
@@ -12,7 +13,7 @@ import './tutor.css';
 // history after being attempted (collapsed score bars), and while one is
 // unattempted the composer locks until the student completes it.
 
-export default function TutorPanel({ tutor }) {
+export default function TutorPanel({ tutor, canSaveNotes = false, onSaveAnswer }) {
     const [sourceType, setSourceType] = useState('mistake');
     const [chat, setChat] = useState(null);          // {chat, urls}
     const [messages, setMessages] = useState([]);
@@ -51,8 +52,43 @@ export default function TutorPanel({ tutor }) {
             .finally(() => { if (openSeq.current === seq) setOpening(false); });
     }, [tutor.open, sourceType]);
 
+    // Add a quiz to the timeline, de-duped by id (the server may return the
+    // existing ready quiz under the one-active-quiz rule).
+    const addQuiz = useCallback((quiz) => {
+        setQuizzes((qs) => (qs.some((q) => q.id === quiz.id) ? qs : [...qs, quiz]));
+    }, []);
+
+    // Hits the SAME /quiz endpoint as the button. When `userText` is present
+    // (a typed "quiz me" command) the server persists it as a user turn and
+    // returns it, so the timeline is refresh-stable - no fake optimistic bubble.
+    const makeQuiz = useCallback(async (userText) => {
+        if (!chat || quizBusy || quizPending) return;
+        setError(null);
+        setQuizBusy(true);
+        try {
+            const { data } = await axios.post(chat.urls.quiz, userText ? { message: userText } : {});
+            if (data.message) setMessages((m) => [...m, data.message]);
+            addQuiz(data.quiz);
+        } catch (e) {
+            const server = typeof e.response?.data?.error === 'string' ? e.response.data.error : null;
+            const throttled = e.response?.status === 429;
+            setError({ text: server || (throttled ? 'You’re going a little fast — give it a few seconds and try again.' : 'Couldn’t generate a quiz right now — please try again.') });
+        } finally {
+            setQuizBusy(false);
+        }
+    }, [chat, quizBusy, quizPending, addQuiz]);
+
     const send = useCallback(async (text) => {
         if (!chat || pending || quizPending) return;
+
+        // Deterministic intent: an explicit "generate a quiz" command routes to
+        // the quiz flow (persisting the command server-side); everything else
+        // is normal tutor chat.
+        if (detectTutorAction(text) === 'quiz') {
+            makeQuiz(text);
+            return;
+        }
+
         setError(null);
         setPending(true);
         setMessages((m) => [...m, {
@@ -61,7 +97,15 @@ export default function TutorPanel({ tutor }) {
         }]);
         try {
             const { data } = await axios.post(chat.urls.message, { message: text });
-            setMessages((m) => [...m, data.message]);
+            // The backend is the source of truth for quiz intent: if it
+            // reclassified this message as a quiz request (a phrase the
+            // fast-path above missed), it returns a quiz payload. Keep the
+            // optimistic user bubble and drop the quiz into the thread.
+            if (data.quiz) {
+                addQuiz(data.quiz);
+            } else {
+                setMessages((m) => [...m, data.message]);
+            }
         } catch (e) {
             // Server sends friendly copy for daily caps (429) and outages (502).
             const server = typeof e.response?.data?.error === 'string' ? e.response.data.error : null;
@@ -74,23 +118,7 @@ export default function TutorPanel({ tutor }) {
         } finally {
             setPending(false);
         }
-    }, [chat, pending, quizPending]);
-
-    const makeQuiz = useCallback(async () => {
-        if (!chat || quizBusy || quizPending) return;
-        setError(null);
-        setQuizBusy(true);
-        try {
-            const { data } = await axios.post(chat.urls.quiz);
-            setQuizzes((qs) => [...qs, data.quiz]);
-        } catch (e) {
-            const server = typeof e.response?.data?.error === 'string' ? e.response.data.error : null;
-            const throttled = e.response?.status === 429;
-            setError({ text: server || (throttled ? 'You’re going a little fast — give it a few seconds and try again.' : 'Couldn’t generate a quiz right now — please try again.') });
-        } finally {
-            setQuizBusy(false);
-        }
-    }, [chat, quizBusy, quizPending]);
+    }, [chat, pending, quizPending, makeQuiz]);
 
     const onQuizAttempted = useCallback((quizId) => {
         setQuizzes((qs) => qs.map((q) => (q.id === quizId ? { ...q, status: 'attempted' } : q)));
@@ -119,7 +147,7 @@ export default function TutorPanel({ tutor }) {
                         onClick={() => setSourceType('question')}>This question</button>
                 </div>
                 <div className="sp" />
-                <button type="button" className="tut-quizbtn" onClick={makeQuiz}
+                <button type="button" className="tut-quizbtn" onClick={() => makeQuiz()}
                     disabled={!chat || quizBusy || pending || quizPending}>
                     {quizBusy ? 'Building quiz…' : '✎ Quiz me'}
                 </button>
@@ -136,6 +164,8 @@ export default function TutorPanel({ tutor }) {
                                 pending={pending}
                                 scrollRef={scrollRef}
                                 onQuizAttempted={onQuizAttempted}
+                                canSaveNotes={canSaveNotes}
+                                onSaveAnswer={onSaveAnswer}
                             />
 
                             {items.length === 0 && chat && !pending && (

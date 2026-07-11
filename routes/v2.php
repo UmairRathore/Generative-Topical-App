@@ -368,8 +368,11 @@ Route::prefix('v2')->name('v2.')->group(function () {
             Route::get('tutor/chats/{chat}', [StudentAiTutor::class, 'show'])->name('tutor.chats.show');
             Route::post('tutor/chats/{chat}/messages', [StudentAiTutor::class, 'message'])
                 ->middleware('throttle:ai-message')->name('tutor.chats.message');
+            // Quiz budget is enforced in the controller (AiTutorController::
+            // guardQuizBudget), not here, so a typed "quiz me" arriving via the
+            // /messages route shares the SAME quiz limiter as this button path.
             Route::post('tutor/chats/{chat}/quiz', [StudentAiTutor::class, 'quiz'])
-                ->middleware('throttle:ai-quiz')->name('tutor.chats.quiz');
+                ->name('tutor.chats.quiz');
             Route::post('tutor/quizzes/{quiz}/attempts', [StudentAiTutor::class, 'quizAttempt'])
                 ->middleware('throttle:20,1')->name('tutor.quizzes.attempt');
 

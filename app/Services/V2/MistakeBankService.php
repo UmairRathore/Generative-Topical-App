@@ -212,6 +212,23 @@ class MistakeBankService
             case 'most_repeated':  $q->where('mistake_count', '>=', 2); break;
             case 'never_reviewed': $q->where('review_count', 0); break;
             case 'mastered':       $q->where('status', StudentMistake::STATUS_MASTERED); break;
+
+            // AI Tutor engagement filters (status only - EXISTS subqueries on
+            // the AI tables, no chat content touched).
+            case 'ai_not_discussed':
+                $q->whereDoesntHave('aiChats', fn ($c) => $c->has('messages'));
+                break;
+            case 'ai_discussed':
+                $q->whereHas('aiChats', fn ($c) => $c->has('messages'));
+                break;
+            case 'ai_has_quiz':
+                $q->whereHas('aiQuizzes', fn ($z) => $z->has('attempts'));
+                break;
+            case 'ai_low_quiz':
+                // Any attempt scoring under half marks.
+                $q->whereHas('aiQuizzes.attempts', fn ($a) => $a->whereColumn('score', '<', DB::raw('total / 2')));
+                break;
+
             case 'all': default:   break;
         }
 

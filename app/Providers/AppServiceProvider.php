@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +24,27 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Already-signed-in users who hit any login/guest page are sent to
+        // THEIR OWN portal dashboard (not bounced to a generic page). Covers
+        // the student case: an authenticated student opening /v2/student/login
+        // (or the app root) lands on the student dashboard.
+        RedirectIfAuthenticated::redirectUsing(function (Request $request): string {
+            $dashboards = [
+                'v2_super_admin'  => 'v2.super_admin.dashboard',
+                'v2_school_admin' => 'v2.school.dashboard',
+                'v2_branch_admin' => 'v2.branch.index',
+                'v2_teacher'      => 'v2.teacher.dashboard',
+                'v2_student'      => 'v2.student.dashboard',
+            ];
+            foreach ($dashboards as $guard => $dashboard) {
+                if (Route::has($dashboard) && auth()->guard($guard)->check()) {
+                    return route($dashboard);
+                }
+            }
+
+            return route('v2.student.login');
+        });
+
         // Secure-image backstop: key by the token's viewer (NOT IP) so a whole
         // classroom behind one NAT IP is never throttled, while a single
         // compromised account that tries to bulk-pull the corpus still gets
@@ -60,10 +83,9 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(300)->by($actorKey($r))
                 ->response($aiDaily("You've used today's AI tutor time - it resets tomorrow. Your chats are saved.")),
         ]);
-        RateLimiter::for('ai-quiz', fn (Request $r) => [
-            Limit::perMinute(5)->by($actorKey($r)),
-            Limit::perDay(60)->by($actorKey($r))
-                ->response($aiDaily("You've reached today's quiz limit - it resets tomorrow. Try reviewing your earlier quizzes.")),
-        ]);
+        // NOTE: the quiz limiter (5/min, 60/day) lives in
+        // AiTutorController::guardQuizBudget so the "Quiz me" button (/quiz) and
+        // a typed "quiz me" (via /messages) share one bucket - a route limiter
+        // could only cover the button path.
     }
 }

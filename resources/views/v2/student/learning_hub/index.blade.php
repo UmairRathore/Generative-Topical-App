@@ -68,8 +68,18 @@
           x-data="{ subjectId: @js((string) ($filters['subject_id'] ?? '')), topicId: @js((string) ($filters['topic_id'] ?? '')), topics: @js($topicsBySubject) }">
         @php $sel = 'padding:7px 10px; border:1px solid var(--border); border-radius:8px; background:var(--surface); font-size:12.5px; color:var(--text);'; @endphp
         <select name="filter" style="{{ $sel }}">
-            @foreach (['all' => 'All', 'needs_review' => 'Needs review', 'most_repeated' => 'Most repeated', 'never_reviewed' => 'Never reviewed', 'mastered' => 'Mastered'] as $k => $v)
-                <option value="{{ $k }}" @selected(($filters['filter'] ?? 'all') === $k)>{{ $v }}</option>
+            @php
+                $filterGroups = [
+                    'Revision' => ['all' => 'All', 'needs_review' => 'Needs review', 'most_repeated' => 'Most repeated', 'never_reviewed' => 'Never reviewed', 'mastered' => 'Mastered'],
+                    'AI Tutor' => ['ai_not_discussed' => 'Not discussed with AI', 'ai_discussed' => 'Discussed with AI', 'ai_has_quiz' => 'Has AI quiz', 'ai_low_quiz' => 'Low AI quiz score'],
+                ];
+            @endphp
+            @foreach ($filterGroups as $group => $opts)
+                <optgroup label="{{ $group }}">
+                    @foreach ($opts as $k => $v)
+                        <option value="{{ $k }}" @selected(($filters['filter'] ?? 'all') === $k)>{{ $v }}</option>
+                    @endforeach
+                </optgroup>
             @endforeach
         </select>
         <select name="subject_id" x-model="subjectId" @change="topicId = ''" style="{{ $sel }}">

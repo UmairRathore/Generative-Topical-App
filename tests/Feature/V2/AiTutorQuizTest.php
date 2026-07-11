@@ -112,6 +112,18 @@ class AiTutorQuizTest extends TestCase
         ];
     }
 
+    private function validChatResponse(): array
+    {
+        return [
+            'answer' => 'Let us start with the forces acting on the ball. What do you notice?',
+            'meta'   => [
+                'provider' => 'openai', 'model' => 'gpt-4o-mini',
+                'input_tokens' => 800, 'output_tokens' => 200, 'total_tokens' => 1000,
+                'cost_usd' => 0.0003, 'latency_ms' => 1500,
+            ],
+        ];
+    }
+
     private function openChat(StudentMistake $mistake): AiTutorChat
     {
         $this->actingAsStudent()
@@ -144,6 +156,158 @@ class AiTutorQuizTest extends TestCase
         $log = AiInteractionLog::where('feature', 'tutor_quiz')->firstOrFail();
         $this->assertSame('ok', $log->status);
         $this->assertSame('mistake', $log->source_context_type);
+    }
+
+    public function test_second_generation_while_ready_creates_no_duplicate_quiz(): void
+    {
+        Http::fake([self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse())]);
+        $chat = $this->openChat($this->makeMistake());
+        $url = route('v2.student.tutor.chats.quiz', $chat);
+
+        // First generation creates exactly one ready quiz.
+        $this->actingAsStudent()->postJson($url)->assertOk();
+        $this->assertSame(1, AiTutorQuiz::withoutGlobalScopes()->count());
+        $quizId = AiTutorQuiz::withoutGlobalScopes()->firstOrFail()->id;
+        $questionCount = DB::table('v2_ai_tutor_quiz_questions')->count();
+
+        // A second request while the first is still ready returns the existing
+        // quiz and creates NO new quiz or questions - and never calls Python.
+        $this->actingAsStudent()->postJson($url)
+            ->assertOk()
+            ->assertJsonPath('existing', true)
+            ->assertJsonPath('quiz.id', AiTutorQuiz::withoutGlobalScopes()->firstOrFail()->getRouteKey());
+
+        $this->assertSame(1, AiTutorQuiz::withoutGlobalScopes()->count());
+        $this->assertSame($quizId, AiTutorQuiz::withoutGlobalScopes()->firstOrFail()->id);
+        $this->assertSame($questionCount, DB::table('v2_ai_tutor_quiz_questions')->count());
+        // Python was hit once (first gen), never for the second request.
+        Http::assertSentCount(1);
+    }
+
+    public function test_generation_resumes_once_the_ready_quiz_is_attempted(): void
+    {
+        Http::fake([self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse())]);
+        $chat = $this->openChat($this->makeMistake());
+        $url = route('v2.student.tutor.chats.quiz', $chat);
+
+        $this->actingAsStudent()->postJson($url)->assertOk();
+        $quiz = AiTutorQuiz::withoutGlobalScopes()->firstOrFail();
+
+        // Attempt it -> no longer "ready".
+        $answers = $quiz->questions->mapWithKeys(fn ($q) => [$q->id => 'A'])->all();
+        $this->actingAsStudent()->postJson(route('v2.student.tutor.quizzes.attempt', $quiz), ['answers' => $answers])->assertOk();
+
+        // A new generation is now allowed -> a second quiz exists.
+        $this->actingAsStudent()->postJson($url)->assertOk()->assertJsonMissing(['existing' => true]);
+        $this->assertSame(2, AiTutorQuiz::withoutGlobalScopes()->count());
+    }
+
+    public function test_typed_command_persists_the_user_message_and_generates_a_quiz(): void
+    {
+        Http::fake([self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse())]);
+        $chat = $this->openChat($this->makeMistake());
+
+        $this->actingAsStudent()
+            ->postJson(route('v2.student.tutor.chats.quiz', $chat), ['message' => 'generate a quiz for me'])
+            ->assertOk()
+            ->assertJsonPath('message.role', 'user')
+            ->assertJsonPath('message.content', 'generate a quiz for me');
+
+        // The typed command is a real persisted user turn (refresh-stable), and a quiz exists.
+        $this->assertDatabaseHas('v2_ai_tutor_messages', ['chat_id' => $chat->id, 'role' => 'user', 'content' => 'generate a quiz for me']);
+        $this->assertSame(1, AiTutorQuiz::withoutGlobalScopes()->count());
+    }
+
+    public function test_typed_quiz_command_via_message_endpoint_generates_a_quiz_not_chat(): void
+    {
+        Http::fake([
+            self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse()),
+            self::AI_URL.'/tutor/chat' => Http::response($this->validChatResponse()),
+        ]);
+        $chat = $this->openChat($this->makeMistake());
+
+        // The frontend fast-path is bypassed - the raw "quiz me" hits the normal
+        // message endpoint. The backend must still generate a quiz.
+        $this->actingAsStudent()
+            ->postJson(route('v2.student.tutor.chats.message', $chat), ['message' => 'quiz me'])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonCount(4, 'quiz.questions')
+            ->assertJsonPath('message.role', 'user')
+            ->assertJsonPath('message.content', 'quiz me');
+
+        // A quiz exists and the typed command is a real persisted user turn.
+        $this->assertSame(1, AiTutorQuiz::withoutGlobalScopes()->count());
+        $this->assertDatabaseHas('v2_ai_tutor_messages', [
+            'chat_id' => $chat->id, 'role' => 'user', 'content' => 'quiz me',
+        ]);
+
+        // The quiz generator ran; the CHAT model was never called for this turn.
+        Http::assertSent(fn ($r) => $r->url() === self::AI_URL.'/tutor/quiz');
+        Http::assertNotSent(fn ($r) => $r->url() === self::AI_URL.'/tutor/chat');
+    }
+
+    public function test_normal_message_is_still_chat_not_quiz(): void
+    {
+        Http::fake([
+            self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse()),
+            self::AI_URL.'/tutor/chat' => Http::response($this->validChatResponse()),
+        ]);
+        $chat = $this->openChat($this->makeMistake());
+
+        $this->actingAsStudent()
+            ->postJson(route('v2.student.tutor.chats.message', $chat), ['message' => 'why is my answer wrong?'])
+            ->assertOk()
+            ->assertJsonPath('message.role', 'assistant');
+
+        $this->assertSame(0, AiTutorQuiz::withoutGlobalScopes()->count());
+        Http::assertSent(fn ($r) => $r->url() === self::AI_URL.'/tutor/chat');
+        Http::assertNotSent(fn ($r) => $r->url() === self::AI_URL.'/tutor/quiz');
+    }
+
+    public function test_one_ready_quiz_enforcement_applies_through_the_message_endpoint(): void
+    {
+        Http::fake([
+            self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse()),
+            self::AI_URL.'/tutor/chat' => Http::response($this->validChatResponse()),
+        ]);
+        $chat = $this->openChat($this->makeMistake());
+        $url = route('v2.student.tutor.chats.message', $chat);
+
+        $this->actingAsStudent()->postJson($url, ['message' => 'quiz me'])->assertOk();
+        $this->actingAsStudent()->postJson($url, ['message' => 'quiz me again'])
+            ->assertOk()
+            ->assertJsonPath('existing', true);
+
+        // The one-active-quiz invariant holds regardless of entry point.
+        $this->assertSame(1, AiTutorQuiz::withoutGlobalScopes()->count());
+        Http::assertSentCount(1); // only the first request generated
+    }
+
+    public function test_typed_quiz_via_message_is_gated_by_the_quiz_limiter_not_the_chat_limiter(): void
+    {
+        Http::fake([
+            self::AI_URL.'/tutor/quiz' => Http::response($this->validQuizResponse()),
+            self::AI_URL.'/tutor/chat' => Http::response($this->validChatResponse()),
+        ]);
+        $chat = $this->openChat($this->makeMistake());
+        $url = route('v2.student.tutor.chats.message', $chat);
+
+        // The quiz budget is 5/min. Five typed quiz commands pass (the first
+        // generates; the rest return the existing ready quiz)...
+        for ($i = 0; $i < 5; $i++) {
+            $this->actingAsStudent()->postJson($url, ['message' => 'quiz me'])->assertOk();
+        }
+        // ...the 6th is blocked by the QUIZ limiter (5/min), even though the
+        // chat limiter (10/min) still has headroom.
+        $this->actingAsStudent()->postJson($url, ['message' => 'quiz me'])->assertStatus(429);
+
+        // Proof it was the quiz budget, not the chat budget: a normal chat
+        // message on the same endpoint still succeeds.
+        $this->actingAsStudent()
+            ->postJson($url, ['message' => 'why is my answer wrong?'])
+            ->assertOk()
+            ->assertJsonPath('message.role', 'assistant');
     }
 
     public function test_invalid_quiz_payload_is_rejected_and_logged(): void

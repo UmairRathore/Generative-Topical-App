@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\V2\Student;
 
 use App\Http\Controllers\Controller;
+use App\Models\V2\AiTutorMessage;
+use App\Models\V2\NotesImport;
 use App\Models\V2\NotesPage;
 use App\Models\V2\Question;
 use App\Models\V2\QuestionLearningAsset;
@@ -11,6 +13,7 @@ use App\Services\V2\MistakeBankService;
 use App\Services\V2\NotesBlockMapper;
 use App\Services\V2\NotesDocumentService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -39,10 +42,11 @@ class NotesImportController extends Controller
         $this->authorizePage($page);
 
         $data = $request->validate([
-            'source'          => ['required', Rule::in(['mistake', 'asset', 'widget_state'])],
+            'source'          => ['required', Rule::in(['mistake', 'asset', 'widget_state', 'ai_answer'])],
             'mistake_id'      => ['required', 'string'],
             'asset_type'      => ['required_if:source,asset', 'string', Rule::in(QuestionLearningAsset::ALLOWED_TYPES)],
             'widget'          => ['required_if:source,widget_state', 'string', 'max:64'],
+            'ai_message_id'   => ['required_if:source,ai_answer', 'integer'],
             'config'          => ['sometimes', 'array'],
             // Insert before this top-level block (a page_break id from the
             // outline, or a cursor block id). Absent/unknown -> append at end.
@@ -63,26 +67,46 @@ class NotesImportController extends Controller
             'mistake' => $mapper->fromMistake($mistake, $mistakes->visibleAsset($mistake->question_id, 'option_explanation')),
             'asset' => $this->assetBlocks($mistake, $question, $data['asset_type'], $mistakes, $mapper),
             'widget_state' => $this->widgetStateBlocks($mistake, $data, $mistakes, $mapper),
+            'ai_answer' => $this->aiAnswerBlocks($mistake, (int) $data['ai_message_id'], $mapper),
         };
 
         if ($blocks === []) {
             return response()->json(['error' => 'unavailable'], 404);
         }
 
+        // The EXACT source object saved (for the provenance ledger). Resolved
+        // from the same objects the blocks were built from - never an
+        // ambiguous question_id+type pair.
+        $sourceId = $this->sourceId($mistake, $data, $mistakes);
+
         $before = $data['before_block_id'] ?? null;
         // Don't add the same diagram twice within the section it's landing in.
         $blocks = $this->withoutDuplicateFigures($page->document_json ?? [], $blocks, $before);
 
-        $service->apply($page, $this->spliced($page->document_json ?? [], $blocks, $before));
+        // Atomic: the note mutation (+ version snapshot) and its provenance row
+        // commit together. A ledger failure rolls back the document mutation -
+        // no saved content is ever left without its provenance event.
+        DB::transaction(function () use ($service, $page, $blocks, $before, $data, $sourceId, $mistake) {
+            $service->apply($page, $this->spliced($page->document_json ?? [], $blocks, $before));
 
-        // Auto-tag the page from the mistake's curriculum when not already set.
-        if (! $page->subject_id) {
-            $page->forceFill([
-                'subject_id'  => $mistake->subject_id,
-                'topic_id'    => $page->topic_id ?: $mistake->topic_id,
-                'subtopic_id' => $page->subtopic_id ?: $mistake->subtopic_id,
-            ])->save();
-        }
+            NotesImport::create([
+                'student_id'  => $this->student()->id,
+                'page_id'     => $page->id,
+                'source'      => $data['source'],
+                'source_id'   => $sourceId,
+                'question_id' => $mistake->question_id,
+                'created_at'  => now(),
+            ]);
+
+            // Auto-tag the page from the mistake's curriculum when not already set.
+            if (! $page->subject_id) {
+                $page->forceFill([
+                    'subject_id'  => $mistake->subject_id,
+                    'topic_id'    => $page->topic_id ?: $mistake->topic_id,
+                    'subtopic_id' => $page->subtopic_id ?: $mistake->subtopic_id,
+                ])->save();
+            }
+        });
 
         return response()->json([
             'ok'             => true,
@@ -90,6 +114,20 @@ class NotesImportController extends Controller
             'contentVersion' => $page->content_version,
             'pageUrl'        => route('v2.student.notes.pages.show', $page),
         ]);
+    }
+
+    /**
+     * The exact source object id for the provenance ledger. By the time this
+     * runs the blocks are non-empty, so the resolved assets exist.
+     */
+    private function sourceId(StudentMistake $mistake, array $data, MistakeBankService $mistakes): int
+    {
+        return match ($data['source']) {
+            'mistake'      => (int) $mistake->id,
+            'asset'        => (int) ($mistakes->visibleAsset($mistake->question_id, $data['asset_type'])?->id ?? 0),
+            'widget_state' => (int) ($mistakes->visibleAsset($mistake->question_id, 'interactive_widget')?->id ?? 0),
+            'ai_answer'    => (int) $data['ai_message_id'],
+        };
     }
 
     /**
@@ -111,6 +149,29 @@ class NotesImportController extends Controller
         }
 
         return $blocks;
+    }
+
+    /**
+     * One AI Tutor assistant answer -> a markdown snapshot block. The message
+     * must be an assistant turn in a chat the student owns AND anchored to this
+     * same (already release-gated) mistake - so a student can only save their
+     * own tutor replies, onto the question they belong to.
+     */
+    private function aiAnswerBlocks(StudentMistake $mistake, int $messageId, NotesBlockMapper $mapper): array
+    {
+        $message = AiTutorMessage::with('chat')->find($messageId);
+
+        $ok = $message
+            && $message->role === AiTutorMessage::ROLE_ASSISTANT
+            && $message->chat
+            && $message->chat->student_id === $this->student()->id
+            && (int) $message->chat->student_mistake_id === (int) $mistake->id;
+
+        if (! $ok || trim((string) $message->content) === '') {
+            return [];
+        }
+
+        return $mapper->fromAiAnswer((string) $message->content);
     }
 
     /**

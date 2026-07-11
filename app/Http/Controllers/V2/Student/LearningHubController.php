@@ -89,7 +89,7 @@ class LearningHubController extends Controller
      * the interactive simulation, flashcards, memcards and a solution flow —
      * as tabs. Tabs auto-appear as assets are imported; no code change needed.
      */
-    public function studio(StudentMistake $mistake, MistakeBankService $service)
+    public function studio(StudentMistake $mistake, MistakeBankService $service, \App\Services\V2\NotesProvenanceService $provenance)
     {
         $this->authorizeMistake($mistake);
         abort_unless($mistake->latestExam && $mistake->latestExam->resultsReleased(), 404);
@@ -101,14 +101,21 @@ class LearningHubController extends Controller
         $types = ['worked_solution', 'option_explanation', 'flashcards', 'memcards',
             'mermaid', 'revision_notes', 'common_mistakes'];
         $assets = [];
+        $assetIds = [];   // exact source ids for provenance (asset_type => asset id)
         foreach ($types as $t) {
             if ($a = $service->visibleAsset($qid, $t)) {
                 $assets[$t] = ['title' => $a->title, 'content' => $a->content, 'format' => $a->format, 'payload' => $a->payload_json];
+                $assetIds[$t] = $a->id;
             }
         }
 
         $widget = $service->visibleAsset($qid, 'interactive_widget');
         $wp = $widget?->payload_json;
+        // The "Save simulator to notes" button imports the widget via the ASSET
+        // path (source=asset, asset_type=interactive_widget) - track it the same way.
+        if ($widget) {
+            $assetIds['interactive_widget'] = $widget->id;
+        }
 
         // Opening the studio counts as a review + records what was shown.
         $service->markReviewed($mistake);
@@ -175,7 +182,22 @@ class LearningHubController extends Controller
                     'topicName'   => $mistake->topic?->title,
                 ],
             ],
+            // Save-to-Notes provenance, keyed to each Save action (asset_type or
+            // 'mistake'). Informational only - the student may always save again.
+            // Exact-source: never inferred from question_id.
+            'notesProvenance' => $this->studioProvenance($mistake, $assetIds, $provenance),
         ]);
+    }
+
+    /** Provenance map for every studio Save action, keyed as the frontend expects. */
+    private function studioProvenance(StudentMistake $mistake, array $assetIds, \App\Services\V2\NotesProvenanceService $provenance): array
+    {
+        $sources = ['mistake' => ['source' => 'mistake', 'source_id' => $mistake->id]];
+        foreach ($assetIds as $type => $id) {
+            $sources[$type] = ['source' => 'asset', 'source_id' => $id];
+        }
+
+        return $provenance->forSources($this->student()->id, $sources);
     }
 
     public function updateStatus(StudentMistake $mistake, Request $request, MistakeBankService $service)

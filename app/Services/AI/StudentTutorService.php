@@ -158,12 +158,30 @@ class StudentTutorService
     /**
      * Generate a 3-5 question mini quiz from the chat's context.
      *
-     * @return array{ok: bool, quiz?: AiTutorQuiz, error?: string}
+     * DOMAIN INVARIANT: a chat has at most ONE active `ready` quiz. If one
+     * already exists, return it - never create a second quiz or duplicate
+     * questions. `$userText` (a typed "quiz me" command) is persisted as a
+     * user turn so the timeline stays refresh-stable.
+     *
+     * @return array{ok: bool, quiz?: AiTutorQuiz, message?: AiTutorMessage, existing?: bool, error?: string}
      */
-    public function generateQuiz(AiTutorChat $chat, Student $student): array
+    public function generateQuiz(AiTutorChat $chat, Student $student, ?string $userText = null): array
     {
+        // One-active-quiz guard (server-side; the client gate is belt-and-braces).
+        $existing = $chat->quizzes()->where('status', AiTutorQuiz::STATUS_READY)->latest('id')->first();
+        if ($existing) {
+            return ['ok' => true, 'quiz' => $existing->load('questions'), 'existing' => true];
+        }
+
         $mistake = $chat->mistake;
         $t0 = microtime(true);
+
+        // Persist the typed command as a user turn BEFORE generating, so it
+        // survives refresh and reads naturally above the quiz (mirrors how
+        // sendMessage keeps the user message even if the AI call then fails).
+        $userMessage = ($userText !== null && trim($userText) !== '')
+            ? $chat->messages()->create(['role' => AiTutorMessage::ROLE_USER, 'content' => $userText])
+            : null;
 
         try {
             // Quiz questions ground on the question itself - stats add nothing.
@@ -215,7 +233,11 @@ class StudentTutorService
                 'response_json'     => ['quiz_title' => $quiz->title, 'question_count' => count($questions), 'meta' => $meta],
             ]);
 
-            return ['ok' => true, 'quiz' => $quiz->load('questions')];
+            if ($userMessage) {
+                $chat->update(['last_message_at' => now()]);
+            }
+
+            return ['ok' => true, 'quiz' => $quiz->load('questions'), 'message' => $userMessage];
         } catch (\Throwable $e) {
             Log::warning('AI tutor quiz failed: '.$e->getMessage());
 

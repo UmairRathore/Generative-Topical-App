@@ -63,7 +63,7 @@ function QuestionPanel({ question, optionExp }) {
 const TAB_ALIASES = { 'ai-tutor': 'tutor', simulator: 'sim' };
 const TAB_EMIT = { tutor: 'ai-tutor', sim: 'simulator' };
 
-export default function Solution({ mistake = {}, question = null, assets = {}, widget = null, backUrl = '/', notes = null, tutor = null, debug = false }) {
+export default function Solution({ mistake = {}, question = null, assets = {}, widget = null, backUrl = '/', notes = null, tutor = null, debug = false, notesProvenance = {} }) {
     const tabs = useMemo(() => [
         { key: 'question', label: 'Question', icon: '◆', show: !!(question?.stem || assets.option_explanation) },
         { key: 'sim', label: 'Simulator', icon: '▲', show: !!widget?.type },
@@ -115,8 +115,23 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
         return () => document.removeEventListener('camb:add-to-note', onWidgetSave);
     }, [notes]);
 
+    // Save-to-Notes provenance ("Saved N×"). Informational only - the student
+    // can always save again. Bumped optimistically on each successful save;
+    // authoritative counts arrive on the next studio load.
+    const [prov, setProv] = useState(notesProvenance || {});
+    const provKey = (payload) => (payload.source === 'mistake' ? 'mistake' : payload.source === 'asset' ? payload.asset_type : null);
+    const savedTag = (key) => {
+        const info = key && prov[key];
+        if (!info || !info.count) return null;
+        const where = (info.pages || []).map((p) => p.title).filter(Boolean).join(', ');
+        return <span className="ls-savedtag" title={where ? 'In: ' + where : undefined}>✓ Saved {info.count}×</span>;
+    };
+
     const noteBtn = (label, payload) => (
-        <button type="button" className="ls-addnote" onClick={() => setPick(payload)}>＋ {label}</button>
+        <span className="ls-addnote-wrap">
+            <button type="button" className="ls-addnote" onClick={() => setPick(payload)}>＋ {label}</button>
+            {savedTag(provKey(payload))}
+        </span>
     );
     const TAB_SAVE = {
         question:   assets.option_explanation && ['Save explanations to notes', { source: 'asset', asset_type: 'option_explanation' }],
@@ -144,9 +159,12 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
                     <div className="ls-brand">Learning Studio<span>{eyebrow}</span></div>
                     <div className="sp" />
                     {notes && (
-                        <button type="button" className="ls-back" onClick={() => setPick({ source: 'mistake' })}>
-                            ＋ Mistake → notes
-                        </button>
+                        <span className="ls-addnote-wrap">
+                            <button type="button" className="ls-back" onClick={() => setPick({ source: 'mistake' })}>
+                                ＋ Mistake → notes
+                            </button>
+                            {savedTag('mistake')}
+                        </span>
                     )}
                     <a className="ls-back" href={backUrl}>← Back to mistake</a>
                 </div>
@@ -190,7 +208,13 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
                     {active === 'flashcards' && <Flashcards cards={assets.flashcards?.payload || []} />}
                     {active === 'memcards' && <Flashcards cards={assets.memcards?.payload || []} />}
                     {active === 'flow' && <Flow source={assets.mermaid?.content || ''} />}
-                    {active === 'tutor' && tutor && <TutorPanel tutor={tutor} />}
+                    {active === 'tutor' && tutor && (
+                        <TutorPanel
+                            tutor={tutor}
+                            canSaveNotes={!!notes}
+                            onSaveAnswer={(messageId) => setPick({ source: 'ai_answer', ai_message_id: messageId })}
+                        />
+                    )}
                     {active === 'json' && <pre className="ls-code">{jsonView}</pre>}
                     </div>
                 </div>
@@ -202,7 +226,22 @@ export default function Solution({ mistake = {}, question = null, assets = {}, w
                     payload={pick}
                     suggestedTitle={assets.worked_solution?.title || eyebrow}
                     onClose={() => setPick(null)}
-                    onDone={(res) => { setPick(null); setAdded(res); }}
+                    onDone={(res) => {
+                        // Optimistically bump the studio-part provenance (mistake/asset
+                        // sources). AI-answer provenance refreshes on next chat load.
+                        const key = provKey(pick);
+                        if (key) {
+                            setProv((pv) => ({
+                                ...pv,
+                                [key]: {
+                                    count: (pv[key]?.count || 0) + 1,
+                                    pages: [{ title: res.pageTitle, url: res.pageUrl }, ...((pv[key]?.pages || []).filter((p) => p.url !== res.pageUrl))],
+                                },
+                            }));
+                        }
+                        setPick(null);
+                        setAdded(res);
+                    }}
                 />
             )}
             {added && (

@@ -149,6 +149,10 @@ body::before {
     .ls-side-veil { display: block; position: fixed; inset: 0; z-index: 50; background: rgba(2, 10, 6, .72); backdrop-filter: blur(2px); }
 }
 
+/* Save-to-notes provenance tag ("✓ Saved N×") next to a Save button. */
+.ls-addnote-wrap { display: inline-flex; align-items: center; gap: 8px; }
+.ls-savedtag { font-size: 11.5px; font-weight: 600; color: #34D399; white-space: nowrap; }
+
 /* generic studio button */
 .ls-btn { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-soft); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 16px; cursor: pointer; transition: .14s; }
 .ls-btn:hover { color: var(--ink); border-color: rgba(52,211,153,.4); }

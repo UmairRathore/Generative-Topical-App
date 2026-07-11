@@ -10,6 +10,17 @@
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+            <!--
+                V1 (Livewire/Breeze) tests are excluded: the V1 app is retired
+                (its routes are commented out in routes/web.php), so these
+                cover functionality that no longer exists. The test files are
+                kept, not deleted - re-include them here if V1 is ever revived.
+            -->
+            <exclude>tests/Feature/Auth</exclude>
+            <exclude>tests/Feature/Settings</exclude>
+            <exclude>tests/Feature/Admin</exclude>
+            <exclude>tests/Feature/DashboardTest.php</exclude>
+            <exclude>tests/Feature/ExampleTest.php</exclude>
         </testsuite>
     </testsuites>
     <source>

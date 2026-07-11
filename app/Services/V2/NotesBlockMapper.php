@@ -85,6 +85,22 @@ class NotesBlockMapper
     }
 
     /**
+     * An AI Tutor answer -> one markdown snapshot block, stamped origin "ai"
+     * and titled so it's visibly distinct from imported (super-admin-blessed)
+     * worked solutions. Reuses the asset_snapshot renderer (markdown + LaTeX);
+     * the AI content is a copy, never a source-of-truth record.
+     */
+    public function fromAiAnswer(string $markdown, string $title = 'AI Tutor'): array
+    {
+        return [$this->block('asset_snapshot', [
+            'assetType' => 'ai_answer',
+            'origin'    => 'ai',
+            'title'     => $title,
+            'markdown'  => $markdown,
+        ])];
+    }
+
+    /**
      * A widget saved from the live `camb:add-to-note` contract - the config is
      * the widget AS THE STUDENT LEFT IT, not the question's pristine default.
      */
