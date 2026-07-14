@@ -6,6 +6,7 @@
 // as components — the same files the island runtime uses.
 import '../widgets/widgets.css';
 import './learn.css';
+import './authoring.css';
 import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 

@@ -17,6 +17,7 @@
         ['section' => 'Content'],
         ['id' => 'v2.super_admin.question_bank',  'icon' => 'book', 'label' => 'Question Bank', 'href' => route('v2.super_admin.question_bank.index')],
         ['id' => 'v2.super_admin.question_flags', 'icon' => 'flag', 'label' => 'Quality Reviews', 'href' => route('v2.super_admin.question_flags.index'), 'badge' => $openFlagCount],
+        ['id' => 'v2.super_admin.authoring', 'icon' => 'sparkle', 'label' => 'Authoring Review', 'href' => route('v2.super_admin.authoring.index')],
         ['section' => 'System'],
         ['id' => 'v2.super_admin.audit.index',  'icon' => 'eye',    'label' => 'Audit Log',    'href' => route('v2.super_admin.audit.index')],
     ];

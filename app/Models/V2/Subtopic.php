@@ -31,4 +31,10 @@ class Subtopic extends Model
     {
         return $this->hasMany(Question::class, 'subtopic_id');
     }
+
+    /** Canonical syllabus learning objectives mapped onto this leaf section (may span syllabus versions). */
+    public function learningObjectives(): HasMany
+    {
+        return $this->hasMany(LearningObjective::class, 'subtopic_id')->orderBy('objective_number');
+    }
 }

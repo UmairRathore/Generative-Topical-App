@@ -33,6 +33,7 @@ use App\Http\Controllers\V2\SuperAdmin\DashboardController as SuperAdminDashboar
 use App\Http\Controllers\V2\SuperAdmin\StatsController as SuperAdminStats;
 use App\Http\Controllers\V2\SuperAdmin\GradeController as SuperAdminGrade;
 use App\Http\Controllers\V2\SuperAdmin\QuestionBankController as SuperAdminQuestionBank;
+use App\Http\Controllers\V2\SuperAdmin\AuthoringReviewController as SuperAdminAuthoringReview;
 use App\Http\Controllers\V2\SuperAdmin\QuestionAssetReviewController as SuperAdminQuestionAssetReview;
 use App\Http\Controllers\V2\SuperAdmin\QuestionFlagController as SuperAdminQuestionFlag;
 use App\Http\Controllers\V2\SuperAdmin\QuestionPropagationController as SuperAdminQuestionPropagation;
@@ -117,6 +118,13 @@ Route::prefix('v2')->name('v2.')->group(function () {
                 Route::delete('question-bank/{question}', [SuperAdminQuestionBank::class, 'destroy'])->name('question_bank.destroy');
                 Route::patch('question-bank/{question}/restore', [SuperAdminQuestionBank::class, 'restore'])->name('question_bank.restore');
                 Route::patch('question-bank/{question}/status', [SuperAdminQuestionBank::class, 'setStatus'])->name('question_bank.status');
+
+                // Authoring Review Studio - visual human review of offline-authored
+                // Stage B lesson artifacts (authoring is external / Claude Code).
+                Route::get('authoring', [SuperAdminAuthoringReview::class, 'index'])->name('authoring.index');
+                Route::get('authoring/{artifact}/review', [SuperAdminAuthoringReview::class, 'review'])->name('authoring.review');
+                Route::post('authoring/{artifact}/approve', [SuperAdminAuthoringReview::class, 'approve'])->name('authoring.approve');
+                Route::post('authoring/{artifact}/feedback', [SuperAdminAuthoringReview::class, 'feedback'])->name('authoring.feedback');
 
                 // AI learning-asset review + approval (generation is external / Claude Code).
                 Route::get('question-bank/{question}/learning-assets', [SuperAdminQuestionAssetReview::class, 'review'])->name('question_bank.learning_assets');
